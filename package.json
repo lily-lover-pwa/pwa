@@ -1,0 +1,27 @@
+{
+    "name": "aquarium-chat",
+    "version": "1.25.0",
+    "description": "PWA-lily (lily-lover-pwa カスタマイズ版)",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "node build.mjs",
+        "build:watch": "node build.mjs --watch",
+        "lint": "eslint .",
+        "lint:report": "eslint . -f json -o .eslint-report.json || true",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "esbuild": "^0.28.0",
+        "eslint": "^9.0.0",
+        "fake-indexeddb": "^6.0.0",
+        "globals": "^15.0.0",
+        "jsdom": "^25.0.0",
+        "prettier": "^3.0.0",
+        "vitest": "^2.0.0"
+    }
+}

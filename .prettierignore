@@ -1,0 +1,25 @@
+# Vendored third-party libraries
+marked.js
+prism.js
+prism.css
+
+# 自動生成バンドル（src/ から生成）
+app.js
+
+# レガシーの大規模ファイルは後続フェーズの分割時に整形する
+# （今 prettier をかけると巨大な差分が出てレビュー不能になるため除外）
+src/app.js
+src/app-logic.js
+src/db.js
+src/ui.js
+src/api.js
+src/dom-elements.js
+src/function-calling.js
+src/dropbox.js
+style.css
+index.html
+sw.js
+
+node_modules/
+coverage/
+.eslint-report.json

@@ -1,0 +1,5 @@
+node_modules/
+.eslint-report.json
+coverage/
+*.log
+.DS_Store

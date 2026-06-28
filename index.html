@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>PWA-lily</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" id="theme-color-meta" content="#908675">
+    <!-- RobotoフォントとMaterial Symbols を読み込む -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
+    <!-- CSSファイルを外部から読み込む -->
+    <link rel="stylesheet" href="style.css?v=1.25.2">
+    <link rel="stylesheet" href="prism.css" />
+    <script src="marked.js" defer></script>
+    <!-- DOMPurify: AI出力/インポート由来HTMLのサニタイズ（XSS対策）。marked の後に読み込む -->
+    <script src="purify.min.js" defer></script>
+    <!-- html2canvas-pro: メッセージの画像保存。iOS Safari は foreignObject 方式が使えず、
+         また計算済みスタイルが color(srgb …)/color-mix を含むため、それらに対応した pro 版を使う。
+         グローバル名は html2canvas のまま（ドロップイン）。 -->
+    <script src="html2canvas-pro.min.js" defer></script>
+    <!-- function-calling.js / dropbox.js は app.js バンドルに統合済み（src/ から生成） -->
+    <!-- AWS SDK for Bedrock Runtime (ESM形式で読み込み) -->
+    <script type="module">
+        // AWS SDK v3のBedrock Runtimeクライアントを動的にインポート
+        import('https://cdn.jsdelivr.net/npm/@aws-sdk/client-bedrock-runtime@3/+esm')
+            .then(module => {
+                window.BedrockRuntimeClient = module.BedrockRuntimeClient;
+                window.ConverseCommand = module.ConverseCommand;
+                console.log("AWS Bedrock Runtime SDK の読み込みが完了しました。");
+            })
+            .catch(err => {
+                console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
+            });
+    </script>
+    <script src="app.js?v=1.25.2" defer></script>
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- チャット画面 -->
+        <div id="chat-screen" class="screen active">
+            <div id="chat-overlay"></div> 
+            <div id="header-trigger-area"></div>
+            <header class="app-header">
+                <button id="goto-history-btn" class="header-button" title="履歴一覧へ"><span class="material-symbols-outlined">menu</span></button>
+                <span id="sync-status-header-icon" class="material-symbols-outlined sync-status-header-icon" title="同期ステータス"></span>
+                <h1 id="chat-title">新規チャット</h1>                
+                <select id="header-project-select" class="header-model-select" title="プロジェクトを切り替え">
+                    <option value="">すべてのプロジェクト</option>
+                </select>
+                <select id="header-model-select" class="header-model-select" title="使用モデルを変更"></select>
+                <button id="new-chat-btn" class="new-chat-button" title="新規チャットを開始"><span class="material-symbols-outlined">add</span></button>
+                <button id="goto-settings-btn" class="header-button" title="設定へ"><span class="material-symbols-outlined">settings</span></button>
+            </header>
+
+            <main class="main-content">
+                <!-- システムプロンプト表示/編集エリア -->
+                <div id="system-prompt-area" class="system-prompt-area">
+                    <details id="system-prompt-details">
+                        <summary>システムプロンプト</summary>
+                        <div class="system-prompt-content">
+                            <textarea id="system-prompt-editor" aria-label="システムプロンプト編集"></textarea>
+                            <div class="system-prompt-actions">
+                                <button id="cancel-system-prompt-btn" class="cancel-system-prompt-btn">キャンセル</button>
+                                <button id="save-system-prompt-btn" class="save-system-prompt-btn">保存</button>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+                <!-- メッセージコンテナ -->
+                <div id="message-container" class="message-container">
+                    <!-- メッセージはここに読み込まれる -->
+                    <div id="chat-anchor" style="height: 1px;"></div> 
+                </div>
+                <div id="loading-indicator" class="loading-indicator hidden" aria-live="polite">応答中</div>
+            </main>
+
+            <div id="floating-action-panel" class="floating-action-panel">
+                <button id="chat-stats-btn" class="floating-action-button" title="会話の統計">
+                    <span class="material-symbols-outlined">info</span>
+                </button>
+                <button id="summarize-history-btn" class="floating-action-button" title="履歴を要約" disabled>
+                    <span class="material-symbols-outlined">article_shortcut</span>
+                </button>
+                <button id="debug-log-btn" class="floating-action-button hidden" title="デバッグログを表示">
+                    <span class="material-symbols-outlined">bug_report</span>
+                </button>
+                <button id="memory-toggle-btn" class="floating-action-button hidden" title="このチャットの長期記憶を切り替え">
+                    <span class="material-symbols-outlined">auto_stories</span>
+                </button>
+                <button id="character-profile-btn" class="floating-action-button" title="キャラクタープロファイル">
+                    <span class="material-symbols-outlined">group</span>
+                </button>
+                <button id="range-image-save-btn" class="floating-action-button" title="範囲を選んで画像保存">
+                    <span class="material-symbols-outlined">photo_library</span>
+                </button>
+                <button id="scroll-to-top-btn" class="floating-action-button" title="最上部へ">
+                    <span class="material-symbols-outlined">arrow_upward</span>
+                </button>
+                <button id="scroll-to-bottom-btn" class="floating-action-button" title="最下部へ">
+                    <span class="material-symbols-outlined">arrow_downward</span>
+                </button>
+            </div>
+
+            <button id="scroll-bottom-fab" class="scroll-bottom-fab hidden" title="最下部へ" aria-label="最下部へスクロール">
+                <span class="material-symbols-outlined">keyboard_arrow_down</span>
+            </button>
+
+            <!-- 範囲画像保存モードの確認バー -->
+            <div id="range-image-bar" class="range-image-bar hidden">
+                <span id="range-image-info" class="range-image-info">開始メッセージをタップ</span>
+                <button id="range-image-cancel-btn" class="range-image-bar-btn">キャンセル</button>
+                <button id="range-image-save-confirm-btn" class="range-image-bar-btn primary" disabled>保存</button>
+            </div>
+
+            <footer class="chat-input-area">
+                <div id="profile-card-header-wrapper" class="profile-card-wrapper">
+                    <div id="profile-card-header" class="profile-card" title="プロファイルを切り替え">
+                        <div id="profile-card-icon-container" class="profile-icon-container"></div>
+                    </div>
+                    <div id="header-profile-menu" class="profile-menu hidden"></div>
+                </div>
+                <textarea id="user-input" placeholder="メッセージを入力..." rows="1" aria-label="メッセージ入力"></textarea>
+                <!-- 添付ファイルボタンを追加 -->
+                <button id="attach-file-btn" title="ファイルを添付">
+                    <div class="attach-icon-container">
+                        <span class="material-symbols-outlined">attach_file</span>
+                    </div>
+                    <div class="attach-badge-container">
+                        <span class="attachment-badge"></span>
+                    </div>
+                </button>
+                <button id="send-button" title="送信"><span class="material-symbols-outlined">send</span></button>
+            </footer>
+
+        </div>
+
+        <!-- 履歴画面 -->
+        <div id="history-screen" class="screen">
+            <header class="app-header">
+                <button id="back-to-chat-from-history" class="header-button" title="チャットへ戻る"><span class="material-symbols-outlined">arrow_forward_ios</span></button>
+                <h1 id="history-title">履歴一覧</h1>
+                <button id="delete-old-chats-btn" class="header-button header-delete-button" title="古い履歴を一括削除" disabled><span class="material-symbols-outlined">delete_sweep</span></button>
+                <button id="import-history-btn" class="header-save-button" title="履歴をインポート"><span class="material-symbols-outlined">download</span></button>
+                <input type="file" id="import-history-input" accept=".txt,text/plain" class="hidden"> <!-- インポート用ファイル入力 -->
+            </header>
+            <main class="main-content">
+                <ul id="history-list" class="history-list">
+                    <!-- 履歴アイテムはここに読み込まれる -->
+                    <li class="js-history-item-template history-item">
+                        <div class="history-item-details">
+                            <span class="history-item-title"></span>
+                            <div class="history-item-stats">
+                                <span class="stat-item js-stat-tokens" title="合計トークン数 (入力/出力の内訳付き)"><span class="material-symbols-outlined">token</span>-</span>
+                                <span class="stat-item js-stat-assets" title="合計アセット数"><span class="material-symbols-outlined">perm_media</span>-</span>
+                                <span class="stat-item js-stat-size" title="合計アセット容量"><span class="material-symbols-outlined">database</span>-</span>
+                            </div>
+                        </div>
+                        <div class="history-item-bottom-row">
+                            <div class="history-item-dates">
+                                <span class="created-date"></span>
+                                <span class="updated-date"></span>
+                            </div>
+                            <div class="history-item-actions">
+                                <button class="js-edit-title-btn" title="タイトル編集"><span class="material-symbols-outlined">edit</span></button>
+                                <button class="js-export-btn" title="出力"><span class="material-symbols-outlined">upload</span></button>
+                                <button class="js-duplicate-btn" title="複製"><span class="material-symbols-outlined">content_copy</span></button>
+                                <button class="js-delete-btn" title="削除"><span class="material-symbols-outlined">delete</span></button>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+                 <div id="no-history-message" class="hidden" style="text-align: center; color: var(--text-secondary); margin-top: 20px;">
+                     <p>チャット履歴はありません。</p>
+                     <button id="restore-from-cloud-btn" class="hidden" style="margin-top: 12px; padding: 10px 20px; background: var(--primary-color, #2196a8); color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;">☁️ クラウドから復元</button>
+                 </div>
+            </main>
+        </div>
+
+        <!-- 設定画面 -->
+        <div id="settings-screen" class="screen">
+            <header class="app-header" style="justify-content: space-between; position: sticky; top: 0; z-index: 100; padding: 0 16px;">
+                 <button id="back-to-chat-from-settings" class="header-button" style="display:flex; align-items:center; font-size:1.1rem; gap:4px; margin-right:auto; background:none; border:none; color:inherit; cursor:pointer;" title="チャットへ戻る">
+                     <span class="material-symbols-outlined">arrow_back_ios</span>設定
+                 </button>
+                 <div style="display:flex; align-items:center; gap:12px;">
+                     <span style="font-size:11px; opacity:0.8;">※反映には保存が必要</span>
+                     <button id="save-settings-btn" class="settings-action-button" style="margin:0; padding:6px 16px; background-color:#2196a8; color:white; border-radius:4px;">設定を保存</button>
+                 </div>
+            </header>
+            <main class="main-content">
+                <div class="settings-group" id="profile-management-group">
+                    <h3>プロファイル</h3>
+                    <div id="profile-card-header-wrapper-settings" class="profile-card-wrapper profile-card-wrapper-settings">
+                        <div id="profile-card-header-settings" class="profile-card profile-card-settings" title="プロファイルを切り替え">
+                            <div id="profile-card-icon-container-settings" class="profile-icon-container"></div>
+                            <span id="profile-card-name-settings" class="profile-card-name-text"></span>
+                            <span class="material-symbols-outlined profile-card-chevron">expand_more</span>
+                        </div>
+                        <div id="header-profile-menu-settings" class="profile-menu hidden"></div>
+                    </div>
+                    <h3 style="margin-top:16px;">プロファイル編集</h3>
+                    <div id="profile-display-card" class="profile-display-card">
+                        <div class="profile-display-icon-wrapper">
+                            <label for="profile-icon-input" title="アイコンを変更">
+                                <img id="profile-display-icon" src="" alt="プロファイルアイコン">
+                                <div class="default-icon-placeholder">
+                                    <span class="material-symbols-outlined">account_circle</span>
+                                </div>
+                            </label>
+                            <button id="profile-reset-icon-btn" class="icon-button icon-button-overlay" title="アイコンをリセット">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
+                        <div class="profile-display-text">
+                            <div class="profile-display-name-wrapper">
+                                <span id="profile-display-name-main"></span>
+                                <button id="profile-edit-name-btn" class="icon-button" title="プロファイル名を編集"><span class="material-symbols-outlined">edit</span></button>
+                            </div>
+                            <span id="profile-display-name-sub"></span>
+                        </div>
+                        <div id="profile-display-status" class="profile-display-status"></div>
+                    </div>
+                    <input type="file" id="profile-icon-input" accept="image/jpeg, image/png, image/gif, image/webp" class="hidden">
+
+                    <div class="profile-actions">
+                        <button id="profile-save-new-btn" title="現在の設定を新規プロファイルとして保存"><span class="material-symbols-outlined">person_add</span>新規保存</button>
+                        <button id="profile-delete-btn" title="選択中のプロファイルを削除"><span class="material-symbols-outlined">person_cancel</span>削除</button>
+                        <button id="profile-export-btn" title="選択中のプロファイルをファイルに出力"><span class="material-symbols-outlined">upload</span>出力</button>
+                        <button id="profile-import-btn" title="プロファイルをファイルから読み込み"><span class="material-symbols-outlined">download</span>取込</button>
+                        <input type="file" id="profile-import-input" accept=".json,application/json" class="hidden">
+                    </div>
+                    <p class="profile-actions-note">
+                        ※設定項目はリアルタイムで保存されます。<br>
+                        ※新機能の詳細は<a href="https://github.com/kinkan04/Gemini-PWA-Mk-II" target="_blank" rel="noopener noreferrer">リポジトリ</a>を参照。
+                    </p>
+                </div>
+                <div class="settings-group" id="memory-settings-container">
+                    <h3>メモリ機能</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        チャットを横断してユーザーの好みや指示を記憶し、応答に反映させます。記憶はプロファイルごとに独立して保存されます。
+                    </p>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enable-memory-toggle">
+                        メモリ機能を有効にする
+                    </label>
+                    <div id="memory-options-container" class="hidden">
+                        <label for="memory-auto-save-interval">自動学習の間隔:</label>
+                        <select id="memory-auto-save-interval">
+                            <option value="10">10メッセージごと</option>
+                            <option value="20">20メッセージごと</option>
+                            <option value="30">30メッセージごと</option>
+                            <option value="40">40メッセージごと</option>
+                            <option value="50">50メッセージごと</option>
+                            <option value="75">75メッセージごと</option>
+                            <option value="100">100メッセージごと</option>
+                            <option value="0">自動学習OFF</option>
+                        </select>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                            ※ユーザーのメッセージ送信を1回としてカウントします。
+                        </p>
+                        <button id="manage-memory-btn" class="settings-action-button" style="margin-top: 16px;">記憶を管理する</button>
+                    </div>
+                </div>
+
+                <details class="settings-group" open>
+                    <summary class="settings-summary"><h3 style="display:inline;font-size:15px;color:var(--text-primary);margin:0;">▼ 基礎設定</h3></summary>
+                    <div class="settings-content" style="padding-top:15px;">
+                        <label for="api-provider">使用するAPIプロバイダー:</label>
+                        <select id="api-provider" aria-label="APIプロバイダー">
+                            <option value="gemini">Gemini</option>
+                            <option value="openai">OpenAI (ChatGPT)</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="groq">Groq</option>
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="xai">xAI (Grok)</option>
+                            <option value="mistral">Mistral</option>
+                            <option value="openrouter">OpenRouter</option>
+                            <option value="zai">Z.ai</option>
+                            <option value="bedrock">Amazon Bedrock</option>
+                            <option value="sakana">Sakana (fugu)</option>
+                        </select>
+                        <div id="api-usage-container" class="api-usage-container hidden" style="margin-top:10px;">
+                            <p id="api-usage-text" class="api-usage-text"></p>
+                            <button id="reset-api-count-btn" class="settings-reset-button" type="button">カウントをリセット</button>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="settings-group" open>
+                    <summary class="settings-summary"><h3 style="display:inline;font-size:15px;color:var(--text-primary);margin:0;">▼ API / モデル設定</h3></summary>
+                    <div class="settings-content" style="padding-top:10px;">
+                        
+                        <div id="gemini-api-key-container">
+                            <label for="api-key">Gemini APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="api-key" placeholder="APIキーを入力" aria-label="Gemini APIキー">
+                            <label for="gemini-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="gemini-custom-models" placeholder="例: gemini-2.0-pro-exp-02-05, gemini-2.0-flash"></textarea>
+                        </div>
+
+                        <div id="zai-api-key-container" class="hidden">
+                            <label for="zai-api-key">Z.ai APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="zai-api-key" placeholder="Z.ai APIキーを入力" aria-label="Z.ai APIキー">
+                            <label for="zai-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="zai-custom-models" placeholder="例: glm-4-plus"></textarea>
+                        </div>
+
+                        <div id="openrouter-api-key-container" class="hidden">
+                            <label for="openrouter-api-key">OpenRouter APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="openrouter-api-key" placeholder="OpenRouter APIキーを入力" aria-label="OpenRouter APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ APIキーは <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">OpenRouter</a> から取得できます。
+                            </p>
+                            <label for="openrouter-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="openrouter-custom-models" placeholder="例: gryphe/mythomax-l2-13b"></textarea>
+                        </div>
+
+                        <div id="bedrock-api-key-container" class="hidden">
+                            <label for="bedrock-access-key">Bedrock Access Key:</label>
+                            <input type="password" autocomplete="new-password" id="bedrock-access-key" placeholder="AWS Access Keyを入力" aria-label="Bedrock Access Key">
+                            
+                            <label for="bedrock-secret-key">Bedrock Secret Key:</label>
+                            <input type="password" autocomplete="new-password" id="bedrock-secret-key" placeholder="AWS Secret Keyを入力" aria-label="Bedrock Secret Key">
+                            
+                            <label for="bedrock-region">Bedrockリージョン:</label>
+                            <select id="bedrock-region" aria-label="Bedrockリージョン">
+                                <option value="us-east-1">us-east-1 (N. Virginia)</option>
+                                <option value="us-west-2">us-west-2 (Oregon)</option>
+                                <option value="ap-northeast-1">ap-northeast-1 (Tokyo)</option>
+                                <option value="eu-central-1">eu-central-1 (Frankfurt)</option>
+                            </select>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ IAM Access Key/Secret Keyが必要です。<br>
+                            </p>
+                            <label for="bedrock-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="bedrock-custom-models" placeholder="例: anthropic.claude-v2"></textarea>
+                        </div>
+
+                        <div id="openai-api-key-container" class="hidden">
+                            <label for="openai-api-key">OpenAI APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="openai-api-key" placeholder="sk-proj-..." aria-label="OpenAI APIキー">
+                            <label for="openai-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="openai-custom-models" placeholder="例: gpt-4o, o1-preview"></textarea>
+                        </div>
+
+                        <div id="anthropic-api-key-container" class="hidden">
+                            <label for="anthropic-api-key">Anthropic APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="anthropic-api-key" placeholder="sk-ant-..." aria-label="Anthropic APIキー">
+                            <label for="anthropic-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="anthropic-custom-models" placeholder="例: claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022"></textarea>
+                            <label for="anthropic-cache-ttl" style="margin-top: 15px;">プロンプトキャッシュ保持時間:</label>
+                            <select id="anthropic-cache-ttl">
+                                <option value="none">なし（キャッシュ未使用）</option>
+                                <option value="5m">5分（デフォルト・低コスト）</option>
+                                <option value="1h">1時間（長い会話向け）</option>
+                            </select>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">※ 1時間TTLはキャッシュ書き込みコストが2倍になりますが、5分以上間隔が空く会話で有効です。</p>
+                            <label for="anthropic-effort" style="margin-top: 15px;">思考の深さ (Effort):</label>
+                            <select id="anthropic-effort">
+                                <option value="">OFF (思考なし)</option>
+                                <option value="low">low（速度・コスト重視）</option>
+                                <option value="medium">medium（バランス型）</option>
+                                <option value="high" selected>high（デフォルト）</option>
+                                <option value="max">max（最大品質）</option>
+                            </select>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">※ Claude APIでの思考の深さ。adaptive thinkingを使用。<br>※ OFF にすると思考（推論）を行いません。思考表示にはInclude Thoughtsも必要。</p>
+                        </div>
+
+                        <div id="groq-api-key-container" class="hidden">
+                            <label for="groq-api-key">Groq APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="groq-api-key" placeholder="gsk_..." aria-label="Groq APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ APIキーは <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Groq Console</a> から取得できます。
+                            </p>
+                            <label for="groq-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="groq-custom-models" placeholder="例: llama-3.3-70b-versatile"></textarea>
+                        </div>
+
+                        <div id="deepseek-api-key-container" class="hidden">
+                            <label for="deepseek-api-key">DeepSeek APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="deepseek-api-key" placeholder="sk-..." aria-label="DeepSeek APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ APIキーは <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">DeepSeek Platform</a> から取得できます。
+                            </p>
+                            <label for="deepseek-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="deepseek-custom-models" placeholder="例: deepseek-chat"></textarea>
+                        </div>
+
+                        <div id="xai-api-key-container" class="hidden">
+                            <label for="xai-api-key">xAI APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="xai-api-key" placeholder="xai-..." aria-label="xAI APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ APIキーは <a href="https://console.x.ai/" target="_blank" rel="noopener noreferrer">xAI Console</a> から取得できます。
+                            </p>
+                            <label for="xai-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="xai-custom-models" placeholder="例: grok-4"></textarea>
+                        </div>
+
+                        <div id="mistral-api-key-container" class="hidden">
+                            <label for="mistral-api-key">Mistral APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="mistral-api-key" placeholder="..." aria-label="Mistral APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ APIキーは <a href="https://console.mistral.ai/api-keys/" target="_blank" rel="noopener noreferrer">Mistral Console</a> から取得できます。
+                            </p>
+                            <label for="mistral-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="mistral-custom-models" placeholder="例: mistral-large-latest"></textarea>
+                        </div>
+                        <div id="sakana-api-key-container" class="hidden">
+                            <label for="sakana-api-key">Sakana (fugu) APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="sakana-api-key" placeholder="..." aria-label="Sakana APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ APIキーは <a href="https://console.sakana.ai/" target="_blank" rel="noopener noreferrer">Sakana AI Console</a> から取得できます。
+                            </p>
+                            <label for="sakana-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="sakana-custom-models" placeholder="例: fugu, fugu-ultra"></textarea>
+                        </div>
+
+                        <div style="border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 15px;">
+                            <button id="fetch-all-models-btn" class="settings-action-button" style="width:100%; margin-bottom:12px;">
+                                🔄 全プロバイダーの最新モデルを取得
+                            </button>
+                            <label for="model-name" id="model-name-label">モデル名:</label>
+                            <select id="model-name" aria-label="モデル名">
+                                <option value="gemini-2.0-flash" selected>gemini-2.0-flash</option>
+                                <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+                                <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
+                                <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                <optgroup label="プレビュー版">
+                                    <option value="gemini-2.5-flash-preview-09-2025">gemini-2.5-flash-preview-09-2025</option>
+                                    <option value="gemini-2.5-flash-lite-preview-09-2025">gemini-2.5-flash-lite-preview-09-2025</option>
+                                    <option value="gemini-2.5-flash-image-preview">gemini-2.5-flash-image-preview (Nano Banana)</option>
+                                </optgroup>
+                                <optgroup label="追加モデル" id="user-defined-models-group">
+                                    <!-- JSで動的挿入 -->
+                                </optgroup>
+                            </select>
+                            
+                            <div id="openrouter-model-input-container" class="hidden">
+                                <label for="openrouter-model-input">OpenRouter モデル名:</label>
+                                <input type="text" id="openrouter-model-input" placeholder="例: openai/gpt-5.1" aria-label="OpenRouter モデル名">
+                            </div>
+
+                            <p id="model-warning-message" class="hidden model-warning">
+                                ※Nano Banana等はテスト中のため不具合が発生する可能性があります。
+                            </p>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="settings-group">
+                    <h3>パラメータ</h3>
+                    <label for="system-prompt-default">システムプロンプト (デフォルト):</label>
+                    <textarea id="system-prompt-default" placeholder="例: あなたは親切なアシスタントです。新規チャット作成時に適用されます。" aria-label="システムプロンプト (デフォルト)"></textarea>
+
+                    <div class="param-grid">
+                        <div>
+                            <label for="max-tokens">Max Tokens:</label>
+                            <input type="number" id="max-tokens" step="1" min="1" placeholder="例:1024" aria-label="Max Tokens">
+                        </div>
+                        <div>
+                            <label for="temperature">Temperature:</label>
+                            <input type="number" id="temperature" step="0.1" min="0" max="2" placeholder="例:0.9(0.0-2.0)" aria-label="Temperature">
+                        </div>
+                        <div>
+                            <label for="top-k">Top K:</label>
+                            <input type="number" id="top-k" step="1" min="1" placeholder="例:40(1-40)" aria-label="Top K">
+                        </div>
+                        <div>
+                            <label for="top-p">Top P:</label>
+                            <input type="number" id="top-p" step="0.01" min="0" max="1" placeholder="例:0.95(0.0 - 1.0)" aria-label="Top P">
+                        </div>
+                    </div>
+                    
+                    <details style="margin-top: 15px;">
+                        <summary style="cursor: pointer; font-weight: normal; font-size: 14px; color: var(--text-link); margin-bottom: 10px;">その他パラメータ</summary>
+                        <div class="param-grid">
+                        </div>
+                        <p style="height:16px;"></p>
+                        <div class="param-grid">
+                            <div>
+                                <label for="thinking-budget">Thinking Budget:</label>
+                                <input type="number" id="thinking-budget" step="1" min="0" placeholder="例: 5000 (0～24576整数)" aria-label="Thinking Budget">
+                            </div>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                            ※ Thinking Budgetは新しいGeminiモデルのみ対応。0明示でthinkingをOFF。<br>
+                            ※ 1～1024指定時は固定で1024になる
+                        </p>
+                        <label class="checkbox-label" style="margin-top: 15px;">
+                            <input type="checkbox" id="include-thoughts-toggle">
+                            Include Thoughts
+                        </label>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                            ※ チェック時、モデルの思考プロセスの要約が返る。<br>
+                            ※ thinkingConfigが有効なモデルでのみ機能。
+                        </p>
+                        <div id="thought-translation-options" class="hidden" style="margin-left: 20px; border-left: 2px solid var(--border-tertiary); padding-left: 15px; margin-top: 10px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-thought-translation">
+                                思考プロセスを日本語に翻訳する
+                            </label>
+                            <label for="thought-translation-model">翻訳用モデル名:</label>
+                            <select id="thought-translation-model" aria-label="翻訳用モデル名">
+                                <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (推奨・無料枠あり)</option>
+                                <option value="gemini-2.5-flash">gemini-2.5-flash (無料枠あり)</option>
+                                <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                                <optgroup label="DeepSeek (APIキー必要)">
+                                    <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                                    <option value="deepseek-chat">deepseek-chat (V3)</option>
+                                    <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+                                </optgroup>
+                                <optgroup label="ユーザー指定" id="thought-translation-user-models">
+                                </optgroup>
+                            </select>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="settings-group">
+                   <h3>アドバンスド</h3>
+                   <label class="checkbox-label" style="margin-bottom: 10px;">
+                       <input type="checkbox" id="dummy-enabled-toggle">
+                       ダミープロンプトを有効にする
+                   </label>
+                   <label for="dummy-user">ダミー User プロンプト (送信時のみ追加):</label>
+                   <textarea id="dummy-user" placeholder="API送信直前に user ロールとして履歴末尾に追加されます" aria-label="ダミー User プロンプト"></textarea>
+                   <div style="margin-left: 15px; margin-top: -5px; margin-bottom: 10px;">
+                    <label class="checkbox-label" style="font-size: 12px;">
+                        <input type="checkbox" id="apply-dummy-to-proofread">
+                        校正時にも適用する
+                    </label>
+                    <label class="checkbox-label" style="font-size: 12px;">
+                        <input type="checkbox" id="apply-dummy-to-translate">
+                        思考プロセス翻訳時にも適用する
+                    </label>
+                    </div>
+                   <label for="dummy-model">ダミー Model プロンプト (送信時のみ追加):</label>
+                   <textarea id="dummy-model" placeholder="API送信直前に model ロールとして履歴最末尾に追加されます" aria-label="ダミー Model プロンプト"></textarea>
+
+                   <label class="checkbox-label">
+                       <input type="checkbox" id="reverse-dummy-order">
+                       ダミーUserプロンプトとダミーModelプロンプトの順序を入れ替える
+                   </label>
+                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                       ※チェック時、API送信時に（User→ダミーModel→ダミーUser）の順序で追加されます。
+                   </p>
+
+                   <label class="checkbox-label">
+                       <input type="checkbox" id="concat-dummy-model">
+                       ダミーモデルと回答を連結
+                   </label>
+                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                       ※チェック時、モデル応答の先頭に上記ダミーModelの内容を付与。
+                   </p>
+
+                   <label class="checkbox-label" style="margin-top: 15px;">
+                    <input type="checkbox" id="enable-auto-retry">
+                    APIエラー/ブロック時に自動でリトライする
+                    </label>
+                    <div id="auto-retry-options">
+                        <label for="max-retries">リトライ上限回数:</label>
+                        <input type="number" id="max-retries" step="1" min="0" placeholder="例: 5">
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                            ※ 0に設定するとリトライしません。
+                        </p>
+
+                        <label class="checkbox-label" style="margin-top: 15px;">
+                            <input type="checkbox" id="use-fixed-retry-delay">
+                            固定待機時間でリトライする
+                        </label>
+
+                        <div id="fixed-retry-delay-container" class="hidden">
+                            <label for="fixed-retry-delay-seconds">待機時間 (秒):</label>
+                            <input type="number" id="fixed-retry-delay-seconds" step="1" min="0" placeholder="例: 15">
+                        </div>
+
+                        <div id="max-backoff-delay-container">
+                             <label for="max-backoff-delay-seconds">指数バックオフの最大待機時間 (秒):</label>
+                             <input type="number" id="max-backoff-delay-seconds" step="1" min="0" placeholder="例: 60">
+                             <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                                 ※ リトライ毎に倍増する待機時間の上限を設定します。短いネットワークエラーは即座に、長いエラーには優しく対応します。
+                             </p>
+                        </div>
+
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-api-timeout">
+                                APIタイムアウトを有効化
+                            </label>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                                API呼び出しが指定秒数を超えてもレスポンスが返らない場合、自動的に中断して再試行します。<br>
+                                <strong>推奨：Function Calling使用時は有効化（90秒）</strong>
+                            </p>
+                            
+                            <div id="api-timeout-options" style="margin-left: 1.5rem;">
+                                <label for="api-timeout-seconds">タイムアウト秒数:</label>
+                                <input type="number" id="api-timeout-seconds" min="30" max="600" step="10" value="90">
+                                <span style="margin-left: 0.25rem; color: var(--text-secondary);">秒</span>
+                                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 5px; margin-bottom: 10px; line-height: 1.4;">
+                                    推奨値：<br>
+                                    • Function Calling使用時: 90秒<br>
+                                    • 通常使用時: 120秒<br>
+                                    • 無効化したい場合: チェックを外す
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group" id="data-sync-group">
+                    <div class="sync-header">
+                        <h3>
+                            データ同期
+                        </h3>
+                    </div>
+                
+                    <!-- 連携前の表示 -->
+                    <div id="dropbox-auth-state">
+                        <p class="sync-description">
+                            Dropboxアカウントと連携して、異なるブラウザ間でPWAの全データを安全に同期します。<br>
+                            初回は複数環境で残したいデータを1つのブラウザーにまとめてから連携することをおすすめします。<br>
+                            初回連携時は全データをクラウドにアップロードする処理が実行されます。<a href="https://github.com/kinkan04/Gemini-PWA-Mk-II" target="_blank">本機能の詳細はこちら</a>
+                        </p>
+                        <p style="font-size:0.85em; line-height:1.6; word-break:break-word;">
+                            ⚠️ 連携エラーが出る場合は <a href="https://www.dropbox.com/developers/apps" target="_blank">Dropbox App Console</a> のRedirect URIsに <code>https://lily-lover-pwa.github.io/pwa/</code> が登録されているか確認してください。
+                        </p>
+                        <button id="dropbox-auth-btn" class="sync-primary-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M128,32,69.6,71.2,10.4,110.4,69.6,149.6,128,188.8l58.4-39.2,59.2-39.2L186.4,71.2ZM128,51.5l38.7,26.1-38.7,26.1-38.7-26.1Zm0,153.3,58.4-39.2,0-52.2-58.4,39.2Zm-58.4-91.4,58.4,39.2,0,52.2-58.4-39.2Z"/></svg>
+                            <span>Dropboxと連携する</span>
+                        </button>
+                    </div>
+                
+                    <!-- 連携後の表示 -->
+                    <div id="dropbox-connected-state" class="hidden">
+                        <p class="sync-description">
+                            <span id="sync-status-settings-icon" class="sync-status-header-icon" title="同期ステータス"></span>
+                            <strong id="dropbox-user-name"></strong> のアカウントと連携済みです。
+                            <span id="sync-progress-text" class="sync-progress-text"></span>
+                        </p>
+
+                        <p id="last-sync-time-display" class="last-sync-time-display"></p>
+
+                        <div class="sync-setting-row">
+                            <label for="dropbox-sync-frequency">セッションの自動同期のタイミング:</label>
+                            <select id="dropbox-sync-frequency">
+                                <option value="instant">メッセージ送信後すぐ (即時)</option>
+                                <option value="5">5メッセージごと</option>
+                                <option value="10">10メッセージごと</option>
+                                <option value="30">30メッセージごと</option>
+                                <option value="manual">手動同期のみ</option>
+                            </select>
+                        </div>
+
+                        <div id="sync-error-display" class="sync-error-display hidden">
+                            <div class="sync-error-header">
+                                <span class="material-symbols-outlined">error</span>
+                                <span>同期エラー</span>
+                            </div>
+                            <p id="sync-error-message" class="sync-error-message"></p>
+                            <span id="sync-error-timestamp" class="sync-error-timestamp"></span>
+                            <button id="clear-sync-error-btn" class="clear-sync-error-btn">エラーをクリア</button>
+                        </div>
+
+                        <div class="sync-actions">
+                            <button id="dropbox-sync-btn">
+                                <span class="material-symbols-outlined">sync</span>
+                                今すぐ同期
+                            </button>
+                            <button id="dropbox-restore-btn">
+                                <span class="material-symbols-outlined">cloud_download</span>
+                                クラウドから復元
+                            </button>
+                            <button id="dropbox-disconnect-btn">
+                                <span class="material-symbols-outlined">link_off</span>
+                                連携を解除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                      
+                <div id="gemini-grounding-param" class="settings-group">
+                    <h3>ツール設定 (Gemini)</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        ※ Function Calling と Google Search は同時に使用できません。
+                    </p>
+                    <details style="margin-top: 15px; margin-bottom: 15px;">
+                        <summary style="cursor: pointer; font-weight: normal; font-size: 14px; color: var(--text-link); margin-bottom: 10px;">Web検索設定 (Google Custom Search)</summary>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px; margin-bottom: 10px;">
+                            ※AIがFunction Callingを使用して外部情報を検索するために使用します。<a href="https://developers.google.com/custom-search/v1/overview" target="_blank" rel="noopener">Google Custom Search API</a>を利用し、1日100回まで無料です。<br>
+                            検索エンジンIDは<a href="https://programmablesearchengine.google.com/" target="_blank" rel="noopener">Googleのサイト</a>で検索エンジンを作成し取得して下さい。タグ内の"cx="以降の文字列がIDです。
+                        </p>
+                        <label for="google-search-api-key">Google Search APIキー:</label>
+                        <input type="password" id="google-search-api-key" placeholder="APIキーを入力">
+                        <label for="google-search-engine-id">検索エンジンID (CX):</label>
+                        <input type="text" id="google-search-engine-id" placeholder="検索エンジンIDを入力">
+                    </details>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="gemini-enable-function-calling-toggle">
+                        Function Calling を使用する
+                    </label>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                        ※ チェック時、AIは計算などのタスクを外部関数に任せようとします。<br>
+                        ※ Google Searchより優先されます。
+                    </p>
+
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="gemini-enable-grounding-toggle">
+                        ネットから情報を取得させる (Google Search)
+                    </label>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                        ※ チェック時、モデルは回答生成のためにWeb検索を行います。<br>
+                        ※ 推論モデルは推論内で検索する場合があり、引用データが帰らない場合がある。
+                    </p>
+                </div>
+
+                <div class="settings-group" id="novelai-settings">
+                    <h3>NovelAI設定</h3>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:-10px;margin-bottom:15px;">
+                        Function Callingで「絵を描いて」と言うとNovelAIでアニメ調画像を生成します。
+                    </p>
+                    <label for="novelai-api-key">APIトークン:</label>
+                    <input type="password" id="novelai-api-key" placeholder="eyJ..." autocomplete="new-password">
+                    <label for="novelai-model" style="margin-top:15px;">モデル:</label>
+                    <select id="novelai-model">
+                        <option value="nai-diffusion-4-5-curated">V4.5 Curated（推奨）</option>
+                        <option value="nai-diffusion-4-5-full">V4.5 Full</option>
+                        <option value="nai-diffusion-3">V3</option>
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <h3>校正機能</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enable-proofreading">
+                        生成後に別のモデルで文章を校正する
+                    </label>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                        ※チェック時、最初の応答生成に成功した後、下記設定で校正処理が実行されます。<br>
+                        ※校正処理にもAPIコストが発生します。
+                    </p>
+                
+                    <div id="proofreading-options" class="hidden">
+                        <label for="proofreading-model-name">校正用モデル名:</label>
+                        <select id="proofreading-model-name" aria-label="校正用モデル名">
+                            <!-- オプションは既存のモデル選択と同様にJSで動的に設定可能 -->
+                            <optgroup label="推奨">
+                                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                            </optgroup>
+                             <optgroup label="その他">
+                                <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                                <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+                             </optgroup>
+                             <optgroup label="ユーザー指定" id="proofreading-user-models">
+                             </optgroup>
+                        </select>
+                
+                        <label for="proofreading-system-instruction">校正用システムプロンプト:</label>
+                        <textarea id="proofreading-system-instruction" placeholder="例: あなたはプロの編集者です。受け取った文章をより自然で分かりやすく校正してください。" aria-label="校正用システムプロンプト"></textarea>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <h3>履歴の要約機能</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        チャット履歴が長くなった際に、AIに送信するコンテキストを要約して応答品質の低下を防ぎます。
+                    </p>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enable-summary-button-toggle">
+                        チャット画面に要約ボタンを表示する
+                    </label>
+                    <label for="summary-model-name">要約用モデル名:</label>
+                    <select id="summary-model-name" aria-label="要約用モデル名">
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (推奨・無料枠あり)</option>
+                        <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (無料枠あり・軽量)</option>
+                        <option value="gemini-2.5-pro">gemini-2.5-pro (高品質)</option>
+                        <optgroup label="DeepSeek (APIキー必要)">
+                            <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                            <option value="deepseek-chat">deepseek-chat (V3)</option>
+                            <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+                        </optgroup>
+                        <optgroup label="旧バージョン">
+                            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+                        </optgroup>
+                        <optgroup label="プレビュー版">
+                            <option value="gemini-2.5-flash-preview-09-2025">gemini-2.5-flash-preview-09-2025</option>
+                            <option value="gemini-2.5-flash-lite-preview-09-2025">gemini-2.5-flash-lite-preview-09-2025</option>
+                            <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
+                            <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
+                        </optgroup>
+                        <optgroup label="ユーザー指定" id="summary-user-models">
+                        </optgroup>
+                    </select>
+                    <label for="summary-system-prompt">要約実行時のシステムプロンプト:</label>
+                    <textarea id="summary-system-prompt" placeholder="要約を実行するAIへの指示を入力します。" aria-label="要約実行時のシステムプロンプト"></textarea>
+                </div>
+
+                <div class="settings-group">
+                   <h3>その他設定</h3>
+                   <label class="checkbox-label">
+                        <input type="checkbox" id="header-auto-hide-toggle">
+                        チャット画面のヘッダーを自動的に隠す
+                    </label>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                        ※ PCではマウスオーバー、スマホではタップで表示されます。
+                    </p>
+                    <label class="checkbox-label">
+                       <input type="checkbox" id="enter-to-send">
+                       Enterキーで送信する
+                   </label>
+                   <p style="height:10px"></p>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enable-wide-mode-toggle">
+                        PC表示時にワイドモードを有効にする
+                    </label>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                        ※ 画面幅が800px以上の場合に、チャット画面の横幅を広げます。
+                    </p>
+
+                   <label class="checkbox-label">
+                    <input type="checkbox" id="auto-scroll-toggle">
+                            メッセージの更新後に自動的に最下部へスクロールする
+                    </label>
+                    <p style="height:10px"></p>
+                   <!-- ジェスチャー遷移ON/OFF -->
+                   <label class="checkbox-label">
+                       <input type="checkbox" id="swipe-navigation-toggle">
+                       チャット画面から左右スワイプで画面移動
+                   </label>
+                   <p style="height:10px"></p>
+                   <!-- ダークモード切り替え -->
+                   <label class="checkbox-label">
+                       <input type="checkbox" id="dark-mode-toggle">
+                       ダークモードを使用する
+                   </label>
+                   <p style="height:10px"></p>
+                   <!-- システムプロンプト非表示設定 -->
+                   <label class="checkbox-label">
+                       <input type="checkbox" id="hide-system-prompt-toggle">
+                       システムプロンプト非表示
+                   </label>
+                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                       ※ 没入感を高めたい場合に。非表示でも機能は有効。
+                   </p>
+                   <!-- フローティングボタン -->
+                   <label for="floating-panel-behavior">フローティングボタンの表示:</label>
+                   <select id="floating-panel-behavior" aria-label="フローティングボタンの表示">
+                       <option value="on-click">クリック/タップで表示 (時間経過で非表示)</option>
+                       <option value="always">常時表示</option>
+                       <option value="hidden">常時非表示</option>
+                   </select>
+                   <!-- 履歴のソート順 -->
+                   <label for="history-sort-order">履歴のソート順:</label>
+                   <select id="history-sort-order" aria-label="履歴のソート順">
+                       <option value="updatedAt">更新日時 (新しい順)</option>
+                       <option value="createdAt">作成日時 (新しい順)</option>
+                   </select>
+                   <!-- フォント指定 -->
+                   <label for="font-family-input">アプリのフォント:</label>
+                   <input type="text" id="font-family-input" placeholder="例: 'Meiryo', sans-serif" aria-label="アプリ全体のフォント">
+                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                       ※ 端末またはPCにインストールされているフォント名を指定。
+                   </p>
+                   <div class="settings-color-picker-container">
+                        <label for="header-color-input">ヘッダーの色:</label>
+                        <input type="color" id="header-color-input">
+                        <button id="reset-header-color-btn" class="settings-reset-button" type="button">リセット</button>
+                    </div>
+                   <!-- 追加モデル入力欄 -->
+                   <label for="additional-models">追加モデル (カンマ区切り):</label>
+                   <textarea id="additional-models" placeholder="例: gemini-2.0-pro,gemini-2.0-flash-lite" aria-label="追加モデル"></textarea>
+
+                   <label class="checkbox-label" style="margin-top: 15px;">
+                    <input type="checkbox" id="debug-mode-toggle">
+                    デバッグモードを有効にする
+                </label>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                    ※ アプリ内の動作ログを収集・表示する機能です。開発者向け。
+                </p>
+                   
+                </div>
+
+                <!-- 更新履歴 -->
+                <details style="margin-bottom: 20px;">
+                    <summary style="cursor: pointer; font-size: 14px; font-weight: bold; color: var(--text-link); padding: 6px 0;">更新履歴</summary>
+                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.8; padding: 10px 4px;">
+                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.20 (2026-05)</p>
+                        <ul style="margin: 0 0 8px; padding-left: 18px;">
+                            <li>履歴一覧のトークン表示を改善（合計トークンに加えて、入力/出力の内訳も表示）</li>
+                        </ul>
+                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.18 (2025-04)</p>
+                        <ul style="margin: 0 0 8px; padding-left: 18px;">
+                            <li>自動タイトル生成の動作を修正（タイトルのみ更新するよう最適化、消費トークン数百程度）</li>
+                            <li>モバイル表示の文字サイズを少し大きく（15px）</li>
+                            <li>Service WorkerのAPIバイパス対象を全AIプロバイダーに拡大</li>
+                        </ul>
+                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.17 (2025-04)</p>
+                        <ul style="margin: 0 0 8px; padding-left: 18px;">
+                            <li>アプリ名を「Aquarium Chat」に変更</li>
+                            <li>チャットタイトルの自動生成機能を追加（初回やり取り後に自動でタイトルを付ける）</li>
+                            <li>Dropbox同期の競合を自動マージに変更（ダイアログ廃止）</li>
+                            <li>プロジェクトフィルター起因のチャット消失バグを修正</li>
+                            <li>Dropbox同期時のデータ消失バグを修正（空データでクラウドを上書きしない）</li>
+                        </ul>
+                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.14〜v1.16</p>
+                        <ul style="margin: 0 0 8px; padding-left: 18px;">
+                            <li>マルチプロバイダー対応（OpenRouter, Anthropic, OpenAI互換API等）</li>
+                            <li>プロジェクト機能の追加（チャットをプロジェクト単位で管理）</li>
+                            <li>Dropbox双方向同期の実装</li>
+                            <li>メモリ自動保存機能</li>
+                            <li>Stable Diffusion画像生成連携</li>
+                        </ul>
+                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.0〜v1.13</p>
+                        <ul style="margin: 0 0 4px; padding-left: 18px;">
+                            <li>Gemini APIを使ったチャットPWAとして公開</li>
+                            <li>マークダウン表示・コードハイライト対応</li>
+                            <li>チャット履歴のIndexedDB保存</li>
+                            <li>ダーク／ライトテーマ切替</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <div class="danger-zone">
+                     <!-- バージョン表示 -->
+                     <p style="text-align: center; color: var(--text-secondary); font-size: 12px; margin-bottom: 10px;">
+                         バージョン: <span id="app-version"></span>
+                     </p>
+                     <p style="text-align: center; color: var(--text-secondary); font-size: 12px; margin-top: -5px; margin-bottom: 10px;">
+                        <a href="https://github.com/kinkan04/Gemini-PWA-Mk-II" target="_blank" rel="noopener noreferrer" style="color: var(--text-link); text-decoration: none;">GitHub Repository</a>
+                    </p>
+                     <button id="update-app-btn">アプリを更新 (キャッシュクリア)</button>
+                     <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; text-align:center;">
+                         ※ サーバー側のhtmlファイルなどはブラウザにキャッシュされるため、<BR>
+                         このボタンで明示的にサーバーがから再取得しない限り更新されない。
+                     </p>
+                     <details style="text-align:center;">
+                         <summary style="cursor: pointer; font-weight: normal; font-size: 14px; color: var(--text-link); margin-bottom: 10px;">※取り扱い注意項目※</summary>
+                         <button id="clear-data-btn">全データクリア (履歴と設定)</button>
+                         <p style="font-size: 11px; color: var(--text-secondary); margin-top:5px; margin-bottom: 10px;">
+                             ※ ブラウザに保存されている設定や履歴を全て削除。<BR>
+                             ！！間違えて押そうとしていないか注意！！
+                         </p>
+                     </details>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- カスタムダイアログテンプレート -->
+    <dialog id="alertDialog" class="custom-dialog">
+        <p class="dialog-message"></p>
+        <div class="dialog-actions">
+            <button value="ok" class="dialog-ok-btn">OK</button>
+        </div>
+    </dialog>
+
+    <dialog id="confirmDialog" class="custom-dialog">
+        <p class="dialog-message"></p>
+        <div class="dialog-actions">
+            <button value="cancel" class="dialog-cancel-btn">キャンセル</button>
+            <button value="ok" class="dialog-ok-btn">OK</button>
+        </div>
+    </dialog>
+
+    <dialog id="promptDialog" class="custom-dialog">
+        <label class="dialog-message" for="promptInput"></label>
+        <input type="text" id="promptInput" class="dialog-input">
+        <div class="dialog-actions">
+            <button value="cancel" class="dialog-cancel-btn">キャンセル</button>
+            <button value="ok" class="dialog-ok-btn">OK</button>
+        </div>
+    </dialog>
+
+    <!-- ファイルアップロードダイアログ -->
+    <dialog id="fileUploadDialog" class="custom-dialog">
+        <div class="dialog-content">
+            <div class="file-upload-area">
+                 
+                 <label for="file-input" id="select-files-btn" class="dialog-button">ファイルを選択</label>
+            </div>
+            <ul id="selected-files-list">
+                <!-- 選択されたファイルがここに表示される -->
+            </ul>
+            <p id="file-upload-notice">画像、テキスト、PDF、動画、音声などを添付可能</p>
+        </div>
+        <div class="dialog-actions">
+            <button id="cancel-attach-btn" value="cancel" class="dialog-cancel-btn">キャンセル</button>
+            <button id="confirm-attach-btn" value="ok" class="dialog-ok-btn" disabled>添付して閉じる</button>
+        </div>
+    </dialog>
+
+    <div id="image-modal-overlay" class="hidden">
+        <span id="image-modal-close">×</span>
+        <img id="image-modal-img" src="" alt="拡大画像">
+    </div>
+        <!-- Memory Management Dialog -->
+        <dialog id="memoryManagementDialog" class="custom-dialog">
+            <h3 class="dialog-title">記憶の管理</h3>
+            <div class="dialog-content">
+                <div id="memory-list-container" class="memory-list-container">
+                    <!-- 記憶項目がここに表示されます -->
+                </div>
+                <div class="memory-add-form">
+                    <textarea id="new-memory-input" placeholder="新しい記憶を追加..."></textarea>
+                    <button id="add-memory-btn">追加</button>
+                </div>
+            </div>
+            <div class="dialog-actions" style="justify-content: space-between; align-items: center;">
+                <button id="delete-all-memory-btn" value="delete_all" class="dialog-delete-btn">全て削除</button>
+                <button id="close-memory-dialog-btn" value="close">閉じる</button>
+            </div>
+        </dialog>
+        
+        <!-- Progress Dialog -->
+        <dialog id="progressDialog" class="custom-dialog progress-dialog">
+            <div class="dialog-content">
+                <div class="progress-spinner"></div>
+                <p id="progress-message" class="dialog-message"></p>
+            </div>
+        </dialog>
+
+        <!-- Summary Dialog -->
+        <dialog id="summaryDialog" class="custom-dialog">
+            <h3 class="dialog-title">履歴の要約</h3>
+            <div class="dialog-content">
+                <div class="summary-description">
+                    <p>APIに送信する会話履歴を要約し、コンテキストを圧縮します。</p>
+                    <ul>
+                        <li>ユーザーから見える会話履歴は変更されません。</li>
+                        <li>要約文は会話ログと紐づいてDBに保存されており、会話ログを削除すると一緒に削除されます。</li>
+                        <li>会話ログをエクスポート/インポートした場合、要約ログもその対象になります。</li>
+                        <li>要約後に会話を続けて再度要約を行うと、前回の要約文に新しい要約内容が追記されます。</li>
+                        <li>APIには「冒頭5件」+「前回の要約文（あれば）」+「今回の要約文」+「最新15件」が送信されます。</li>
+                    </ul>
+                </div>
+                <p id="summary-stats" class="summary-stats"></p>
+                <textarea id="summary-editor" class="summary-editor" rows="10"></textarea>
+            </div>
+            <div class="dialog-actions summary-actions">
+                <button id="summary-cancel-btn" value="cancel" class="dialog-cancel-btn">キャンセル</button>
+                <div class="summary-main-actions">
+                    <button id="summary-regenerate-btn" value="regenerate">再生成</button>
+                    <button id="summary-confirm-btn" value="confirm" class="dialog-ok-btn">決定</button>
+                </div>
+            </div>
+        </dialog>
+
+
+        <!-- Chat Stats Dialog -->
+        <dialog id="chatStatsDialog" class="custom-dialog">
+            <h3 class="dialog-title">会話の統計</h3>
+            <div class="dialog-content">
+                <div id="chat-stats-content" class="chat-stats-content"></div>
+            </div>
+            <div class="dialog-actions">
+                <button id="chat-stats-close-btn" class="dialog-ok-btn">閉じる</button>
+            </div>
+        </dialog>
+
+        <!-- Character Profile Dialog -->
+        <dialog id="characterProfileDialog" class="custom-dialog">
+            <!-- このラッパーdivを追加 -->
+            <div class="dialog-layout-wrapper">
+                <div class="profile-dialog-header">
+                    <button id="profile-back-btn" class="header-button" title="リストに戻る"><span class="material-symbols-outlined">arrow_back_ios</span></button>
+                    <h3 class="dialog-title">キャラクタープロファイル</h3>
+                </div>
+                <div class="dialog-content profile-dialog-layout">
+                    <div id="character-list-pane" class="profile-character-list">
+                        <!-- キャラクターリストがここに表示されます -->
+                    </div>
+                    <div id="character-detail-pane" class="profile-detail-pane">
+                        <!-- キャラクター詳細がここに表示されます -->
+                    </div>
+                </div>
+                <div class="dialog-actions">
+                    <span class="dialog-note">※編集内容は自動的に保存されます</span>
+                    <button id="close-profile-dialog-btn" value="close">閉じる</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Debug Log Dialog -->
+        <dialog id="debugLogDialog" class="custom-dialog">
+            <h3 class="dialog-title">デバッグログ</h3>
+            <div class="dialog-content">
+                <div id="log-container" class="log-container">
+                    <!-- ログはここに表示されます -->
+                </div>
+            </div>
+            <div class="dialog-actions" style="justify-content: space-between;">
+                <div class="log-actions-left">
+                    <button id="copy-logs-btn" value="copy">クリップボードにコピー</button>
+                    <button id="clear-logs-btn" value="clear" class="dialog-delete-btn">クリア</button>
+                </div>
+                <button id="close-log-dialog-btn" value="close">閉じる</button>
+            </div>
+        </dialog>
+
+    <script src="prism.js" data-autoloader-path="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Sync Notification -->
+    <div id="sync-notification" class="sync-notification hidden">
+        <span id="sync-notification-icon" class="material-symbols-outlined"></span>
+        <span id="sync-notification-message"></span>
+    </div>
+    
+    <!-- プロジェクト管理ダイアログ -->
+    <dialog id="projectManagementDialog" class="dialog-overlay">
+        <div class="dialog-box" style="max-height: 80vh; overflow-y: auto; width: 500px; max-width: 90vw;">
+            <div class="dialog-header">
+                <h2>プロジェクト管理</h2>
+                <button type="button" class="dialog-close-btn" id="close-project-dialog-btn"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="dialog-content">
+                <div class="settings-group">
+                    <label for="new-project-name">新規プロジェクト名</label>
+                    <input type="text" id="new-project-name" placeholder="プロジェクト名を入力" class="dialog-input">
+                    
+                    <label for="new-project-prompt" style="margin-top: 15px;">プロジェクト専用システムプロンプト</label>
+                    <textarea id="new-project-prompt" placeholder="このプロジェクト特有のプロンプトを入力" rows="4" class="dialog-input"></textarea>
+
+                    <label for="new-project-model" style="margin-top: 15px;">デフォルトモデル (任意)</label>
+                    <select id="new-project-model" class="dialog-input">
+                        <option value="">(グローバル設定に従う)</option>
+                    </select>
+
+                    <div style="text-align: right; margin-top: 15px;">
+                        <button type="button" id="create-project-btn" class="dialog-ok-btn">プロジェクトを作成</button>
+                    </div>
+                </div>
+
+                <div class="settings-group" style="margin-top: 25px;">
+                    <h3>作成済みプロジェクト</h3>
+                    <div id="project-list-container" class="project-list">
+                        <!-- プロジェクトリストがここに動的に追加される -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </dialog>
+</div>
+</body>
+</html>

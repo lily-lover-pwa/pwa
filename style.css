@@ -1,0 +1,3092 @@
+/* --- MUI-like Design System --- */
+:root {
+    /* Font */
+    --font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+
+    /* Spacing Unit */
+    --spacing-unit: 8px;
+
+    /* Border Radius */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 16px;
+
+    /* Transitions */
+    --transition-duration: 0.2s;
+    --transition-timing: ease-in-out;
+
+    /* Shadows (Elevation) */
+    --shadow-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --shadow-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    --shadow-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+    --shadow-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+    --shadow-5: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+
+    /* Light Mode Palette (Off-White / Dusty Beige Theme) */
+    --bg-primary: #faf8f4;
+    --bg-secondary: #f0ede6;
+    --bg-tertiary: #e6e0d4;
+    --bg-input: #ffffff;
+    --bg-user-message: #e6ddcf;
+    --bg-model-message: #faf8f4;
+    --bg-system-message: #f0ede6;
+    --bg-error-message: #f4e4e4;
+    --bg-button: #a89e8d;
+    --bg-button-hover: #908675;
+    --bg-button-disabled: rgba(92, 87, 78, 0.2);
+    --bg-button-action: #a89e8d;
+    --bg-button-action-hover: #908675;
+    --bg-button-delete: #b56a6a;
+    --bg-button-delete-hover: #a25757;
+    --bg-button-retry: #908675;
+    --bg-button-retry-hover: #79705f;
+    --bg-button-edit: #c9a86a;
+    --bg-button-edit-hover: #b8975a;
+    --bg-button-duplicate: #a89e8d;
+    --bg-button-duplicate-hover: #908675;
+    --bg-button-export: #a89e8d;
+    --bg-button-export-hover: #908675;
+    --bg-button-save: #908675;
+    --bg-button-save-hover: #79705f;
+    --bg-button-cancel: #bcb6ab;
+    --bg-button-cancel-hover: #a39c8f;
+    --bg-button-update: #a89e8d;
+    --bg-button-update-hover: #908675;
+    --header-color-default: #908675;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --bg-message-actions: rgba(250, 248, 244, 0.9);
+    --message-bubble-opacity: 1;
+    --overlay-opacity-value: 0.75;
+    --bg-overlay-light: rgba(250, 248, 244, var(--overlay-opacity-value));
+
+    --text-primary: #5c574e;
+    --text-secondary: #8a8275;
+    --text-light: #ffffff;
+    --text-disabled: rgba(92, 87, 78, 0.5);
+    --text-error: #9c4a4a;
+    --text-link: #908675;
+    --text-placeholder: #aaa295;
+    --text-system: #5c574e;
+
+    --border-primary: #e6e0d4;
+    --border-secondary: #c9c1b2;
+    --border-tertiary: #f0ede6;
+    --border-danger: #d8a9a9;
+    --border-system: #c9c1b2;
+
+    --badge-color: #c9a86a;
+    --badge-size: 10px;
+}
+
+body.dark-mode {
+    /* Dark Mode Palette (Warm Taupe) */
+    --bg-primary: #1c1a17;
+    --bg-secondary: #252320;
+    --bg-tertiary: #2e2b27;
+    --bg-input: #2a2723;
+    --bg-user-message: #3a352d;
+    --bg-model-message: #2e2b27;
+    --bg-system-message: #302d28;
+    --bg-error-message: #3d2020;
+    --bg-button: #b3a890;
+    --bg-button-hover: #cabfa6;
+    --bg-button-disabled: rgba(255, 255, 255, 0.12);
+    --bg-button-action: #3a362f;
+    --bg-button-action-hover: #4a453c;
+    --bg-button-delete: #d8a0a0;
+    --bg-button-delete-hover: #e8c0c0;
+    --bg-button-retry: #b8c0a0;
+    --bg-button-retry-hover: #d0d8b8;
+    --bg-button-edit: #d8c082;
+    --bg-button-edit-hover: #ece0b0;
+    --bg-button-duplicate: #c0bbae;
+    --bg-button-duplicate-hover: #dcd8cc;
+    --bg-button-export: #b3a890;
+    --bg-button-export-hover: #cabfa6;
+    --bg-button-save: #b8c0a0;
+    --bg-button-save-hover: #d0d8b8;
+    --bg-button-cancel: #bdb8ad;
+    --bg-button-cancel-hover: #ddd8cd;
+    --bg-button-update: #b3a890;
+    --bg-button-update-hover: #cabfa6;
+    --header-color-default: #908675;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --bg-message-actions: rgba(46, 43, 39, 0.9);
+    --bg-overlay-dark: rgba(28, 26, 23, var(--overlay-opacity-value));
+
+    --text-primary: #e6e1d6;
+    --text-secondary: #c0b9aa;
+    --text-light: #1c1a17;
+    --text-disabled: rgba(255, 255, 255, 0.3);
+    --text-error: #e8c0c0;
+    --text-link: #c9bfa6;
+    --text-placeholder: #7a7468;
+    --text-system: #c0b9aa;
+
+    --border-primary: #3a362f;
+    --border-secondary: #524d44;
+    --border-tertiary: #211f1c;
+    --border-danger: #b56a6a;
+    --border-system: #4a453c;
+}
+
+/* --- Base Styles & Resets --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+html, body {
+    height: 100%;
+    font-family: var(--font-family);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    overscroll-behavior-y: contain;
+    transition: background-color var(--transition-duration) var(--transition-timing), color var(--transition-duration) var(--transition-timing);
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+}
+button {
+    cursor: pointer;
+    padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
+    border-radius: var(--border-radius-sm);
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    background-color: var(--bg-button);
+    color: var(--text-light);
+    transition: background-color var(--transition-duration) var(--transition-timing), box-shadow var(--transition-duration) var(--transition-timing);
+    box-shadow: var(--shadow-1);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-unit);
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
+}
+button:hover:not(:disabled) {
+    background-color: var(--bg-button-hover);
+    box-shadow: var(--shadow-2);
+}
+button:disabled {
+    background-color: var(--bg-button-disabled);
+    color: var(--text-disabled);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+input, select, textarea {
+    width: 100%;
+    padding: calc(var(--spacing-unit) * 1.5);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    margin-bottom: var(--spacing-unit);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    transition: background-color var(--transition-duration) var(--transition-timing), border-color var(--transition-duration) var(--transition-timing);
+}
+input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--bg-button);
+    outline-offset: -1px;
+    border-color: var(--bg-button);
+}
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+label {
+    display: block;
+    margin-bottom: var(--spacing-unit);
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+::placeholder { color: var(--text-placeholder); opacity: 1; }
+.hidden { display: none !important; }
+
+/* --- App Structure --- */
+.app-container {
+    display: flex;
+    position: relative;
+    height: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: var(--bg-primary);
+    overflow: hidden;
+}
+body:not(.dark-mode) .app-container {
+    box-shadow: var(--shadow-4);
+}
+
+/* --- Header --- */
+.app-header {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
+    background-color: var(--bg-header);
+    color: var(--text-light);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: background-color var(--transition-duration) var(--transition-timing);
+    gap: 8px; /* 要素間のスペースを再設定 */
+    box-shadow: var(--shadow-2);
+}
+
+.app-header h1 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin: 0;
+    margin-right: auto;
+    /* ボタンの高さに合わせるための行の高さを指定 */
+    line-height: 40px; /* header-buttonのpadding(8*2) + icon-size(24) = 40px */
+}
+
+
+
+.header-button {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    padding: var(--spacing-unit);
+    line-height: 1;
+    min-width: auto;
+    flex-shrink: 0;
+    border-radius: 50%;
+    box-shadow: none;
+}
+
+.header-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+#history-screen .app-header {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+}
+#history-screen .app-header h1#history-title {
+    margin-right: 0;
+    margin-left: auto;
+    text-align: right;
+}
+.header-save-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    background-color: transparent;
+    border: 1px solid var(--text-light);
+}
+.header-save-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.new-chat-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    background-color: var(--bg-button-save);
+    color: var(--text-primary);
+}
+body.dark-mode .new-chat-button {
+    color: var(--text-light);
+}
+
+
+
+/* --- Screen Transitions --- */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease-in-out;
+    background-color: var(--bg-secondary);
+    z-index: 0;
+}
+.screen.active {
+    transform: translateX(0);
+    z-index: 1;
+}
+
+/* --- Chat Screen --- */
+#chat-screen {
+    position: relative;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    /* background-imageプロパティを削除 */
+    /* フェードインは一旦廃止し、シンプルな切り替えにする */
+    transition: background-image 0.3s ease-in-out; 
+}
+
+/* 背景画像用の擬似要素を追加 */
+#chat-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--chat-background-image, none); /* CSS変数から画像を設定 */
+    background-size: cover;
+    background-position: center;
+    opacity: 0; /* 初期状態は透明 */
+    transition: opacity 0.8s ease-in-out; /* フェード効果を0.8秒に設定 */
+    z-index: 0; /* オーバーレイより後ろ */
+}
+
+/* このクラスが付与されたら、擬似要素をフェードインさせる */
+#chat-screen.background-visible::before {
+    opacity: 1;
+}
+
+
+
+#chat-overlay {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-color: var(--bg-overlay-light);
+    opacity: var(--overlay-opacity-value, 0.75);
+    transition: opacity 0.5s ease-in-out, background-color var(--transition-duration) var(--transition-timing);
+    z-index: 0; /* コンテンツより後ろ、背景より手前 */
+}
+
+body.dark-mode #chat-overlay {
+    background-color: var(--bg-overlay-dark);
+}
+
+.main-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden; /* 横方向のスクロールを常に禁止する */
+    padding: calc(var(--spacing-unit) * 2);
+    position: relative;
+    z-index: 1;
+    touch-action: pan-y;
+    padding-bottom: 40px;
+}
+
+
+#chat-screen .main-content {
+    background-color: transparent;
+    touch-action: pan-x pan-y pinch-zoom;
+}
+#chat-screen .app-header,
+#chat-screen .chat-input-area {
+    z-index: 2;
+}
+
+/* --- System Prompt --- */
+.system-prompt-area {
+    padding: calc(var(--spacing-unit) * 1.5);
+    border: 1px solid var(--border-system);
+    border-radius: var(--border-radius-md);
+    background-color: var(--bg-system-message);
+    color: var(--text-system);
+    transition: all var(--transition-duration) var(--transition-timing);
+    position: relative;
+    overflow: hidden;
+    max-height: 500px;
+    margin-top: 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+}
+.system-prompt-area summary {
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-system);
+}
+
+/* --- Message Bubbles --- */
+.message-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-unit);
+}
+.message {
+    padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5);
+    border-radius: var(--border-radius-lg);
+    max-width: var(--message-max-width, 85%);
+    min-width: 220px;
+    position: relative;
+    word-wrap: break-word;
+    color: var(--text-primary);
+    transition: background-color var(--transition-duration) var(--transition-timing), color var(--transition-duration) var(--transition-timing);
+    box-shadow: var(--shadow-1);
+    margin-top: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 3);
+}
+.message:first-child { margin-top: 0; }
+.message.user {
+    background-color: color-mix(in srgb, var(--bg-user-message) calc(var(--message-bubble-opacity, 1) * 100%), transparent);
+    align-self: flex-end;
+    border-bottom-right-radius: var(--border-radius-sm);
+}
+.message.model {
+    background-color: color-mix(in srgb, var(--bg-model-message) calc(var(--message-bubble-opacity, 1) * 100%), transparent);
+    align-self: flex-start;
+    border-bottom-left-radius: var(--border-radius-sm);
+    max-width: 90%;
+}
+.message[data-turn]::before {
+    content: "#" attr(data-turn);
+    display: block;
+    font-size: 0.6rem;
+    line-height: 1;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    margin-bottom: 2px;
+}
+/* 送信時刻をターン番号/モデル名の横に表示（data-time は UI 表示のみ・API送信なし） */
+.message[data-turn][data-time]::before {
+    content: "#" attr(data-turn) " / " attr(data-time);
+}
+.message.model[data-turn][data-model]::before {
+    content: "#" attr(data-turn) "  " attr(data-model);
+}
+.message.model[data-turn][data-model][data-time]::before {
+    content: "#" attr(data-turn) "  " attr(data-model) " / " attr(data-time);
+}
+.message.user[data-turn]::before { text-align: right; }
+.message.error {
+    background-color: var(--bg-error-message);
+    color: var(--text-error);
+}
+
+/* --- Chat Input Area --- */
+.chat-input-area {
+    display: flex;
+    padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
+    border-top: 1px solid var(--border-primary);
+    background-color: var(--bg-primary);
+    flex-shrink: 0;
+    gap: var(--spacing-unit);
+}
+.chat-input-area textarea {
+    flex-grow: 1;
+    min-height: 44px;
+    max-height: 150px;
+    height: 44px;
+    resize: none;
+    margin-bottom: 0;
+    padding: 10px;
+    border-radius: var(--border-radius-lg);
+    font-size: 16px !important;
+    box-sizing: border-box !important;
+}
+.message-edit-area textarea {
+    font-size: 16px !important;
+    box-sizing: border-box !important;
+}
+.chat-input-area button {
+    height: 44px;
+    width: 44px;
+    padding: 0;
+    font-size: 24px;
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+body.dark-mode #attach-file-btn {
+    color: var(--text-primary);
+}
+#send-button.sending {
+    background-color: #ffc107;
+    color: #333;
+}
+
+/* --- History Screen --- */
+.history-list {
+    list-style: none;
+    padding: 0;
+}
+.history-item {
+    padding: calc(var(--spacing-unit) * 2);
+    border-radius: var(--border-radius-md);
+    margin-bottom: var(--spacing-unit);
+    background-color: var(--bg-primary);
+    transition: background-color var(--transition-duration) var(--transition-timing), box-shadow var(--transition-duration) var(--transition-timing);
+    cursor: pointer;
+    box-shadow: var(--shadow-1);
+}
+.history-item:hover {
+    background-color: var(--bg-tertiary);
+    box-shadow: var(--shadow-2);
+}
+.history-item-actions button {
+    padding: var(--spacing-unit);
+    min-width: auto;
+    border-radius: 50%;
+    box-shadow: none;
+}
+.history-item-actions button .material-symbols-outlined { font-size: 1.25rem; }
+
+/* --- Settings Screen --- */
+.settings-group {
+    margin-bottom: calc(var(--spacing-unit) * 3);
+    padding: calc(var(--spacing-unit) * 2);
+    border-radius: var(--border-radius-md);
+    background-color: var(--bg-primary);
+    box-shadow: var(--shadow-1);
+}
+.settings-group h3 {
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-primary);
+    padding-bottom: var(--spacing-unit);
+}
+
+/* ダークモード時の設定画面のリンク色をピンク色に変更 */
+body.dark-mode #settings-screen a {
+    color: #ff91af;
+}
+body.dark-mode #settings-screen a:hover {
+    color: #ffb3cc;
+    text-decoration: underline;
+}
+
+/* --- Custom Dialog Styles (Alert, Confirm, Prompt) --- */
+.custom-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: none;
+    border-radius: var(--border-radius-md);
+    padding: calc(var(--spacing-unit) * 3);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-5);
+    min-width: 300px;
+    max-width: calc(100vw - 32px);
+    width: auto;
+    box-sizing: border-box;
+    z-index: 100;
+}
+.custom-dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+.custom-dialog.animating {
+    animation: dialog-fade-in 0.2s ease-out;
+}
+@keyframes dialog-fade-in {
+    from { opacity: 0; transform: translate(-50%, -45%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.custom-dialog .dialog-message {
+    margin: 0 0 20px 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+.custom-dialog .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-unit);
+    margin-top: calc(var(--spacing-unit) * 2);
+}
+
+/* --- Other Styles --- */
+.danger-zone {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid var(--border-danger);
+}
+.danger-zone button { width: 100%; }
+#update-app-btn { background-color: var(--bg-button-update); }
+#update-app-btn:hover { background-color: var(--bg-button-update-hover); }
+#clear-data-btn { background-color: var(--bg-button-delete); }
+#clear-data-btn:hover { background-color: var(--bg-button-delete-hover); }
+
+.param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; }
+.image-upload-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.background-thumbnail { max-width: 100px; max-height: 60px; border-radius: 4px; border: 1px solid var(--border-tertiary); object-fit: cover; }
+.message-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+}
+#image-modal-overlay { background-color: rgba(0, 0, 0, 0.85); }
+.citation-details, .function-call-details { margin-top: var(--spacing-unit); font-size: 0.8rem; border-top: 1px dashed var(--border-secondary); padding-top: var(--spacing-unit); }
+.message-edit-area { margin-top: 5px; }
+.message-edit-area textarea { min-height: 60px; margin-bottom: 5px; width: 100%; }
+.message-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; }
+.message-edit-actions button { padding: 4px 10px; font-size: 12px; }
+.message-edit-actions .save-edit-btn { background-color: var(--bg-button-save); }
+.message-edit-actions .save-edit-btn:hover { background-color: var(--bg-button-save-hover); }
+.message-edit-actions .cancel-edit-btn { background-color: var(--bg-button-cancel); }
+.message-edit-actions .cancel-edit-btn:hover { background-color: var(--bg-button-cancel-hover); }
+.chat-input-area button#attach-file-btn.has-attachments .attachment-badge { display: block; }
+#loading-indicator { position: fixed; bottom: 70px; right: 20px; background-color: var(--bg-tertiary); color: var(--text-secondary); padding: 6px 12px; border-radius: 15px; font-size: 11px; z-index: 3; box-shadow: var(--shadow-2); transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease; opacity: 0; visibility: hidden; transform: translateY(10px); pointer-events: none; }
+#loading-indicator:not(.hidden) { opacity: 1; visibility: visible; transform: translateY(0); }
+.history-item-details { overflow: hidden; min-width: 0; width: 100%; margin-bottom: 8px; }
+.history-item-title { font-size: 15px; font-weight: bold; margin-bottom: 0px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; color: var(--text-primary); }
+.history-item-bottom-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.history-item-dates { font-size: 9px; color: var(--text-secondary); flex-shrink: 0; line-height: 1.3; text-align: left; }
+.history-item-dates span { display: block; white-space: nowrap; }
+.history-item-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; cursor: default; }
+.js-history-item-template { display: none !important; }
+#no-history-message { text-align: center; color: var(--text-secondary); margin-top: 20px; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; color: var(--text-primary); }
+.checkbox-label input[type="checkbox"] { width: auto; margin-bottom: 0; cursor: pointer; }
+.settings-slider-container { margin-top: 15px; }
+.settings-slider-container label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 5px; outline: none; padding: 0; margin: 0; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: var(--bg-button); cursor: pointer; border-radius: 50%; border: 2px solid var(--bg-primary); }
+input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; background: var(--bg-button); cursor: pointer; border-radius: 50%; border: 2px solid var(--bg-primary); }
+.settings-color-picker-container { display: flex; align-items: center; gap: 10px; margin-top: 15px; }
+.settings-color-picker-container label { margin-bottom: 0; flex-shrink: 0; }
+input[type="color"] { -webkit-appearance: none; appearance: none; width: 40px; height: 30px; padding: 0; border: none; background: none; cursor: pointer; margin-bottom: 0; }
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-primary); border-radius: 4px; }
+input[type="color"]::-moz-color-swatch { border: 1px solid var(--border-primary); border-radius: 4px; }
+.settings-reset-button { background-color: var(--bg-button-action); color: var(--text-light); padding: 4px 10px; font-size: 12px; border-radius: 4px; margin-left: auto; }
+.settings-reset-button:hover { background-color: var(--bg-button-action-hover); }
+.message-content > *:first-child { margin-top: 0; }
+.message-content > *:last-child { margin-bottom: 0; }
+.message-content h1, .message-content h2, .message-content h3, .message-content h4, .message-content h5, .message-content h6 { margin-top: 1.2em; margin-bottom: 0.6em; font-weight: bold; line-height: 1.3; color: inherit; }
+.message-content p { margin-bottom: 0.8em; }
+.message-content ul, .message-content ol { margin-bottom: 0.8em; padding-left: 2em; }
+.message-content li { margin-bottom: 0.3em; }
+.message-content pre { background-color: var(--bg-secondary); padding: 10px; border-radius: 5px; overflow-x: auto; margin: 1em 0; font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; font-size: 13px; border: 1px solid var(--border-tertiary); color: var(--text-secondary); }
+
+/* テキストアーティファクト：コードブロックのカード化 */
+.code-artifact { margin: 1em 0; border: 1px solid var(--border-tertiary); border-radius: var(--border-radius-md); overflow: hidden; }
+.code-artifact-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 4px 12px; background-color: var(--bg-header); }
+.code-artifact-lang { font-size: 11px; font-weight: 600; color: #fff; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+.code-artifact-copy { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; color: #fff; background-color: rgba(255,255,255,0.18); border: none; border-radius: var(--border-radius-sm); cursor: pointer; transition: background-color 0.15s; }
+.code-artifact-copy:hover { background-color: rgba(255,255,255,0.3); }
+.code-artifact-copy .material-symbols-outlined { font-size: 16px; }
+.code-artifact pre { margin: 0; border: none; border-radius: 0; }
+.message.user .message-content pre { background-color: transparent; padding: 0; margin: 0; border: none; border-radius: 0; color: inherit; font-family: inherit; font-size: inherit; line-height: inherit; white-space: pre-wrap; word-wrap: break-word; overflow-x: visible; }
+.message-content code:not(pre > code) { background-color: var(--bg-secondary); padding: 0.2em 0.4em; border-radius: 3px; font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; font-size: 0.9em; border: 1px solid var(--border-tertiary); color: var(--text-secondary); }
+.message-content blockquote { margin: 1em 0; padding-left: 1em; border-left: 4px solid var(--border-primary); color: var(--text-secondary); }
+.message-content a { color: var(--text-link); text-decoration: underline; }
+.message-content table { border-collapse: collapse; margin: 1em 0; width: auto; border: 1px solid var(--border-secondary); }
+.message-content th, .message-content td { border: 1px solid var(--border-secondary); padding: 6px 10px; text-align: left; }
+.message-content th { background-color: var(--bg-tertiary); font-weight: bold; }
+.message-content hr { border: none; border-top: 1px solid var(--border-secondary); margin: 1.5em 0; }
+.message.editing.show-actions .message-actions, .message.editing.show-actions .message-cascade-controls { display: none !important; }
+.message-actions .token-count-display { font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; line-height: 1.5; white-space: nowrap; }
+.message-actions .token-cache-display { display: block; font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8; }
+.thought-summary-details { margin-bottom: 10px; font-size: 13px; border: 1px solid var(--border-tertiary); border-radius: 5px; background-color: var(--bg-tertiary); }
+.thought-summary-details summary { cursor: pointer; font-weight: 500; color: var(--text-secondary); list-style: none; padding: 6px 10px; outline: none; display: flex; align-items: center; gap: 5px; user-select: none; }
+.thought-summary-details summary::before { content: '🧠'; font-size: 14px; display: inline-block; }
+.thought-summary-details[open] summary { border-bottom: 1px solid var(--border-tertiary); }
+.thought-summary-content { padding: 8px 10px; font-size: 13px; line-height: 1.5; color: var(--text-primary); word-wrap: break-word; }
+.attachment-details { margin-top: 10px; font-size: 12px; border: 1px solid var(--border-attachment-details); border-radius: 5px; background-color: var(--bg-attachment-details); }
+.attachment-details summary { cursor: pointer; font-weight: normal; color: var(--text-attachment-summary); list-style: none; padding: 5px 10px; outline: none; display: flex; align-items: center; gap: 5px; }
+.attachment-details summary::before { content: '📎'; font-size: 14px; display: inline-block; }
+.attachment-details[open] summary { border-bottom: 1px solid var(--border-attachment-details); }
+.attachment-list { list-style: none; padding: 8px 10px 5px 10px; margin: 0; }
+.attachment-list li { margin-bottom: 4px; font-size: 10px; color: var(--text-attachment-filename); overflow-wrap: break-word; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+#fileUploadDialog { min-width: 320px; max-width: 600px; width: 90%; }
+.dialog-content { margin-bottom: 20px; }
+.file-upload-area { margin-bottom: 15px; text-align: center; }
+.file-upload-area .dialog-button {
+    /* ボタンらしい見た目を再現するためのスタイル */
+    display: inline-block; /* 中央揃えとpaddingを正しく適用するため */
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--text-light);
+    background-color: var(--bg-button);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+    text-align: center;
+    user-select: none; /* テキスト選択を防止 */
+    -webkit-tap-highlight-color: transparent; /* モバイルでのタップ時のハイライトを無効化 */
+    transition: background-color var(--transition-duration) var(--transition-timing), box-shadow var(--transition-duration) var(--transition-timing);
+}
+
+/* ホバー時のスタイルも追加 */
+.file-upload-area .dialog-button:hover {
+    background-color: var(--bg-button-hover);
+    box-shadow: var(--shadow-2);
+}
+#selected-files-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-secondary); border-radius: 5px; background-color: var(--bg-secondary); }
+.selected-file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border-tertiary); background-color: var(--bg-tertiary); }
+.selected-file-item:last-child { border-bottom: none; }
+.selected-file-info { flex-grow: 1; overflow: hidden; margin-right: 10px; }
+.selected-file-name { display: block; font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selected-file-size { display: block; font-size: 11px; color: var(--text-secondary); }
+.remove-file-btn { background-color: var(--bg-button-delete); color: var(--text-light); border: none; border-radius: 15%; width: 22px; height: 22px; min-width: 0 !important; font-size: 14px; line-height: 1; padding: 0; cursor: pointer; flex-shrink: 0; display: flex; justify-content: center; align-items: center; }
+#file-upload-notice { font-size: 11px; color: var(--text-secondary); margin-top: 10px; text-align: center; }
+
+/* --- Animations & Effects --- */
+@keyframes pop-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.message:nth-last-child(-n+2) {
+    animation: pop-in 0.3s var(--transition-timing) forwards;
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    background-color: rgba(255, 255, 255, 0.7);
+}
+body.dark-mode .ripple {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* --- Message Actions --- */
+.message-actions, .message-cascade-controls {
+    position: absolute;
+    display: flex;
+    opacity: 0;
+    transform: translateY(8px);
+    flex-wrap: nowrap;
+    gap: var(--spacing-unit);
+    background: var(--bg-message-actions);
+    padding: var(--spacing-unit);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-2);
+    z-index: 2;
+    transition: opacity var(--transition-duration) var(--transition-timing), transform var(--transition-duration) var(--transition-timing);
+    width: max-content;
+    white-space: nowrap;
+    /* pointer-events: none; を削除 */
+    will-change: opacity, transform;
+}
+
+.message-actions { bottom: calc(-1 * var(--spacing-unit) * 5.5); }
+.message-cascade-controls {
+    top: calc(-1 * var(--spacing-unit) * 5.5);
+    left: 0;
+    align-items: center;
+}
+
+.message:hover .message-actions,
+.message:hover .message-cascade-controls {
+  opacity: 1;
+  transform: translateY(0);
+  /* pointer-events: auto; はデフォルト値なので不要 */
+}
+
+/* 編集中のメッセージでは、ホバーしてもメニューを表示しないようにする */
+.message.editing:hover .message-actions,
+.message.editing:hover .message-cascade-controls {
+  opacity: 0;
+}
+
+.message.user .message-actions { right: 0; }
+.message.model .message-actions { left: var(--spacing-unit); }
+
+.message-actions button, .message-cascade-controls button {
+    padding: calc(var(--spacing-unit) * 0.5) var(--spacing-unit);
+    font-size: 0.75rem;
+    min-width: auto;
+    gap: 4px;
+    box-shadow: none;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.message-actions button .material-symbols-outlined, .message-cascade-controls button .material-symbols-outlined {
+    font-size: 1rem;
+}
+.message-cascade-controls .cascade-indicator {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    padding: 0 var(--spacing-unit);
+    white-space: nowrap;
+    font-weight: 500;
+}
+.message-cascade-controls .cascade-delete-btn {
+    background-color: var(--bg-button-delete);
+    color: var(--text-light);
+}
+body.dark-mode .message-cascade-controls .cascade-delete-btn {
+    color: var(--text-primary);
+}
+.message-cascade-controls .cascade-delete-btn:hover {
+    background-color: var(--bg-button-delete-hover);
+}
+.message.retrying-hidden {
+    display: none !important;
+}
+
+.thought-summary-details {
+    margin-bottom: 10px;
+    font-size: 13px;
+    border: 1px solid var(--border-tertiary);
+    border-radius: 5px;
+    background-color: var(--bg-tertiary);
+}
+.thought-summary-details summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-secondary);
+    list-style: none;
+    padding: 6px 10px;
+    outline: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+}
+.thought-summary-details summary::before {
+    content: '🧠';
+    font-size: 14px;
+    display: inline-block;
+}
+.thought-summary-details {
+    margin-bottom: 10px;
+    font-size: 13px;
+    border: 1px solid var(--border-tertiary);
+    border-radius: 5px;
+    background-color: var(--bg-secondary);
+}
+
+.thought-summary-content ul,
+.thought-summary-content ol {
+    padding-left: 2em; 
+}
+
+.thought-summary-content {
+    padding: 8px 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    word-wrap: break-word;
+}
+
+.thought-summary-content {
+    padding: 8px 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    word-wrap: break-word;
+}
+
+/* --- Prism.js Custom Overrides --- */
+.message-content pre[class*="language-"],
+.message-content pre[class*="language-"] code {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* --- Drag and Drop Styles --- */
+#chat-screen.drag-over::after {
+    content: 'ここにファイルをドロップ';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text-light);
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 3px dashed var(--bg-button);
+    border-radius: var(--border-radius-lg);
+    margin: var(--spacing-unit);
+    z-index: 100;
+    pointer-events: none; /* After要素がイベントを奪わないように */
+}
+
+body.dark-mode #chat-screen.drag-over::after {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- Attachment Button Badge Fix --- */
+#attach-file-btn {
+    position: relative;
+    background-color: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+    display: grid; /* Gridレイアウトで重ね合わせる */
+    place-items: center;
+    overflow: visible; /* バッジがはみ出せるように */
+}
+
+#attach-file-btn .attach-icon-container,
+#attach-file-btn .attach-badge-container {
+    grid-area: 1 / 1; /* アイコンとバッジを同じセルに配置 */
+}
+
+#attach-file-btn .attach-icon-container {
+    z-index: 1; /* アイコンを奥に */
+}
+
+#attach-file-btn .attach-badge-container {
+    z-index: 2; /* バッジコンテナを手前に */
+    width: 100%;
+    height: 100%;
+    position: relative; /* バッジの配置基準 */
+}
+
+.attachment-badge {
+    position: absolute;
+    top: 5px;   /* 位置を微調整 */
+    right: 5px; /* 位置を微調整 */
+    width: var(--badge-size);
+    height: var(--badge-size);
+    background-color: var(--badge-color);
+    border-radius: 50%;
+    border: 1px solid var(--bg-primary);
+    display: none;
+}
+
+/* 既存の表示切り替えルールはそのまま利用 */
+.chat-input-area button#attach-file-btn.has-attachments .attachment-badge {
+    display: block;
+}
+
+/* --- Function Call & Search Results Details --- */
+.function-call-details {
+    margin-top: var(--spacing-unit);
+    font-size: 0.8rem;
+    border-top: 1px dashed var(--border-secondary); /* 上部に点線の区切り */
+    padding-top: var(--spacing-unit);
+}
+.function-call-details summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-secondary);
+    list-style: none;
+    padding: 0 0 4px 0; /* 下方向の余白を少し確保 */
+    outline: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+}
+.function-call-details[open] summary {
+    margin-bottom: 6px; /* 展開時にリストとの間に少し余白 */
+}
+.function-call-list {
+    padding-left: 25px; /* リストのインデント */
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+.function-call-list li {
+    margin-bottom: 4px;
+}
+
+/* --- 連続するツールブロックの区切り線を消す --- */
+.function-call-details + .function-call-details {
+    border-top: none;
+    padding-top: 0;
+    margin-top: calc(var(--spacing-unit) / 2); /* 連続する場合のブロック間の余白を少し詰める */
+}
+
+/* --- Image Modal Styles --- */
+#image-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+#image-modal-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-5);
+}
+
+#image-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    font-size: 30px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 0 0 5px black;
+}
+
+/* --- Profile Card Styles (Header) --- */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+}
+.app-header h1#chat-title {
+    margin: 0;
+    margin-right: auto;
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    min-width: 50px;
+}
+.profile-card-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+.app-header .profile-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) var(--transition-timing);
+    max-width: 180px;
+    background-color: rgba(255, 255, 255, 0.1); 
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.app-header .profile-card:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+.profile-icon-container {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+}
+
+.profile-icon-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.profile-icon-container .material-symbols-outlined {
+    font-size: 24px;
+    color: var(--text-light);
+}
+.profile-card-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 4px;
+}
+.profile-card-arrow {
+    font-size: 20px;
+    color: var(--text-light);
+}
+.app-header .header-button,
+.app-header .new-chat-button {
+    flex-shrink: 0;
+}
+
+/* --- Profile Menu (Dropdown) --- */
+.app-header .profile-menu,
+#settings-screen .profile-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-3);
+    z-index: 100;
+    overflow: hidden;
+    min-width: 180px;
+    border: 1px solid var(--border-primary);
+}
+.profile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) var(--transition-timing);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+.profile-menu-item:hover {
+    background-color: var(--bg-tertiary);
+}
+.profile-menu-item.active {
+    font-weight: 700;
+    background-color: var(--bg-secondary);
+}
+.profile-menu-item .profile-icon-container {
+    width: 24px;
+    height: 24px;
+}
+.profile-menu-item .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* --- 設定画面のプロファイル切り替えカード --- */
+.profile-card-wrapper-settings {
+    margin-bottom: 4px;
+}
+.profile-card-settings {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    transition: background-color var(--transition-duration) var(--transition-timing);
+    user-select: none;
+}
+.profile-card-settings:hover {
+    background-color: var(--bg-tertiary);
+}
+.profile-card-settings .profile-icon-container {
+    background-color: var(--bg-tertiary);
+}
+.profile-card-settings .profile-icon-container .material-symbols-outlined {
+    color: var(--text-secondary);
+}
+.profile-card-name-text {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.profile-card-chevron {
+    font-size: 20px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+/* --- Profile Management Styles (Settings Screen) --- */
+#profile-management-group {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    padding-bottom: 12px;
+}
+
+#profile-management-group h3 {
+    display: none;
+}
+
+.profile-display-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: var(--bg-tertiary);
+    padding: 12px 16px;
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 16px;
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-1);
+}
+.profile-display-icon-wrapper {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.profile-display-icon-wrapper label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: var(--bg-secondary);
+    cursor: pointer;
+}
+.profile-display-icon-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.profile-display-icon-wrapper .default-icon-placeholder .material-symbols-outlined {
+    font-size: 40px;
+    color: var(--text-secondary);
+}
+.profile-display-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-grow: 1;
+    min-width: 0;
+}
+.profile-display-name-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.profile-display-name-main {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.profile-display-name-sub {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-display-status {
+    display: none;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    box-shadow: none;
+    color: var(--text-secondary);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.icon-button .material-symbols-outlined {
+    font-size: 18px;
+}
+.icon-button:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+.icon-button-overlay {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background-color: var(--bg-button-delete);
+    color: var(--text-light) !important;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    opacity: 0;
+    transition: opacity var(--transition-duration) var(--transition-timing);
+}
+.profile-display-icon-wrapper:hover .icon-button-overlay {
+    opacity: 1;
+}
+.icon-button-overlay .material-symbols-outlined {
+    font-size: 16px;
+}
+.profile-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 0; 
+    border-top: none; 
+    padding-top: 0;
+}
+.profile-actions button {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    justify-content: flex-start;
+    background-color: var(--bg-button-action);
+    color: var(--text-light);
+}
+.profile-actions button:hover {
+    background-color: var(--bg-button-action-hover);
+}
+/* ダークモード時のボタン文字色を調整 */
+body.dark-mode .profile-actions button {
+    color: var(--text-primary);
+}
+
+/* --- Profile Management Button Color Fix --- */
+
+/* 基本のボタンスタイル */
+#profile-management-group .profile-actions button {
+    background-color: var(--bg-button-action);
+    color: var(--text-light);
+}
+#profile-management-group .profile-actions button:hover {
+    background-color: var(--bg-button-action-hover);
+}
+
+/* ダークモード時のボタンスタイルを明示的に指定 */
+body.dark-mode #profile-management-group .profile-actions button {
+    background-color: #424242;
+    color: var(--text-primary);
+}
+body.dark-mode #profile-management-group .profile-actions button:hover {
+    background-color: #616161;
+}
+
+/* --- Footer Profile Card --- */
+.chat-input-area .profile-card-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    align-self: flex-end; 
+}
+
+.chat-input-area .profile-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) var(--transition-timing);
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    height: 44px;
+    width: 44px;
+}
+
+.chat-input-area .profile-card:hover {
+    background-color: var(--border-primary);
+}
+
+.chat-input-area .profile-icon-container {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-secondary);
+    overflow: hidden;
+}
+
+.chat-input-area .profile-icon-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.chat-input-area .profile-icon-container .material-symbols-outlined {
+    font-size: 28px;
+    color: var(--text-secondary);
+}
+
+/* --- Footer Dropdown Menu Position --- */
+.chat-input-area .profile-menu {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-3);
+    z-index: 100;
+    overflow: hidden;
+    min-width: 200px;
+    border: 1px solid var(--border-primary);
+}
+
+/* --- Profile Menu Item Layout --- */
+.profile-menu-item {
+    gap: 10px;
+    padding: 8px 12px;
+}
+
+.profile-menu-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden; 
+}
+
+.profile-menu-name {
+    font-size: 0.85rem; 
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-menu-model {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-menu-item.active .profile-menu-name {
+    font-weight: 700;
+}
+
+/* --- Profile Actions Note --- */
+.profile-actions-note {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-align: right;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.profile-actions-note a {
+    color: var(--text-link);
+    text-decoration: none;
+}
+
+.profile-actions-note a:hover {
+    text-decoration: underline;
+}
+
+/* --- Empty Model Bubble Fix --- */
+.message.model:not(:has(.thought-summary-details)):has(.message-content:empty) {
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    min-height: 20px; /* 瞬時に表示される際のレイアウトシフトを最小限に抑えるための高さ確保 */
+    background-color: transparent;
+}
+
+#chat-screen { transform: translateX(0); }
+#history-screen { transform: translateX(-100%); }
+#settings-screen { transform: translateX(100%); }
+
+/* --- Lazy Load Image Styles --- */
+.lazy-load-image {
+    background-color: var(--bg-tertiary);
+    min-height: 100px; /* 読み込み中の高さを確保 */
+    display: block;
+    border-radius: var(--border-radius-md);
+    margin-top: 8px;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0.5;
+}
+
+.lazy-load-image[src] {
+    min-height: auto; /* 読み込み後は高さを自動に */
+    background-color: transparent;
+    opacity: 1;
+}
+
+.lazy-load-image.load-error {
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-error);
+    border: 1px dashed var(--border-danger);
+}
+/* --- App Update Notification --- */
+.update-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    padding: 12px 20px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-3);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 1000;
+    animation: slide-up 0.5s ease-out forwards;
+}
+
+.update-notification.hidden {
+    display: none;
+}
+
+@keyframes slide-up {
+    from {
+        transform: translate(-50%, 100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%);
+        opacity: 1;
+    }
+}
+
+#reload-for-update-btn {
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    background-color: var(--bg-button-update);
+    color: var(--text-light);
+    box-shadow: none;
+}
+body.dark-mode #reload-for-update-btn {
+    color: var(--text-primary);
+}
+
+/* --- Wide Mode Styles (for PC) --- */
+@media screen and (min-width: 801px) {
+    body.wide-mode-enabled .app-container {
+        max-width: 1600px;
+    }
+}
+
+/* --- Asset Management Styles --- */
+.asset-count-display {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.asset-actions {
+    display: grid;
+    /* 3つのボタンを均等な幅で横に並べる */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.asset-actions button {
+    font-size: 0.8rem;
+    padding: 10px 12px;
+    /* アイコンとテキストを中央揃えにする */
+    justify-content: center;
+    background-color: var(--bg-button-action);
+    color: var(--text-light);
+    /* アイコンとテキストの間のスペース */
+    gap: 8px;
+}
+.asset-actions button:hover {
+    background-color: var(--bg-button-action-hover);
+}
+body.dark-mode .asset-actions button {
+    color: var(--text-primary);
+}
+
+
+/* --- Asset Conflict Dialog Styles --- */
+#assetConflictDialog .dialog-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+#assetConflictDialog .dialog-actions-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+#assetConflictDialog .dialog-actions-main .dialog-button {
+    flex-grow: 1;
+    padding: 10px;
+    font-size: 0.8rem;
+    background-color: var(--bg-button-action);
+}
+body.dark-mode #assetConflictDialog .dialog-actions-main .dialog-button {
+    color: var(--text-primary);
+}
+#assetConflictDialog .dialog-actions-sub {
+    margin-top: 15px;
+    border-top: 1px solid var(--border-primary);
+    padding-top: 15px;
+}
+#assetConflictDialog .checkbox-label {
+    justify-content: center;
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+/* --- Memory Settings --- */
+.settings-group-subsection {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-primary);
+}
+
+#memory-options-container {
+    margin-top: 16px;
+    padding-left: 0; /* 左のパディングを削除してインデントをなくす */
+}
+
+
+/* --- Memory Management Dialog --- */
+#memoryManagementDialog {
+    width: 90%;
+    max-width: 600px;
+}
+
+#memoryManagementDialog[open] {
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#memoryManagementDialog .dialog-content {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.dialog-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.memory-list-container {
+    max-height: 40vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 16px;
+    padding: 8px;
+    background-color: var(--bg-secondary);
+}
+
+.memory-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border-radius: var(--border-radius-sm);
+    background-color: var(--bg-primary);
+    margin-bottom: 8px;
+}
+
+.memory-item-text {
+    flex-grow: 1;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.memory-item-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.memory-item-actions button {
+    padding: 4px;
+    min-width: auto;
+    box-shadow: none;
+}
+.memory-item-actions button .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.memory-add-form {
+    display: flex;
+    gap: 8px;
+}
+
+.memory-add-form textarea {
+    flex-grow: 1;
+    min-height: 60px;
+    height: 60px;
+    margin-bottom: 0;
+}
+
+.memory-add-form button {
+    flex-shrink: 0;
+    align-self: flex-end;
+}
+
+#memory-toggle-btn.active {
+    color: var(--badge-color);
+}
+
+/* --- Header Auto-Hide Feature --- */
+
+/* 機能が有効な時の基本設定 */
+body.header-auto-hide #chat-screen .app-header {
+    transform: translateY(-100%);
+    transition: transform 0.3s ease-in-out;
+    position: absolute;
+    width: 100%;
+    max-width: inherit;
+    z-index: 12;
+}
+
+body.header-auto-hide #chat-screen .main-content {
+    height: 100%;
+}
+
+/* PC向け: 画面上部の透明なトリガーエリア */
+@media (hover: hover) and (pointer: fine) {
+    body.header-auto-hide #header-trigger-area {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        z-index: 11;
+        /* background: rgba(255,0,0,0.2); */ /* デバッグ用 */
+    }
+}
+
+/* JSによってこのクラスが付与されたときにヘッダーを表示 */
+body.header-auto-hide.header-force-show #chat-screen .app-header {
+    transform: translateY(0);
+}
+
+/* --- History Summary Feature --- */
+#summaryDialog {
+    width: 90%;
+    max-width: 700px;
+}
+
+.chat-stats-content { display: flex; flex-direction: column; gap: 2px; min-width: 260px; }
+.stats-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 6px 0; border-bottom: 1px solid var(--border-color); }
+.stats-row:last-child { border-bottom: none; }
+.stats-label { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; }
+.stats-value { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); text-align: right; }
+body.dark-mode .stats-row { border-bottom-color: var(--border-color); }
+
+.summary-stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-align: center;
+    background-color: var(--bg-tertiary);
+    padding: 8px;
+    border-radius: var(--border-radius-sm);
+}
+
+.summary-editor {
+    width: 100%;
+    min-height: 200px;
+    max-height: 50vh;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.summary-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.summary-main-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* --- Summary Dialog Description --- */
+.summary-description {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+.summary-description p {
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.summary-description ul {
+    padding-left: 18px;
+    margin: 0;
+}
+.summary-description li {
+    margin-bottom: 4px;
+}
+
+/* --- Summary Marker in Chat --- */
+.summary-marker {
+    width: 80%;
+    margin: 20px auto;
+    text-align: center;
+    border-bottom: 1px dashed var(--border-secondary);
+    position: relative;
+}
+.summary-marker-text {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+    padding: 0 10px;
+    position: relative;
+    top: 8px; /* 線の中央に来るように調整 */
+}
+
+/* --- Progress Dialog --- */
+.progress-dialog {
+    text-align: center;
+}
+.progress-dialog .dialog-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 0;
+}
+.progress-dialog .dialog-message {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+.progress-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--bg-tertiary);
+    border-top-color: var(--bg-button);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- Floating Action Panel --- */
+.floating-action-panel {
+    position: absolute;
+    top: 60px; /* ヘッダー表示時のデフォルト位置 */
+    left: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 5;
+    opacity: 0; /* 初期状態は非表示 */
+    pointer-events: none; /* 非表示時はクリックできないように */
+    transition: opacity 0.3s ease-in-out, top var(--transition-duration) var(--transition-timing);
+}
+
+.floating-action-panel.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ヘッダー自動非表示が有効な場合、ボタンの初期位置を上に設定 */
+body.header-auto-hide .floating-action-panel {
+    top: 16px;
+}
+
+/* ヘッダー自動非表示が有効で、かつヘッダーが表示されている場合の位置 */
+body.header-auto-hide.header-force-show .floating-action-panel {
+    top: 60px;
+}
+
+.floating-action-panel .floating-action-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    /* 半透明の背景色を常に表示 */
+    background-color: rgba(255, 255, 255, 0.8);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all var(--transition-duration) var(--transition-timing);
+    padding: 0;
+}
+
+.floating-action-panel .floating-action-button .material-symbols-outlined {
+    font-size: 22px;
+}
+
+.floating-action-panel .floating-action-button:hover:not(:disabled) {
+    background-color: var(--bg-button-action);
+    color: #ffffff;
+    box-shadow: var(--shadow-3);
+    transform: scale(1.1);
+}
+
+.floating-action-panel .floating-action-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: scale(1);
+    /* disabledでもデザインを維持 */
+    background-color: rgba(255, 255, 255, 0.8);
+    color: var(--text-disabled);
+    border: 1px solid var(--border-primary);
+}
+
+body.dark-mode .floating-action-panel .floating-action-button {
+    background-color: rgba(40, 40, 40, 0.8);
+    color: var(--text-primary);
+    border-color: var(--border-secondary);
+}
+
+body.dark-mode .floating-action-panel .floating-action-button:hover:not(:disabled) {
+    background-color: var(--bg-button-action-hover);
+    color: #ffffff;
+}
+
+body.dark-mode .floating-action-panel .floating-action-button:disabled {
+    background-color: rgba(40, 40, 40, 0.8);
+    color: var(--text-disabled);
+    border-color: var(--border-secondary);
+}
+
+.floating-action-panel .floating-action-button.active {
+    color: var(--badge-color);
+    /* アクティブ状態が分かりやすいように、少し背景を濃くする */
+    background-color: rgba(255, 255, 255, 0.9); 
+}
+
+body.dark-mode .floating-action-panel .floating-action-button.active {
+    background-color: rgba(60, 60, 60, 0.9);
+}
+
+
+/* --- Scroll to Bottom FAB --- */
+.scroll-bottom-fab {
+    position: absolute;
+    bottom: 80px; /* 入力エリアの上 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--bg-button-action);
+    color: #fff;
+    border: none;
+    box-shadow: var(--shadow-3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    padding: 0;
+}
+
+.scroll-bottom-fab.hidden {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.7);
+    pointer-events: none;
+}
+
+/* 入力欄にフォーカス中（＝文字入力中）は、最下部へボタンが入力欄に被らないよう隠す */
+body.input-focused .scroll-bottom-fab {
+    display: none;
+}
+
+.scroll-bottom-fab:hover {
+    background-color: var(--bg-button-action-hover, var(--bg-button-action));
+    box-shadow: var(--shadow-3);
+    transform: translateX(-50%) scale(1.1);
+}
+
+.scroll-bottom-fab .material-symbols-outlined {
+    font-size: 26px;
+}
+
+body.dark-mode .scroll-bottom-fab {
+    background-color: var(--bg-button-action);
+    color: #fff;
+}
+
+/* --- Asset Management Dialog --- */
+#assetManagementDialog {
+    width: 90%;
+    max-width: 700px;
+}
+
+.asset-list-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 8px;
+    background-color: var(--bg-secondary);
+}
+
+.asset-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: var(--border-radius-sm);
+    background-color: var(--bg-primary);
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-1);
+}
+.asset-item:last-child {
+    margin-bottom: 0;
+}
+
+.asset-thumbnail {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-tertiary);
+    flex-shrink: 0;
+}
+
+.asset-info {
+    flex-grow: 1;
+    min-width: 0; /* flexアイテムの縮小問題を解決 */
+}
+
+.asset-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block; /* ブロック要素にしてellipsisを有効化 */
+}
+
+.asset-details {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.asset-actions-item button {
+    padding: 6px;
+    min-width: auto;
+    box-shadow: none;
+    background-color: var(--bg-button-delete);
+}
+.asset-actions-item button:hover {
+    background-color: var(--bg-button-delete-hover);
+}
+.asset-actions-item button .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* --- Dialog Delete Button --- */
+.dialog-delete-btn {
+    background-color: var(--bg-button-delete);
+    color: var(--text-light);
+    margin-right: auto; /* 左端に配置 */
+}
+.dialog-delete-btn:hover {
+    background-color: var(--bg-button-delete-hover);
+}
+body.dark-mode .dialog-delete-btn {
+    /* ダークモード時は、背景が明るい赤になるため、文字色を暗くする */
+    color: var(--text-light); /* In dark mode, this variable is a dark color */
+}
+
+/* --- Character Profile Dialog --- */
+#characterProfileDialog {
+    width: 95%;
+    max-width: 800px;
+    height: 80%;
+    max-height: 700px;
+    padding: 0; /* dialog自体のpaddingは不要 */
+    overflow: hidden; /* ラッパーの角丸を有効にするため */
+}
+
+/* 新しいラッパーにFlexboxレイアウトを適用 */
+.dialog-layout-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary); /* 背景色をラッパーに移動 */
+}
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.dialog-header h2 {
+    margin: 0;
+}
+.dialog-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: none;
+    min-width: auto;
+}
+
+.profile-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 3);
+    border-bottom: 1px solid var(--border-primary);
+    flex-shrink: 0;
+}
+.profile-dialog-header .dialog-title {
+    margin-bottom: 0;
+}
+.profile-dialog-header .header-button {
+    color: var(--text-primary);
+    box-shadow: none;
+    padding: 4px;
+}
+
+#characterProfileDialog .dialog-content {
+    padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 3);
+    overflow-y: auto;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.profile-dialog-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    height: 100%;
+}
+
+.profile-character-list {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 8px;
+    background-color: var(--bg-secondary);
+    overflow-y: auto;
+    height: 100%;
+}
+
+.profile-character-item {
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.profile-character-item:hover {
+    background-color: var(--border-primary);
+}
+.profile-character-item.active {
+    background-color: var(--bg-button);
+    color: var(--text-light);
+}
+
+.profile-detail-pane {
+    overflow-y: auto;
+    padding-right: 8px;
+    height: 100%;
+}
+
+.profile-detail-section {
+    margin-bottom: 20px;
+}
+.profile-detail-section label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+.profile-detail-section input,
+.profile-detail-section textarea,
+.profile-detail-section select {
+    margin-bottom: 0;
+}
+.profile-detail-section textarea {
+    min-height: 80px;
+}
+
+.profile-relationships-grid {
+    display: grid;
+    gap: 12px;
+}
+.profile-relationship-card {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 12px;
+    background-color: var(--bg-secondary);
+}
+.profile-relationship-card h5 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-primary);
+    padding-bottom: 6px;
+}
+
+#characterProfileDialog .dialog-actions {
+    padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 3);
+    border-top: 1px solid var(--border-primary);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dialog-note {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* --- 戻るボタンの表示制御 --- */
+/* デフォルト（PC含む）では、戻るボタンを非表示にする */
+#profile-back-btn {
+    display: none;
+}
+/* スマホサイズで、かつ詳細表示中の場合のみ、表示するように上書きする */
+@media screen and (max-width: 600px) {
+    #characterProfileDialog.details-visible #profile-back-btn {
+        display: inline-flex;
+    }
+}
+
+
+/* Responsive for Mobile */
+@media screen and (max-width: 600px) {
+    .profile-dialog-layout {
+        display: block;
+        height: auto;
+    }
+    .profile-character-list, .profile-detail-pane {
+        height: auto;
+    }
+    .profile-detail-pane {
+        display: none;
+    }
+    #characterProfileDialog.details-visible .profile-character-list {
+        display: none;
+    }
+    #characterProfileDialog.details-visible .profile-detail-pane {
+        display: block;
+    }
+    .profile-character-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .profile-character-item::after {
+        content: '>';
+        color: var(--text-secondary);
+    }
+
+    #profile-back-btn {
+        display: none;
+    }
+    /* スマホで詳細表示中のみ、表示するように上書きする */
+    #characterProfileDialog.details-visible #profile-back-btn {
+        display: inline-flex;
+    }
+}
+
+/* --- Character Profile Dialog Additions --- */
+.profile-detail-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.profile-detail-section-header label {
+    margin-bottom: 0;
+}
+.add-relationship-btn {
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    min-width: auto;
+    background-color: var(--bg-button-action);
+}
+.add-relationship-btn:hover {
+    background-color: var(--bg-button-action-hover);
+}
+
+.profile-relationship-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-primary);
+    padding-bottom: 6px;
+}
+.profile-relationship-card-header h5 {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.delete-relationship-btn {
+    padding: 4px;
+    min-width: auto;
+    box-shadow: none;
+    background-color: transparent;
+    color: var(--text-secondary);
+}
+.delete-relationship-btn:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-error);
+}
+.delete-relationship-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.profile-delete-character-section {
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-danger);
+}
+.delete-character-btn {
+    width: 100%;
+    background-color: var(--bg-button-delete);
+    color: var(--text-light);
+}
+.delete-character-btn:hover {
+    background-color: var(--bg-button-delete-hover);
+}
+body.dark-mode .delete-character-btn {
+    color: var(--text-light);
+}
+
+/* --- データ同期セクションのデザイン (最終確定版) --- */
+#data-sync-group {
+    padding: 20px 24px;
+}
+
+.sync-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* 他のh3と同様の罫線と余白を追加 */
+    margin-bottom: var(--spacing-unit);
+    border-bottom: 1px solid var(--border-primary);
+    padding-bottom: var(--spacing-unit);
+}
+.sync-header h3 svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.sync-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+/* リンク色の視認性を改善 */
+.sync-description a {
+    color: var(--text-link);
+}
+
+/* --- 連携前 --- */
+.sync-primary-btn {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background-color: #0061ff;
+    color: #fff;
+    border-radius: var(--border-radius-sm);
+    gap: 8px;
+    text-transform: none;
+}
+.sync-primary-btn svg {
+    width: 20px;
+    height: 20px;
+}
+.sync-primary-btn:hover:not(:disabled) {
+    background-color: #0052d9;
+}
+
+/* --- 連携後 --- */
+.sync-setting-row {
+    margin-bottom: 16px;
+}
+.sync-setting-row label {
+    /* 他のラベルと同様のスタイル */
+    display: block;
+    margin-bottom: var(--spacing-unit);
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+.sync-setting-row select {
+    /* 他のselectと同様に全幅を使用 */
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.sync-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    /* 背景、パディング、角丸を削除してシンプルに */
+    background-color: transparent;
+    padding: 0;
+    color: inherit; /* 親要素の色を継承 */
+}
+
+
+.sync-status-indicator .status-icon {
+    font-size: 16px;
+}
+
+.sync-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 24px;
+}
+.sync-actions button {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    justify-content: center;
+}
+
+#dropbox-sync-btn {
+    background-color: var(--bg-button-save);
+}
+#dropbox-sync-btn:hover {
+    background-color: var(--bg-button-save-hover);
+}
+
+#dropbox-disconnect-btn {
+    background-color: var(--bg-button-delete);
+}
+#dropbox-disconnect-btn:hover {
+    background-color: var(--bg-button-delete-hover);
+}
+
+/* Status Icon Colors */
+#sync-status-indicator[data-status="idle"] .status-icon { color: #4caf50; }
+#sync-status-indicator[data-status="dirty"] .status-icon { color: #ffa000; }
+#sync-status-indicator[data-status="syncing"] .status-icon { color: var(--text-link); animation: spin 1.5s linear infinite; }
+#sync-status-indicator[data-status="error"] .status-icon { color: #f44336; }
+
+
+
+/* --- リンク色の視認性改善 (ダークモード) --- */
+body.dark-mode {
+    --text-link: #90caf9; /* 明るいブルーに変更 */
+}
+
+/* --- Sync Status Header Icon --- */
+.sync-status-header-icon {
+    font-family: 'Material Symbols Outlined';
+    font-size: 22px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.3s ease-in-out, transform 0.3s ease-in-out;
+    padding: 4px;
+    border-radius: 50%;
+    display: inline-block; /* 常に表示されるように変更 */
+}
+
+.sync-status-header-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Status Styles */
+.sync-status-header-icon[data-status="not-connected"] {
+    color: var(--text-secondary); /* グレー */
+}
+.sync-status-header-icon[data-status="idle"] {
+    color: rgba(255, 255, 255, 0.85); /* 白（背景に埋もれない） */
+}
+.sync-status-header-icon[data-status="dirty"] {
+    color: #ffa000; /* 黄/オレンジ */
+}
+.sync-status-header-icon[data-status="syncing"] {
+    color: var(--text-link); /* 青 */
+    animation: spin 1.5s linear infinite;
+}
+.sync-status-header-icon[data-status="error"] {
+    color: #f44336; /* 赤 */
+}
+
+/* --- Sync Error Display --- */
+.sync-error-display {
+    background-color: var(--bg-error-message);
+    border: 1px solid var(--border-danger);
+    border-radius: var(--border-radius-md);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+.sync-error-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-error);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.sync-error-header .material-symbols-outlined {
+    font-size: 20px;
+}
+.sync-error-message {
+    font-size: 0.8rem;
+    color: var(--text-error);
+    margin-top: 8px;
+    margin-bottom: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.sync-error-timestamp {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+.clear-sync-error-btn {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    background-color: var(--bg-button-action);
+    color: var(--text-light);
+}
+.clear-sync-error-btn:hover {
+    background-color: var(--bg-button-action-hover);
+}
+body.dark-mode .clear-sync-error-btn {
+    color: var(--text-primary);
+}
+
+/* --- Sync Notification --- */
+.sync-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    padding: 12px 20px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+    animation: slide-up 0.5s ease-out forwards;
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+}
+.sync-notification.hidden {
+    display: none;
+}
+.sync-notification.success {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+}
+body.dark-mode .sync-notification.success {
+    background-color: #1b5e20;
+    color: #e8f5e9;
+}
+.sync-notification.error {
+    background-color: var(--bg-error-message);
+    color: var(--text-error);
+}
+
+/* --- Sync Progress Text --- */
+.sync-progress-text {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* --- Last Sync Time Display --- */
+.last-sync-time-display {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: left;
+    margin-top: -16px; /* 上の要素との間隔を詰める */
+    margin-bottom: 20px;
+    padding-left: 4px;
+}
+
+/* --- History Screen Enhancements --- */
+.header-delete-button {
+    color: var(--text-light);
+    background-color: transparent;
+    border-radius: 50%;
+    padding: var(--spacing-unit);
+    box-shadow: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-delete-button:hover:not(:disabled) {
+    background-color: var(--bg-button-delete-hover);
+}
+
+.header-delete-button:disabled {
+    color: var(--text-disabled);
+    background-color: transparent;
+}
+
+body.dark-mode .header-delete-button:disabled {
+    color: var(--text-disabled);
+}
+
+.history-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* タイトルと統計情報の間のスペース */
+}
+
+.history-item-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-item .material-symbols-outlined {
+    font-size: 14px;
+}
+
+/* --- User Attachment Preview --- */
+.attachment-details .attachment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+.attachment-details .attachment-list li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--bg-secondary);
+    max-width: 120px; /* サムネイルの最大幅 */
+}
+
+.attachment-details .attachment-thumbnail {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: var(--border-radius-xs);
+    background-color: var(--bg-tertiary);
+    cursor: pointer;
+}
+
+.attachment-details .attachment-filename {
+    font-size: 11px;
+    color: var(--text-secondary);
+    word-break: break-all;
+    text-align: center;
+    max-height: 2.4em; /* 2行までに制限 */
+    overflow: hidden;
+}
+
+/* --- Stable Diffusion Settings --- */
+#stable-diffusion-settings .sd-description {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: -10px;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+#stable-diffusion-settings .settings-group-subsection {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-primary);
+}
+
+#sd-test-connection-btn {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    margin-top: 8px;
+    background-color: var(--bg-button-action);
+}
+
+body.dark-mode #sd-test-connection-btn {
+    color: var(--text-primary);
+}
+
+#sd-quality-checker-options {
+    margin-top: 16px;
+    padding-left: 20px;
+    border-left: 2px solid var(--border-tertiary);
+}
+
+#sync-status-settings-icon {
+    cursor: default;
+}
+/* --- API Usage Counter --- */
+.api-usage-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-tertiary);
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    margin-top: -4px;
+    margin-bottom: 12px;
+}
+.api-usage-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+.profile-menu-model-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.profile-menu-model {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1; /* モデル名が長い場合に縮むように */
+}
+
+.profile-menu-api-count {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    white-space: nowrap;
+    flex-shrink: 0; /* カウント表示は縮まないように */
+}
+
+/* --- Settings Screen Header Profile Card --- */
+#settings-screen .app-header .profile-card {
+    /* 既存の背景色とボーダーをリセット */
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    /* 新しいグラデーション背景を適用 */
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.1));
+
+    /* 立体感とグラスエフェクトを追加 */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px); /* Safari向け */
+
+    /* パディングと形状を調整 */
+    padding: 4px 12px 4px 4px;
+    border-radius: 20px;
+    transition: all 0.2s ease-in-out;
+}
+
+#settings-screen .app-header .profile-card:hover {
+    /* ホバー時に少し明るくする */
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.15));
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* テキストの可読性を向上 */
+#settings-screen .app-header .profile-card .profile-card-name,
+#settings-screen .app-header .profile-card .profile-card-arrow {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* アイコンコンテナの背景を調整してコントラストを改善 */
+#settings-screen .app-header .profile-card .profile-icon-container {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* --- Debug Log Dialog Styles --- */
+#debugLogDialog[open] {
+    width: 95%;
+    max-width: 800px;
+    height: 80%;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-container {
+    height: 100%;
+    overflow-y: auto;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 8px;
+    font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    flex-grow: 1;
+}
+
+.log-entry {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border-tertiary);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-entry .log-timestamp {
+    color: #999;
+    margin-right: 8px;
+}
+.log-entry .log-type {
+    font-weight: bold;
+    margin-right: 8px;
+    text-transform: uppercase;
+}
+
+.log-entry.log-type-log { color: var(--text-primary); }
+.log-entry.log-type-info { color: #2196F3; }
+.log-entry.log-type-warn { color: #FFC107; }
+.log-entry.log-type-error { color: #F44336; font-weight: bold; }
+
+.log-actions-left {
+    display: flex;
+    gap: 10px;
+}
+
+.log-entry.collapsible {
+    cursor: pointer;
+}
+
+.log-entry .log-summary,
+.log-entry .log-full {
+    /* 将来的なスタイリングのために定義 */
+    display: inline;
+}
+/* --- Header Model Select --- */
+.header-model-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 13px;
+    padding: 4px 24px 4px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 14px;
+    max-width: 140px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: background-color 0.2s;
+}
+
+.header-model-select:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.header-model-select:focus {
+    outline: none;
+    border-color: white;
+}
+
+.header-model-select option {
+    color: var(--text-color);
+    background-color: var(--bg-color-main);
+}
+
+/* --- Project Management UI --- */
+.project-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.project-item {
+    background: var(--bg-color-main);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s;
+}
+
+.project-item:hover {
+    border-color: var(--primary-color);
+}
+
+.project-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.project-item-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.project-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.project-item-actions button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.project-item-actions button:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-color-input);
+}
+
+.project-item-actions .delete-project-btn:hover {
+    color: var(--danger-color);
+}
+
+.project-item-system-prompt {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    background: var(--bg-color-input);
+    padding: 8px;
+    border-radius: 4px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+/* --- Accordion Settings (Phase 7) --- */
+details.settings-group {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    margin-bottom: calc(var(--spacing-unit) * 1.5);
+    overflow: hidden;
+    padding: 0;
+}
+details.settings-group[open] {
+    padding-bottom: 0;
+}
+details.settings-group > summary.settings-summary {
+    background-color: var(--bg-secondary);
+    padding: 12px 16px;
+    cursor: pointer;
+    list-style: none; /* Hide default arrow */
+    position: relative;
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.2s;
+}
+details.settings-group[open] > summary.settings-summary {
+    border-bottom-color: var(--border-color);
+}
+details.settings-group > summary::-webkit-details-marker {
+    display: none;
+}
+details.settings-group > summary:hover {
+    background-color: var(--bg-hover);
+}
+
+@media screen and (max-width: 800px) {
+    html, body { font-size: 15px; }
+}
+
+/* ===== 範囲画像保存モード ===== */
+.range-select-mode .message {
+    cursor: pointer;
+}
+/* 選択モード中は各メッセージ内のアクション/カスケード操作を無効化（タップを範囲選択に使う） */
+.range-select-mode .message-actions,
+.range-select-mode .message-cascade-controls {
+    pointer-events: none;
+}
+.message.range-selected {
+    outline: 2px solid var(--primary-color, #2196a8);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-md, 8px);
+    background-color: rgba(33, 150, 168, 0.10);
+}
+.range-image-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface-color, #1f2a30);
+    color: var(--text-light, #ffffff);
+    border-radius: 24px;
+    box-shadow: var(--shadow-2, 0 3px 6px rgba(0, 0, 0, 0.3));
+    max-width: calc(100% - 24px);
+}
+.range-image-bar.hidden {
+    display: none;
+}
+.range-image-info {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.range-image-bar-btn {
+    border: none;
+    border-radius: 16px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.15);
+    color: inherit;
+    white-space: nowrap;
+}
+.range-image-bar-btn.primary {
+    background: var(--primary-color, #2196a8);
+    color: #ffffff;
+}
+.range-image-bar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
