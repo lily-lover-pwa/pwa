@@ -76,6 +76,13 @@
 
     --badge-color: #c9a86a;
     --badge-size: 10px;
+
+    /* 別名（古い命名で参照されている箇所向け。未定義だと option 文字色が
+       継承で白になり Chrome のドロップダウンが白文字×白背景で見えなくなる） */
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
 }
 
 body.dark-mode {
