@@ -1206,9 +1206,15 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
 
         // 各グループに対してユーザー定義モデルを追加
         targetGroups.forEach(({ groupId, selectElement, currentValue }) => {
+            // メインのモデル選択(追加モデル)は per-provider の renderCustomModels が
+            // 単独管理する。ここで触ると（特にChromeでは実行順の関係で）optgroupを
+            // 空のまま disabled=true にしてしまい、追加モデルがグレーアウトして
+            // 選べなくなるため、このグループはスキップする。
+            if (groupId === 'user-defined-models-group') return;
+
             const group = document.getElementById(groupId);
             if (!group) return; // グループが存在しない場合はスキップ
-            
+
             group.innerHTML = ''; // 一旦クリア
 
         if (models.length > 0) {

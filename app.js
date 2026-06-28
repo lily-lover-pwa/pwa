@@ -3585,6 +3585,9 @@ Reason: [NGの場合の理由]`,
         }
       ];
       targetGroups.forEach(({ groupId, selectElement, currentValue }) => {
+        // メインの追加モデルは per-provider の renderCustomModels が単独管理する。
+        // ここで触るとChromeで実行順の関係でグレーアウトするためスキップ。
+        if (groupId === "user-defined-models-group") return;
         const group = document.getElementById(groupId);
         if (!group) return;
         group.innerHTML = "";
