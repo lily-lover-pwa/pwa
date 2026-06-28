@@ -998,8 +998,9 @@ window.dbUtils = dbUtils;
 
         const renderCustomModels = () => {
             if(customGroup) customGroup.innerHTML = '';
-            
+
             // Rebuild the unified custom models list mapped to UI dropdown
+            let addedCount = 0;
             providers.forEach(prov => {
                 const text = state.settings.customModelsText[prov] || '';
                 const ids = text.split(',').map(s => s.trim()).filter(Boolean);
@@ -1012,9 +1013,14 @@ window.dbUtils = dbUtils;
                         opt.dataset.provider = prov;
                         opt.dataset.userDefined = 'true';
                         customGroup.appendChild(opt);
+                        addedCount++;
                     }
                 });
             });
+            // updateUserModelOptions() が旧 additionalModels 設定を見て optgroup を
+            // disabled にしたまま残すことがあるため、ここで明示的に有効/無効を再設定する。
+            // （これをしないと、追加したモデルがグレーアウトして選択できない）
+            if (customGroup) customGroup.disabled = addedCount === 0;
         };
 
         providers.forEach(prov => {

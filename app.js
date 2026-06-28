@@ -14308,6 +14308,7 @@ ${pageText}
       }
       const renderCustomModels = /* @__PURE__ */ __name(() => {
         if (customGroup) customGroup.innerHTML = "";
+        let addedCount = 0;
         providers.forEach((prov) => {
           const text = state.settings.customModelsText[prov] || "";
           const ids = text.split(",").map((s) => s.trim()).filter(Boolean);
@@ -14319,9 +14320,11 @@ ${pageText}
               opt.dataset.provider = prov;
               opt.dataset.userDefined = "true";
               customGroup.appendChild(opt);
+              addedCount++;
             }
           });
         });
+        if (customGroup) customGroup.disabled = addedCount === 0;
       }, "renderCustomModels");
       providers.forEach((prov) => {
         const textarea = document.getElementById(`${prov}-custom-models`);
