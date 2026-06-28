@@ -3,6 +3,9 @@
 > [!NOTE]
 > これは [kinkan04/Gemini-PWA-Mk-II](https://github.com/kinkan04/Gemini-PWA-Mk-II)（本家：[ona-oni/geminipwa](https://github.com/ona-oni/geminipwa/)）を個人用にフォーク・改造したものです。
 
+> [!TIP]
+> 💬 **[チャットを開く →](https://lily-lover-pwa.github.io/pwa/#chat)**
+
 ### 🔧 本家からの主な変更点
 
 | 項目 | 内容 |
