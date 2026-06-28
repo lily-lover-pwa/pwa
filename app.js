@@ -11197,17 +11197,6 @@ JPEG・PNG・GIF・WebP形式に変換してから添付してください。
   }
   __name(triggerDownload, "triggerDownload");
   var mediaMethods = {
-    async saveMessageAsImage(messageElement) {
-      try {
-        const blob = await messageElementToPngBlob(messageElement);
-        triggerDownload(blob, createMessageImageFilename(messageElement));
-      } catch (error) {
-        console.error("メッセージ画像の保存に失敗:", error);
-        await uiUtils.showCustomAlert(`メッセージ画像の保存に失敗しました。
-${error.message}`);
-        throw error;
-      }
-    },
     // ===== 範囲画像保存（複数メッセージをまとめて画像化） =====
     // フローティングパネルの「範囲を画像保存」から呼ばれ、選択モードに入る。
     enterRangeImageMode() {
