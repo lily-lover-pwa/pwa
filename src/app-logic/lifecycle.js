@@ -384,26 +384,18 @@ export const lifecycleMethods = {
             modelSelect.appendChild(userDefinedGroup);
         }
 
-        // ユーザー指定グループを再構築（手動追加 + API取得）
+        // ユーザー指定(追加モデル)グループは renderCustomModels(initPhase7)が
+        // 全プロバイダー横断で単独管理する。ここで現プロバイダー分だけに作り替えると、
+        // groq→openrouter 等の切替で他プロバイダーの追加モデルが消え、OpenRouterの
+        // llama 等が選べなくなるため、innerHTML は触らない（API取得モデルのみ扱う）。
         const standardValues = models.map(m => m.value);
         if (userDefinedGroup) {
-            userDefinedGroup.innerHTML = '';
             userDefinedGroup.disabled = false;
             const customText = (state.settings && state.settings.customModelsText) || {};
             const fetchedModels = (state.settings && state.settings.fetchedModels) || {};
 
-            // 手動追加モデル
+            // API取得モデルの重複判定用（手動追加IDは現プロバイダー分のみ参照）
             const manualIds = (customText[provider] || '').split(',').map(s => s.trim()).filter(Boolean);
-            manualIds.forEach(id => {
-                if (!standardValues.includes(id)) {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = id;
-                    opt.dataset.provider = provider;
-                    opt.dataset.userDefined = 'true';
-                    userDefinedGroup.appendChild(opt);
-                }
-            });
 
             // API取得モデル（標準・手動追加と重複しないもの）
             const allExisting = new Set([...standardValues, ...manualIds]);

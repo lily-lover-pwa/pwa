@@ -4665,21 +4665,13 @@ Reason: [NGの場合の理由]`,
       }
       const standardValues = models.map((m) => m.value);
       if (userDefinedGroup) {
-        userDefinedGroup.innerHTML = "";
+        // 追加モデルグループは renderCustomModels(initPhase7)が全プロバイダー横断で
+        // 単独管理する。ここで現プロバイダー分だけに作り替えると切替で他プロバイダーの
+        // 追加モデルが消えるため innerHTML は触らない（API取得モデルのみ扱う）。
         userDefinedGroup.disabled = false;
         const customText = state.settings && state.settings.customModelsText || {};
         const fetchedModels = state.settings && state.settings.fetchedModels || {};
         const manualIds = (customText[provider] || "").split(",").map((s) => s.trim()).filter(Boolean);
-        manualIds.forEach((id) => {
-          if (!standardValues.includes(id)) {
-            const opt = document.createElement("option");
-            opt.value = id;
-            opt.textContent = id;
-            opt.dataset.provider = provider;
-            opt.dataset.userDefined = "true";
-            userDefinedGroup.appendChild(opt);
-          }
-        });
         const allExisting = /* @__PURE__ */ new Set([...standardValues, ...manualIds]);
         const fetchedIds = (fetchedModels[provider] || []).filter((id) => !allExisting.has(id));
         if (fetchedIds.length > 0) {
