@@ -290,8 +290,18 @@ export const lifecycleMethods = {
 
     // プロバイダーに応じたモデルリストの更新
     updateModelOptions(provider) {
-        // OpenRouterの場合はテキスト入力を使用するためセレクトボックスの更新は不要
+        // OpenRouterの場合はテキスト入力を使用するためセレクトボックスの更新は不要。
         if (provider === 'openrouter') {
+            // ただし、直前のプロバイダー(groq等)の標準モデルがセレクトに残っていると、
+            // ヘッダーのモデル切替に古い一覧が出続け「openrouterでllamaを選んだ後に
+            // groqしか選べない」状態になる。追加モデル(ユーザー指定)グループ以外を消す。
+            const orSelect = elements.modelNameSelect;
+            if (orSelect) {
+                Array.from(orSelect.querySelectorAll('optgroup')).forEach(group => {
+                    if (group.id !== 'user-defined-models-group') group.remove();
+                });
+                Array.from(orSelect.querySelectorAll('option:not([data-user-defined])')).forEach(o => o.remove());
+            }
             // テキストボックスに現在のモデル名を設定
             if (elements.openrouterModelInput) {
                 const currentModel = state.settings.modelName || DEFAULT_OPENROUTER_MODEL;

@@ -4591,6 +4591,13 @@ Reason: [NGの場合の理由]`,
     // プロバイダーに応じたモデルリストの更新
     updateModelOptions(provider) {
       if (provider === "openrouter") {
+        const orSelect = elements.modelNameSelect;
+        if (orSelect) {
+          Array.from(orSelect.querySelectorAll("optgroup")).forEach((group) => {
+            if (group.id !== "user-defined-models-group") group.remove();
+          });
+          Array.from(orSelect.querySelectorAll("option:not([data-user-defined])")).forEach((o) => o.remove());
+        }
         if (elements.openrouterModelInput) {
           const currentModel = state.settings.modelName || DEFAULT_OPENROUTER_MODEL;
           elements.openrouterModelInput.value = currentModel;
