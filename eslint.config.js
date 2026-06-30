@@ -17,6 +17,8 @@ export default [
             'node_modules/**',
             'marked.js',
             'prism.js',
+            'purify.min.js', // ← DOMPurify（vendored）
+            'html2canvas-pro.min.js', // ← html2canvas-pro（vendored）
             'app.js', // ← src/main.js から生成されるバンドル（自動生成物）
             'coverage/**',
             '.eslint-report.json',

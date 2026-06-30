@@ -1976,6 +1976,9 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    1.26: [
+      "DeepSeek（v4-pro / v4-flash）の時間帯料金に対応。会話統計(ⓘ)の推定コストで、ピーク時間帯（日本時間 10:00〜13:00 / 15:00〜19:00）のメッセージは通常の2倍で計算します。各メッセージの送信時刻をもとに自動判定します。"
+    ],
     1.25: [
       "テキストアーティファクト機能：AIの応答内のコードブロック（```で囲まれた部分）を、コピーボタン付きのカードとして表示。プロンプトや長文をワンタップでコピーできます。"
     ],
@@ -3586,8 +3589,6 @@ Reason: [NGの場合の理由]`,
         }
       ];
       targetGroups.forEach(({ groupId, selectElement, currentValue }) => {
-        // メインの追加モデルは per-provider の renderCustomModels が単独管理する。
-        // ここで触るとChromeで実行順の関係でグレーアウトするためスキップ。
         if (groupId === "user-defined-models-group") return;
         const group = document.getElementById(groupId);
         if (!group) return;
@@ -4666,9 +4667,6 @@ Reason: [NGの場合の理由]`,
       }
       const standardValues = models.map((m) => m.value);
       if (userDefinedGroup) {
-        // 追加モデルグループは renderCustomModels(initPhase7)が全プロバイダー横断で
-        // 単独管理する。ここで現プロバイダー分だけに作り替えると切替で他プロバイダーの
-        // 追加モデルが消えるため innerHTML は触らない（API取得モデルのみ扱う）。
         userDefinedGroup.disabled = false;
         const customText = state.settings && state.settings.customModelsText || {};
         const fetchedModels = state.settings && state.settings.fetchedModels || {};
@@ -12526,13 +12524,13 @@ ${flagContent}`);
         "claude-opus": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
         "claude-sonnet": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
         "claude-haiku": { in: 0.8, out: 4, cw5m: 1, cw1h: 1.6, cr: 0.08 },
-        // DeepSeek（標準料金/USD・100万トークン。in=キャッシュミス入力, cr=キャッシュヒット入力）。
-        // v4-pro / v4-flash は V4 正式リリース(2026-06-28)の通常価格で確定。
-        // ※ ピーク時間帯(UTC 1-4時・6-10時)は各項目とも約2倍。ここでは通常価格で概算する。
+        // DeepSeek（標準料金。in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
+        // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
+        // ピーク時間帯(UTC): 01:00-04:00 / 06:00-10:00 （日本時間 10:00-13:00 / 15:00-19:00）。
         "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
         "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
-        "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6 },
-        "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4 },
+        "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
+        "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 },
         "deepseek-": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 }
       };
       const getPricing = /* @__PURE__ */ __name((modelName) => {
@@ -12543,6 +12541,11 @@ ${flagContent}`);
         }
         return null;
       }, "getPricing");
+      const isDeepSeekPeak = /* @__PURE__ */ __name((timestamp) => {
+        if (!timestamp) return false;
+        const h = new Date(timestamp).getUTCHours();
+        return h >= 1 && h < 4 || h >= 6 && h < 10;
+      }, "isDeepSeekPeak");
       const msgs = state.currentMessages.filter((m) => !m.isHidden);
       let totalTokens = 0, totalInput = 0, totalOutput = 0;
       let totalCacheRead = 0, totalCacheWrite = 0;
@@ -12571,7 +12574,8 @@ ${flagContent}`);
         const pricing = getPricing(modelName);
         if (pricing) {
           hasCost = true;
-          totalCost += (Math.max(0, regular) * pricing.in + cw5m * pricing.cw5m + cw1h * pricing.cw1h + cr * pricing.cr + out * pricing.out) / 1e6;
+          const mul = pricing.peakMul && isDeepSeekPeak(msg.timestamp) ? pricing.peakMul : 1;
+          totalCost += mul * (Math.max(0, regular) * pricing.in + cw5m * pricing.cw5m + cw1h * pricing.cw1h + cr * pricing.cr + out * pricing.out) / 1e6;
         }
       }
       const sizeKb = (new TextEncoder().encode(JSON.stringify(state.currentMessages)).byteLength / 1024).toFixed(2);

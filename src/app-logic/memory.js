@@ -401,13 +401,13 @@ export const memoryMethods = {
             'claude-opus':     { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
             'claude-sonnet':   { in: 3,    out: 15,  cw5m: 3.75,  cw1h: 6,    cr: 0.30 },
             'claude-haiku':    { in: 0.80, out: 4,   cw5m: 1.00,  cw1h: 1.60, cr: 0.08 },
-            // DeepSeek（標準料金/USD・100万トークン。in=キャッシュミス入力, cr=キャッシュヒット入力）。
-            // v4-pro / v4-flash は V4 正式リリース(2026-06-28)の通常価格で確定。
-            // ※ ピーク時間帯(UTC 1-4時・6-10時)は各項目とも約2倍。ここでは通常価格で概算する。
+            // DeepSeek（標準料金。in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
+            // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
+            // ピーク時間帯(UTC): 01:00-04:00 / 06:00-10:00 （日本時間 10:00-13:00 / 15:00-19:00）。
             'deepseek-reasoner': { in: 0.55,  out: 2.19, cw5m: 0.55,  cw1h: 0.55,  cr: 0.14 },
             'deepseek-chat':     { in: 0.27,  out: 1.10, cw5m: 0.27,  cw1h: 0.27,  cr: 0.07 },
-            'deepseek-v4-pro':   { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 0.003625 },
-            'deepseek-v4-flash': { in: 0.14,  out: 0.28, cw5m: 0.14,  cw1h: 0.14,  cr: 0.0028 },
+            'deepseek-v4-pro':   { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 0.003625, peakMul: 2 },
+            'deepseek-v4-flash': { in: 0.14,  out: 0.28, cw5m: 0.14,  cw1h: 0.14,  cr: 0.0028,   peakMul: 2 },
             'deepseek-':         { in: 0.27,  out: 1.10, cw5m: 0.27,  cw1h: 0.27,  cr: 0.07 },
         };
         const getPricing = (modelName) => {
@@ -417,6 +417,13 @@ export const memoryMethods = {
                 if (m.startsWith(key)) return price;
             }
             return null;
+        };
+        // DeepSeek のピーク時間帯判定（UTC 01:00-04:00 / 06:00-10:00 = 日本時間 10-13時 / 15-19時）。
+        // タイムゾーンに依存しないよう UTC 時刻で判定する。timestamp はモデル応答生成時刻(epoch ms)。
+        const isDeepSeekPeak = (timestamp) => {
+            if (!timestamp) return false;
+            const h = new Date(timestamp).getUTCHours();
+            return (h >= 1 && h < 4) || (h >= 6 && h < 10);
         };
 
         const msgs = state.currentMessages.filter(m => !m.isHidden);
@@ -450,7 +457,8 @@ export const memoryMethods = {
             const pricing = getPricing(modelName);
             if (pricing) {
                 hasCost = true;
-                totalCost += (Math.max(0, regular) * pricing.in + cw5m * pricing.cw5m + cw1h * pricing.cw1h + cr * pricing.cr + out * pricing.out) / 1_000_000;
+                const mul = (pricing.peakMul && isDeepSeekPeak(msg.timestamp)) ? pricing.peakMul : 1;
+                totalCost += mul * (Math.max(0, regular) * pricing.in + cw5m * pricing.cw5m + cw1h * pricing.cw1h + cr * pricing.cr + out * pricing.out) / 1_000_000;
             }
         }
 
