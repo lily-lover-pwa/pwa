@@ -1950,6 +1950,7 @@ ${relationship_context}`;
   var DEFAULT_GROQ_MODEL = "moonshotai/kimi-k2-instruct";
   var DEEPSEEK_MODELS = [
     { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
+    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
     { value: "deepseek-chat", label: "DeepSeek Chat (V3)" },
     { value: "deepseek-reasoner", label: "DeepSeek Reasoner (R1)" }
   ];
@@ -12525,8 +12526,9 @@ ${flagContent}`);
         "claude-opus": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
         "claude-sonnet": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
         "claude-haiku": { in: 0.8, out: 4, cw5m: 1, cw1h: 1.6, cr: 0.08 },
-        // DeepSeek（標準料金。in=キャッシュミス入力, cr=キャッシュヒット入力）。
-        // ※ deepseek-v4-pro の価格は要確認（変動しやすいので必要なら数値を更新）。
+        // DeepSeek（標準料金/USD・100万トークン。in=キャッシュミス入力, cr=キャッシュヒット入力）。
+        // v4-pro / v4-flash は V4 正式リリース(2026-06-28)の通常価格で確定。
+        // ※ ピーク時間帯(UTC 1-4時・6-10時)は各項目とも約2倍。ここでは通常価格で概算する。
         "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
         "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
         "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6 },
