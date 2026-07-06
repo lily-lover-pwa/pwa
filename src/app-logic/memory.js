@@ -478,9 +478,23 @@ export const memoryMethods = {
             modelsUsed.size > 0 ? ['モデル', [...modelsUsed].join(', ')] : null,
         ].filter(Boolean);
 
+        // 各社の使用量・料金ページへのリンク集（実際の請求額を確認したいとき用）
+        const usageLinks = [
+            ['OpenAI', 'https://platform.openai.com/usage'],
+            ['Claude', 'https://console.anthropic.com/settings/usage'],
+            ['Gemini', 'https://aistudio.google.com/usage'],
+            ['OpenRouter', 'https://openrouter.ai/activity'],
+            ['DeepSeek', 'https://platform.deepseek.com/usage'],
+        ];
+        const linksHtml = `<div class="stats-links">`
+            + `<div class="stats-links-title">🔗 API使用量・料金の確認</div>`
+            + `<div class="stats-links-grid">`
+            + usageLinks.map(([name, url]) => `<a class="stats-link" href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`).join('')
+            + `</div></div>`;
+
         elements.chatStatsContent.innerHTML = rows.map(([label, value]) =>
             `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value">${value}</span></div>`
-        ).join('');
+        ).join('') + linksHtml;
 
         uiUtils.showCustomDialog(elements.chatStatsDialog, elements.chatStatsCloseBtn);
     },

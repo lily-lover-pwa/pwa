@@ -1976,6 +1976,9 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    1.27: [
+      "会話統計(ⓘ)ダイアログの下部に「API使用量・料金の確認」リンクを追加。OpenAI / Claude / Gemini / OpenRouter / DeepSeek の各使用量ページへワンタップで移動できます（推定コストの実額確認用）。"
+    ],
     1.26: [
       "DeepSeek（v4-pro / v4-flash）の時間帯料金に対応。会話統計(ⓘ)の推定コストで、ピーク時間帯（日本時間 10:00〜13:00 / 15:00〜19:00）のメッセージは通常の2倍で計算します。各メッセージの送信時刻をもとに自動判定します。"
     ],
@@ -12592,9 +12595,17 @@ ${flagContent}`);
         ["会話サイズ", `${sizeKb} KB`],
         modelsUsed.size > 0 ? ["モデル", [...modelsUsed].join(", ")] : null
       ].filter(Boolean);
+      const usageLinks = [
+        ["OpenAI", "https://platform.openai.com/usage"],
+        ["Claude", "https://console.anthropic.com/settings/usage"],
+        ["Gemini", "https://aistudio.google.com/usage"],
+        ["OpenRouter", "https://openrouter.ai/activity"],
+        ["DeepSeek", "https://platform.deepseek.com/usage"]
+      ];
+      const linksHtml = `<div class="stats-links"><div class="stats-links-title">🔗 API使用量・料金の確認</div><div class="stats-links-grid">` + usageLinks.map(([name, url]) => `<a class="stats-link" href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`).join("") + `</div></div>`;
       elements.chatStatsContent.innerHTML = rows.map(
         ([label, value]) => `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value">${value}</span></div>`
-      ).join("");
+      ).join("") + linksHtml;
       uiUtils.showCustomDialog(elements.chatStatsDialog, elements.chatStatsCloseBtn);
     },
     async startSummaryProcess() {

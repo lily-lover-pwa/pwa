@@ -152,6 +152,9 @@ export const SAKANA_MODELS = [
 export const DEFAULT_SAKANA_MODEL = 'fugu';
 
 export const VERSION_HISTORY = {
+    1.27: [
+        '会話統計(ⓘ)ダイアログの下部に「API使用量・料金の確認」リンクを追加。OpenAI / Claude / Gemini / OpenRouter / DeepSeek の各使用量ページへワンタップで移動できます（推定コストの実額確認用）。',
+    ],
     1.26: [
         'DeepSeek（v4-pro / v4-flash）の時間帯料金に対応。会話統計(ⓘ)の推定コストで、ピーク時間帯（日本時間 10:00〜13:00 / 15:00〜19:00）のメッセージは通常の2倍で計算します。各メッセージの送信時刻をもとに自動判定します。',
     ],

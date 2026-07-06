@@ -1779,6 +1779,13 @@ body.header-auto-hide.header-force-show #chat-screen .app-header {
 .stats-value { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); text-align: right; }
 body.dark-mode .stats-row { border-bottom-color: var(--border-color); }
 
+/* API使用量・料金の確認リンク（会話統計ダイアログ内） */
+.stats-links { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+.stats-links-title { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; }
+.stats-links-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.stats-link { font-size: 0.82rem; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 14px; color: var(--text-link); text-decoration: none; white-space: nowrap; transition: background-color 0.15s; }
+.stats-link:hover { background-color: var(--bubble-model-bg); }
+
 .summary-stats {
     font-size: 0.8rem;
     color: var(--text-secondary);
