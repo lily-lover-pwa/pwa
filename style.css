@@ -48,6 +48,8 @@
     --bg-button-export-hover: #908675;
     --bg-button-save: #908675;
     --bg-button-save-hover: #79705f;
+    /* 「設定を保存」用アクセント（ライトでは目立つくすみテラコッタ） */
+    --bg-button-save-accent: #b3765e;
     --bg-button-cancel: #bcb6ab;
     --bg-button-cancel-hover: #a39c8f;
     --bg-button-update: #a89e8d;
@@ -112,6 +114,8 @@ body.dark-mode {
     --bg-button-export-hover: #cabfa6;
     --bg-button-save: #b8c0a0;
     --bg-button-save-hover: #d0d8b8;
+    /* ダークモードの「設定を保存」は現状の色を維持 */
+    --bg-button-save-accent: #b8c0a0;
     --bg-button-cancel: #bdb8ad;
     --bg-button-cancel-hover: #ddd8cd;
     --bg-button-update: #b3a890;
