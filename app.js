@@ -14129,11 +14129,22 @@ ${pageText}
             state.settings.fetchedModels[provider] = newModels;
           }
           __name(mergeModels, "mergeModels");
+          async function httpErrorDetail(r) {
+            try {
+              const d = await r.json();
+              let msg = d?.error?.message || d?.message || "";
+              if (/api.?key not valid|invalid.*api.?key|incorrect api key/i.test(msg)) msg = "APIキーが無効です";
+              return msg ? ` (${String(msg).slice(0, 80)})` : "";
+            } catch {
+              return "";
+            }
+          }
+          __name(httpErrorDetail, "httpErrorDetail");
           async function fetchOpenAICompat(url, apiKey, provider, filter) {
             try {
               const r = await fetch(url, { headers: { "Authorization": `Bearer ${apiKey}` } });
               if (!r.ok) {
-                results.push(`${provider}: HTTP ${r.status}`);
+                results.push(`${provider}: HTTP ${r.status}${await httpErrorDetail(r)}`);
                 return;
               }
               const d = await r.json();
@@ -14154,7 +14165,7 @@ ${pageText}
                 mergeModels("gemini", models);
                 results.push(`Gemini: ${models.length}件`);
               } else {
-                results.push(`Gemini: HTTP ${r.status}`);
+                results.push(`Gemini: HTTP ${r.status}${await httpErrorDetail(r)}`);
               }
             } catch (e) {
               results.push(`Gemini: エラー`);
@@ -14171,7 +14182,7 @@ ${pageText}
                 mergeModels("anthropic", models);
                 results.push(`Anthropic: ${models.length}件`);
               } else {
-                results.push(`Anthropic: HTTP ${r.status}`);
+                results.push(`Anthropic: HTTP ${r.status}${await httpErrorDetail(r)}`);
               }
             } catch (e) {
               results.push(`Anthropic: エラー`);

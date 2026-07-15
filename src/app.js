@@ -817,10 +817,21 @@ window.dbUtils = dbUtils;
                     state.settings.fetchedModels[provider] = newModels;
                 }
 
+                // エラー応答（Google/OpenAI互換/Anthropic とも {error:{message}} 形式）から
+                // 理由を取り出して結果表示に添える（例: HTTP 400 (APIキーが無効です)）
+                async function httpErrorDetail(r) {
+                    try {
+                        const d = await r.json();
+                        let msg = d?.error?.message || d?.message || '';
+                        if (/api.?key not valid|invalid.*api.?key|incorrect api key/i.test(msg)) msg = 'APIキーが無効です';
+                        return msg ? ` (${String(msg).slice(0, 80)})` : '';
+                    } catch { return ''; }
+                }
+
                 async function fetchOpenAICompat(url, apiKey, provider, filter) {
                     try {
                         const r = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
-                        if (!r.ok) { results.push(`${provider}: HTTP ${r.status}`); return; }
+                        if (!r.ok) { results.push(`${provider}: HTTP ${r.status}${await httpErrorDetail(r)}`); return; }
                         const d = await r.json();
                         const models = (d.data || []).map(m => m.id).filter(id => id && (!filter || filter(id)));
                         mergeModels(provider, models);
@@ -840,7 +851,7 @@ window.dbUtils = dbUtils;
                                 .filter(id => id.includes('gemini'));
                             mergeModels('gemini', models);
                             results.push(`Gemini: ${models.length}件`);
-                        } else { results.push(`Gemini: HTTP ${r.status}`); }
+                        } else { results.push(`Gemini: HTTP ${r.status}${await httpErrorDetail(r)}`); }
                     } catch(e) { results.push(`Gemini: エラー`); }
                 }
 
@@ -855,7 +866,7 @@ window.dbUtils = dbUtils;
                             const models = (d.data || []).map(m => m.id);
                             mergeModels('anthropic', models);
                             results.push(`Anthropic: ${models.length}件`);
-                        } else { results.push(`Anthropic: HTTP ${r.status}`); }
+                        } else { results.push(`Anthropic: HTTP ${r.status}${await httpErrorDetail(r)}`); }
                     } catch(e) { results.push(`Anthropic: エラー`); }
                 }
 
