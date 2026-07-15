@@ -11065,39 +11065,11 @@ JPEG・PNG・GIF・WebP形式に変換してから添付してください。
     ].join("");
   }
   __name(formatTimestamp, "formatTimestamp");
-  function createMessageImageFilename(messageElement, date = /* @__PURE__ */ new Date()) {
-    const role = messageElement.classList.contains("user") ? "user" : "assistant";
-    const turn = messageElement.dataset.turn || "message";
-    return `PWA-lily_${turn}_${role}_${formatTimestamp(date)}.png`;
-  }
-  __name(createMessageImageFilename, "createMessageImageFilename");
   function createRangeImageFilename(date = /* @__PURE__ */ new Date(), part = 0, total = 1) {
     const suffix = total > 1 ? `_${part}of${total}` : "";
     return `PWA-lily_range_${formatTimestamp(date)}${suffix}.png`;
   }
   __name(createRangeImageFilename, "createRangeImageFilename");
-  async function messageElementToPngBlob(messageElement) {
-    if (!(messageElement instanceof HTMLElement)) {
-      throw new TypeError("保存対象のメッセージが見つかりません。");
-    }
-    if (typeof html2canvas === "undefined") {
-      throw new Error("画像生成ライブラリ（html2canvas）が読み込まれていません。ページを再読み込みしてください。");
-    }
-    const rect = messageElement.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
-      throw new Error("表示されていないメッセージは画像にできません。");
-    }
-    await ensureFontsReady();
-    applyCaptureStyles([messageElement]);
-    try {
-      await nextFrame();
-      const canvas = await captureElementToCanvas(messageElement, captureParams());
-      return await canvasToPngBlob(canvas);
-    } finally {
-      removeCaptureStyles([messageElement]);
-    }
-  }
-  __name(messageElementToPngBlob, "messageElementToPngBlob");
   async function messagesRangeToPngBlobs(messageElements) {
     if (typeof html2canvas === "undefined") {
       throw new Error("画像生成ライブラリ（html2canvas）が読み込まれていません。ページを再読み込みしてください。");
@@ -14210,7 +14182,7 @@ ${pageText}
               "https://api.openai.com/v1/models",
               state.settings.openaiApiKey,
               "openai",
-              (id) => /^(gpt|o\d|chatgpt)/i.test(id)
+              (id) => /^(gpt-\d|o\d|chatgpt)/i.test(id) && !/(audio|realtime|image|tts|transcribe)/i.test(id)
             );
           }
           const compatList = [

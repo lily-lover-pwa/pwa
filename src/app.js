@@ -861,8 +861,10 @@ window.dbUtils = dbUtils;
 
                 // OpenAI
                 if (state.settings.openaiApiKey) {
+                    // gpt-数字 で始まるテキストモデルのみ表示（gpt-image-* / gpt-realtime-* / gpt-audio-* や
+                    // gpt-4o-audio-preview 等の音声・画像系バリアントでドロップダウンが溢れるのを防ぐ）
                     await fetchOpenAICompat('https://api.openai.com/v1/models', state.settings.openaiApiKey, 'openai',
-                        id => /^(gpt|o\d|chatgpt)/i.test(id));
+                        id => /^(gpt-\d|o\d|chatgpt)/i.test(id) && !/(audio|realtime|image|tts|transcribe)/i.test(id));
                 }
 
                 // OpenAI-compatible providers
