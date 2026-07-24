@@ -1,5 +1,5 @@
 // appLogic 機能モジュール: profile（Phase 3 で app-logic.js から分割）。挙動は不変。
-import { IMPORT_PREFIX, MAX_PROFILES } from '../constants.js';
+import { IMPORT_PREFIX, MAX_PROFILES, RETIRED_MODEL_MAP } from '../constants.js';
 import { dbUtils } from '../db.js';
 import { DebugLogger } from '../debug-logger.js';
 import { elements } from '../dom-elements.js';
@@ -85,7 +85,26 @@ export const profileMethods = {
             // 3. state.settings を更新する
             state.settings = newSettings;
 
-            uiUtils.applySettingsToUI(); 
+            // 3.5. 提供終了したモデル設定を後継モデルへ自動移行する（要約失敗などの防止）
+            let migratedRetiredModel = false;
+            for (const key of ['modelName', 'summaryModelName', 'proofreadingModelName']) {
+                const current = state.settings[key];
+                if (current && RETIRED_MODEL_MAP[current]) {
+                    const replacement = RETIRED_MODEL_MAP[current];
+                    state.settings[key] = replacement;
+                    if (state.activeProfile.settings) state.activeProfile.settings[key] = replacement;
+                    migratedRetiredModel = true;
+                    console.log(`[Profile] 提供終了モデル ${current} を ${replacement} に移行しました（${key}）。`);
+                }
+            }
+            if (migratedRetiredModel) {
+                // 保存は非同期（このメソッドは同期のため待たない）
+                dbUtils.updateProfile(state.activeProfile).catch((e) =>
+                    console.error('[Profile] 移行後のプロファイル保存に失敗:', e)
+                );
+            }
+
+            uiUtils.applySettingsToUI();
             uiUtils.updateProfileCardUI();
 
             // 4. プロファイル適用後にデバッグロガーを初期化/再設定する
