@@ -1875,6 +1875,7 @@ ${relationship_context}`;
   var VERSION_ACK_STORAGE_KEY = "appVersionAcknowledged";
   var VERSION_LEGACY_STORAGE_KEY = "appVersion";
   var GEMINI_MODELS = [
+    { value: "gemini-flash-latest", label: "gemini-flash-latest (常に最新Flash)" },
     { value: "gemini-2.5-pro", label: "gemini-2.5-pro" },
     { value: "gemini-2.5-flash", label: "gemini-2.5-flash" },
     { value: "gemini-2.5-flash-lite", label: "gemini-2.5-flash-lite" },
