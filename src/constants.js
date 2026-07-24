@@ -158,6 +158,9 @@ export const SAKANA_MODELS = [
 export const DEFAULT_SAKANA_MODEL = 'fugu';
 
 export const VERSION_HISTORY = {
+    '1.30': [
+        '提供終了モデルの実行時サルベージを追加。送信や要約の途中でモデルが提供終了していた場合、「失敗」で終わらせず後継モデルへの切替を案内します。既知の廃止（gemini-3-pro-preview など）は後継へ自動切替、それ以外はそのプロバイダーの現行モデルを提案して確認します（勝手に別モデルへ切り替えて想定外の課金にはしません）。要約はそのまま自動で再試行します。',
+    ],
     1.29: [
         '要約・メモリ自動学習を全プロバイダー対応に。これまで Gemini（＋要約は DeepSeek）専用だったため、Claude 等に切り替えると要約が失敗していました。今後は選択中のプロバイダー（Anthropic/OpenAI/Groq/xAI/Mistral/OpenRouter/Sakana 等）で動作します。Gemini キーがなくても Claude だけで完結できます。要約用モデルに Claude（haiku/sonnet/opus）を選べるようになり、モデル名からプロバイダーを自動判定します。',
         '提供終了した gemini-3-pro-preview を後継の gemini-3.1-pro-preview へ自動移行。設定・要約モデルにこのモデルが残っていると「要約の生成に失敗しました（no longer available）」が出ていた問題を修正。モデル一覧からも削除しました。',

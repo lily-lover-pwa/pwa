@@ -7,6 +7,7 @@ import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { htmlUtils } from '../utils/html.js';
 import { interruptibleSleep, sleep } from '../utils/format.js';
+import { isRetiredModelError, resolveRetiredModel } from './retired-model.js';
 
 export const messageMethods = {
 
@@ -538,8 +539,22 @@ export const messageMethods = {
 
         } catch(error) {
             console.error("--- handleSend: 最終catchブロックでエラー捕捉 ---", error);
-            const errorMessage = (error.name !== 'AbortError') ? (error.message || "不明なエラーが発生しました。") : "リクエストがキャンセルされました。";
-            
+            let errorMessage = (error.name !== 'AbortError') ? (error.message || "不明なエラーが発生しました。") : "リクエストがキャンセルされました。";
+
+            // メインモデルが提供終了していた場合は、後継への切替を案内する。
+            // （本送信はストリーミングのため自動リトライはせず、切替後に再送を促す。）
+            if (error.name !== 'AbortError' && isRetiredModelError(errorMessage)) {
+                const deadModel = state.settings.modelName;
+                const newModel = await resolveRetiredModel({
+                    deadModel,
+                    provider: state.settings.apiProvider || 'gemini',
+                    settingKey: 'modelName',
+                });
+                if (newModel) {
+                    errorMessage = `モデル「${deadModel}」は提供終了のため「${newModel}」に切り替えました。もう一度送信してください。`;
+                }
+            }
+
             state.currentMessages[modelMessageIndex] = { role: 'error', content: errorMessage, timestamp: Date.now() };
             uiUtils.renderChatMessages(() => uiUtils.scrollToBottom());
             

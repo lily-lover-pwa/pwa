@@ -14,6 +14,7 @@ import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
+import { isRetiredModelError, resolveRetiredModel } from './retired-model.js';
 
 // Gemini のセーフティ設定（全カテゴリ BLOCK_NONE）。要約・メモリ学習で共通利用。
 const GEMINI_SAFETY_OFF = [
@@ -677,14 +678,13 @@ export const memoryMethods = {
 
 
 
-    async _callSummaryApi(originalText) {
+    async _callSummaryApi(originalText, _isRetry = false) {
+        // 要約モデルはユーザー指定（summaryModelName）優先。モデル名からプロバイダーを推定し、
+        // 判別できない場合のみ現在選択中のプロバイダーにフォールバックする。
+        const summaryModel = state.settings.summaryModelName || state.settings.modelName;
+        const provider = inferProviderFromModel(summaryModel, state.settings.apiProvider || 'gemini');
         try {
             const userContent = `【要約対象の会話履歴】\n${originalText}`;
-
-            // 要約モデルはユーザー指定（summaryModelName）優先。モデル名からプロバイダーを推定し、
-            // 判別できない場合のみ現在選択中のプロバイダーにフォールバックする。
-            const summaryModel = state.settings.summaryModelName || state.settings.modelName;
-            const provider = inferProviderFromModel(summaryModel, state.settings.apiProvider || 'gemini');
             console.log('--- [要約API] リクエスト開始 --- 使用モデル:', summaryModel, 'provider:', provider);
 
             const { text: summaryText, raw } = await runAuxiliaryCompletion({
@@ -715,6 +715,20 @@ export const memoryMethods = {
         } catch (error) {
             console.error("要約API呼び出し/処理中にエラー:", error);
             elements.summaryDialog.close();
+
+            // 要約モデルが提供終了していた場合は、後継への切替を案内し、切り替えたら一度だけ再試行する。
+            if (!_isRetry && isRetiredModelError(error.message)) {
+                const newModel = await resolveRetiredModel({
+                    deadModel: summaryModel,
+                    provider,
+                    settingKey: 'summaryModelName',
+                });
+                if (newModel) {
+                    await this._callSummaryApi(originalText, true);
+                    return;
+                }
+            }
+
             uiUtils.showCustomAlert(`要約の生成に失敗しました: ${error.message}`);
         }
     },

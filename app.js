@@ -1979,6 +1979,9 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.30": [
+      "提供終了モデルの実行時サルベージを追加。送信や要約の途中でモデルが提供終了していた場合、「失敗」で終わらせず後継モデルへの切替を案内します。既知の廃止（gemini-3-pro-preview など）は後継へ自動切替、それ以外はそのプロバイダーの現行モデルを提案して確認します（勝手に別モデルへ切り替えて想定外の課金にはしません）。要約はそのまま自動で再試行します。"
+    ],
     1.29: [
       "要約・メモリ自動学習を全プロバイダー対応に。これまで Gemini（＋要約は DeepSeek）専用だったため、Claude 等に切り替えると要約が失敗していました。今後は選択中のプロバイダー（Anthropic/OpenAI/Groq/xAI/Mistral/OpenRouter/Sakana 等）で動作します。Gemini キーがなくても Claude だけで完結できます。要約用モデルに Claude（haiku/sonnet/opus）を選べるようになり、モデル名からプロバイダーを自動判定します。",
       "提供終了した gemini-3-pro-preview を後継の gemini-3.1-pro-preview へ自動移行。設定・要約モデルにこのモデルが残っていると「要約の生成に失敗しました（no longer available）」が出ていた問題を修正。モデル一覧からも削除しました。"
@@ -9270,6 +9273,80 @@ ${knowledgeText}`;
     }
   };
 
+  // src/app-logic/retired-model.js
+  var PROVIDER_DEFAULT_MODEL = {
+    gemini: DEFAULT_MODEL,
+    openai: DEFAULT_OPENAI_MODEL,
+    anthropic: DEFAULT_ANTHROPIC_MODEL,
+    deepseek: DEFAULT_DEEPSEEK_MODEL,
+    groq: DEFAULT_GROQ_MODEL,
+    xai: DEFAULT_XAI_MODEL,
+    mistral: DEFAULT_MISTRAL_MODEL,
+    zai: DEFAULT_ZAI_MODEL,
+    sakana: DEFAULT_SAKANA_MODEL,
+    openrouter: DEFAULT_OPENROUTER_MODEL
+  };
+  function isRetiredModelError(errorMessage) {
+    if (!errorMessage) return false;
+    return /no longer (available|supported)|has been (deprecated|retired|removed|sunset|decommissioned)|model[_ ]not[_ ]found|is not (a valid|found|available|supported)|does not exist|unknown model|invalid model|not a valid model|不明なモデル|存在しません|廃止/i.test(
+      String(errorMessage)
+    );
+  }
+  __name(isRetiredModelError, "isRetiredModelError");
+  function suggestSuccessor(deadModel, provider) {
+    if (deadModel && RETIRED_MODEL_MAP[deadModel]) {
+      return { model: RETIRED_MODEL_MAP[deadModel], fromMap: true };
+    }
+    const fallback = PROVIDER_DEFAULT_MODEL[provider];
+    if (fallback && fallback !== deadModel) {
+      return { model: fallback, fromMap: false };
+    }
+    return null;
+  }
+  __name(suggestSuccessor, "suggestSuccessor");
+  async function applyModelSwitch(settingKey, newModel) {
+    state.settings[settingKey] = newModel;
+    if (state.activeProfile && state.activeProfile.settings) {
+      state.activeProfile.settings[settingKey] = newModel;
+    }
+    try {
+      await dbUtils.saveSetting(settingKey, newModel);
+    } catch (e) {
+      console.error("[RetiredModel] 設定の保存に失敗:", e);
+    }
+    try {
+      if (state.activeProfile) await dbUtils.updateProfile(state.activeProfile);
+    } catch (e) {
+      console.error("[RetiredModel] プロファイルの保存に失敗:", e);
+    }
+    try {
+      uiUtils.applySettingsToUI();
+    } catch {
+    }
+  }
+  __name(applyModelSwitch, "applyModelSwitch");
+  async function resolveRetiredModel({ deadModel, provider, settingKey }) {
+    const suggestion = suggestSuccessor(deadModel, provider);
+    if (!suggestion) return null;
+    if (!suggestion.fromMap) {
+      const ok = await uiUtils.showCustomConfirm(
+        `モデル「${deadModel}」は提供終了しているようです。
+
+代わりに「${suggestion.model}」に切り替えますか？
+（設定のモデル選択で後からいつでも変更できます）`
+      );
+      if (!ok) return null;
+      await applyModelSwitch(settingKey, suggestion.model);
+      return suggestion.model;
+    }
+    await applyModelSwitch(settingKey, suggestion.model);
+    uiUtils.showCustomAlert(
+      `「${deadModel}」は提供終了のため「${suggestion.model}」に自動で切り替えました。`
+    );
+    return suggestion.model;
+  }
+  __name(resolveRetiredModel, "resolveRetiredModel");
+
   // src/app-logic/message.js
   var messageMethods = {
     async proofreadText(textToProofread) {
@@ -9708,7 +9785,18 @@ ${knowledgeText}`;
         }
       } catch (error) {
         console.error("--- handleSend: 最終catchブロックでエラー捕捉 ---", error);
-        const errorMessage = error.name !== "AbortError" ? error.message || "不明なエラーが発生しました。" : "リクエストがキャンセルされました。";
+        let errorMessage = error.name !== "AbortError" ? error.message || "不明なエラーが発生しました。" : "リクエストがキャンセルされました。";
+        if (error.name !== "AbortError" && isRetiredModelError(errorMessage)) {
+          const deadModel = state.settings.modelName;
+          const newModel = await resolveRetiredModel({
+            deadModel,
+            provider: state.settings.apiProvider || "gemini",
+            settingKey: "modelName"
+          });
+          if (newModel) {
+            errorMessage = `モデル「${deadModel}」は提供終了のため「${newModel}」に切り替えました。もう一度送信してください。`;
+          }
+        }
         state.currentMessages[modelMessageIndex] = { role: "error", content: errorMessage, timestamp: Date.now() };
         uiUtils.renderChatMessages(() => uiUtils.scrollToBottom());
         await dbUtils.saveChat(null, null, { skipPush: true });
@@ -12743,12 +12831,12 @@ ${flagContent}`);
       elements.summaryDialog.showModal();
       await this._callSummaryApi(originalText);
     },
-    async _callSummaryApi(originalText) {
+    async _callSummaryApi(originalText, _isRetry = false) {
+      const summaryModel = state.settings.summaryModelName || state.settings.modelName;
+      const provider = inferProviderFromModel(summaryModel, state.settings.apiProvider || "gemini");
       try {
         const userContent = `【要約対象の会話履歴】
 ${originalText}`;
-        const summaryModel = state.settings.summaryModelName || state.settings.modelName;
-        const provider = inferProviderFromModel(summaryModel, state.settings.apiProvider || "gemini");
         console.log("--- [要約API] リクエスト開始 --- 使用モデル:", summaryModel, "provider:", provider);
         const { text: summaryText, raw } = await runAuxiliaryCompletion({
           provider,
@@ -12774,6 +12862,17 @@ ${originalText}`;
       } catch (error) {
         console.error("要約API呼び出し/処理中にエラー:", error);
         elements.summaryDialog.close();
+        if (!_isRetry && isRetiredModelError(error.message)) {
+          const newModel = await resolveRetiredModel({
+            deadModel: summaryModel,
+            provider,
+            settingKey: "summaryModelName"
+          });
+          if (newModel) {
+            await this._callSummaryApi(originalText, true);
+            return;
+          }
+        }
         uiUtils.showCustomAlert(`要約の生成に失敗しました: ${error.message}`);
       }
     },
