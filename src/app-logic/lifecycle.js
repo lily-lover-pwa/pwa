@@ -414,6 +414,31 @@ export const lifecycleMethods = {
             }
         }
 
+        // ★ お気に入りモデルをドロップダウンの先頭に固定表示する（現プロバイダーで選べるものだけ）。
+        // ヘッダーのモデル選択にも innerHTML ミラーで反映されるため、実利用時もワンタップで選べる。
+        const favorites = (state.settings && Array.isArray(state.settings.favoriteModels))
+            ? state.settings.favoriteModels
+            : [];
+        if (favorites.length > 0) {
+            const existingOptions = Array.from(modelSelect.querySelectorAll('option'));
+            const favGroup = document.createElement('optgroup');
+            favGroup.label = '★ お気に入り';
+            favGroup.id = 'favorite-models-group';
+            favorites.forEach(favId => {
+                // このプロバイダーの選択肢に無いお気に入りは表示しない（プロバイダーごとの範囲）
+                const src = existingOptions.find(o => o.value === favId);
+                if (!src) return;
+                const opt = document.createElement('option');
+                opt.value = favId;
+                opt.textContent = '★ ' + src.textContent;
+                if (src.dataset.provider) opt.dataset.provider = src.dataset.provider;
+                favGroup.appendChild(opt);
+            });
+            if (favGroup.children.length > 0) {
+                modelSelect.insertBefore(favGroup, modelSelect.firstChild);
+            }
+        }
+
         // 現在の値が新しいリストに含まれているか確認（標準・手動追加・API取得モデルすべて）
         const allAvailableValues = Array.from(modelSelect.querySelectorAll('option')).map(o => o.value);
         if (allAvailableValues.includes(currentValue)) {

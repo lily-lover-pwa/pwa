@@ -1979,6 +1979,9 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.31": [
+      "モデルの★お気に入りを追加。設定のモデル名の横の★ボタンで、よく使うモデルを登録できます。お気に入りはドロップダウンの先頭「★ お気に入り」グループに固定表示され、チャットヘッダーのモデル選択にも反映されるので素早く選べます（プロバイダーごとに表示）。"
+    ],
     "1.30": [
       "提供終了モデルの実行時サルベージを追加。送信や要約の途中でモデルが提供終了していた場合、「失敗」で終わらせず後継モデルへの切替を案内します。既知の廃止（gemini-3-pro-preview など）は後継へ自動切替、それ以外はそのプロバイダーの現行モデルを提案して確認します（勝手に別モデルへ切り替えて想定外の課金にはしません）。要約はそのまま自動で再試行します。"
     ],
@@ -4713,6 +4716,25 @@ Reason: [NGの場合の理由]`,
             fetchedGroup.appendChild(opt);
           });
           modelSelect.appendChild(fetchedGroup);
+        }
+      }
+      const favorites = state.settings && Array.isArray(state.settings.favoriteModels) ? state.settings.favoriteModels : [];
+      if (favorites.length > 0) {
+        const existingOptions = Array.from(modelSelect.querySelectorAll("option"));
+        const favGroup = document.createElement("optgroup");
+        favGroup.label = "★ お気に入り";
+        favGroup.id = "favorite-models-group";
+        favorites.forEach((favId) => {
+          const src = existingOptions.find((o) => o.value === favId);
+          if (!src) return;
+          const opt = document.createElement("option");
+          opt.value = favId;
+          opt.textContent = "★ " + src.textContent;
+          if (src.dataset.provider) opt.dataset.provider = src.dataset.provider;
+          favGroup.appendChild(opt);
+        });
+        if (favGroup.children.length > 0) {
+          modelSelect.insertBefore(favGroup, modelSelect.firstChild);
         }
       }
       const allAvailableValues = Array.from(modelSelect.querySelectorAll("option")).map((o) => o.value);
@@ -14532,6 +14554,30 @@ ${pageText}
             await persistCustomSetting("apiProvider", provider);
           }
         });
+      }
+      const favBtn = document.getElementById("favorite-model-btn");
+      if (favBtn && mainSelect) {
+        const getFavorites = /* @__PURE__ */ __name(() => Array.isArray(state.settings.favoriteModels) ? state.settings.favoriteModels : [], "getFavorites");
+        const updateFavoriteButton = /* @__PURE__ */ __name(() => {
+          const isFav = getFavorites().includes(mainSelect.value);
+          favBtn.textContent = isFav ? "★" : "☆";
+          favBtn.style.color = isFav ? "#f5b301" : "var(--text-secondary)";
+          favBtn.title = isFav ? "お気に入りから外す" : "このモデルをお気に入りに（ドロップダウンの先頭に固定）";
+        }, "updateFavoriteButton");
+        favBtn.addEventListener("click", async () => {
+          const model = mainSelect.value;
+          if (!model) return;
+          const favorites = getFavorites().slice();
+          const idx = favorites.indexOf(model);
+          if (idx >= 0) favorites.splice(idx, 1);
+          else favorites.push(model);
+          await persistCustomSetting("favoriteModels", favorites);
+          apiProvSelect?.dispatchEvent(new Event("change"));
+          updateFavoriteButton();
+        });
+        mainSelect.addEventListener("change", updateFavoriteButton);
+        apiProvSelect?.addEventListener("change", () => setTimeout(updateFavoriteButton, 0));
+        updateFavoriteButton();
       }
       renderCustomModels();
     }, "initPhase7");

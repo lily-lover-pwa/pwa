@@ -1058,7 +1058,7 @@ window.dbUtils = dbUtils;
             mainSelect.addEventListener('change', async (e) => {
                 const selectedOpt = mainSelect.options[mainSelect.selectedIndex];
                 const newModel = mainSelect.value;
-                
+
                 let provider = null;
                 if (selectedOpt && selectedOpt.dataset.provider) {
                     provider = selectedOpt.dataset.provider;
@@ -1073,6 +1073,36 @@ window.dbUtils = dbUtils;
                     await persistCustomSetting('apiProvider', provider);
                 }
             });
+        }
+
+        // ★ お気に入りモデル（ドロップダウン先頭にピン留め）のトグルボタン
+        const favBtn = document.getElementById('favorite-model-btn');
+        if (favBtn && mainSelect) {
+            const getFavorites = () =>
+                Array.isArray(state.settings.favoriteModels) ? state.settings.favoriteModels : [];
+            const updateFavoriteButton = () => {
+                const isFav = getFavorites().includes(mainSelect.value);
+                favBtn.textContent = isFav ? '★' : '☆';
+                favBtn.style.color = isFav ? '#f5b301' : 'var(--text-secondary)';
+                favBtn.title = isFav
+                    ? 'お気に入りから外す'
+                    : 'このモデルをお気に入りに（ドロップダウンの先頭に固定）';
+            };
+            favBtn.addEventListener('click', async () => {
+                const model = mainSelect.value;
+                if (!model) return;
+                const favorites = getFavorites().slice();
+                const idx = favorites.indexOf(model);
+                if (idx >= 0) favorites.splice(idx, 1);
+                else favorites.push(model);
+                await persistCustomSetting('favoriteModels', favorites);
+                // ドロップダウンを再生成して★グループを更新（現在の選択は維持される）
+                apiProvSelect?.dispatchEvent(new Event('change'));
+                updateFavoriteButton();
+            });
+            mainSelect.addEventListener('change', updateFavoriteButton);
+            apiProvSelect?.addEventListener('change', () => setTimeout(updateFavoriteButton, 0));
+            updateFavoriteButton();
         }
 
         renderCustomModels();

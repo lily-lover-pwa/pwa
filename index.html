@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.41" defer></script>
+    <script src="app.js?v=1.25.42" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -423,7 +423,8 @@
                                 🔄 全プロバイダーの最新モデルを取得
                             </button>
                             <label for="model-name" id="model-name-label">モデル名:</label>
-                            <select id="model-name" aria-label="モデル名">
+                            <div class="model-name-row" style="display:flex; gap:6px; align-items:stretch;">
+                            <select id="model-name" aria-label="モデル名" style="flex:1; min-width:0;">
                                 <option value="gemini-2.0-flash" selected>gemini-2.0-flash</option>
                                 <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
                                 <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
@@ -438,7 +439,9 @@
                                     <!-- JSで動的挿入 -->
                                 </optgroup>
                             </select>
-                            
+                            <button type="button" id="favorite-model-btn" aria-label="お気に入りの切り替え" title="このモデルをお気に入りに（ドロップダウンの先頭に固定）" style="flex:0 0 auto; padding:0 12px; font-size:16px; line-height:1; cursor:pointer;">☆</button>
+                            </div>
+
                             <div id="openrouter-model-input-container" class="hidden">
                                 <label for="openrouter-model-input">OpenRouter モデル名:</label>
                                 <input type="text" id="openrouter-model-input" placeholder="例: openai/gpt-5.1" aria-label="OpenRouter モデル名">
