@@ -509,7 +509,8 @@ export const memoryMethods = {
     showChatStats() {
         // 料金テーブル（USD / 100万トークン）。in=入力, out=出力, cw=キャッシュ書込, cr=キャッシュ読込(ヒット)。
         const MODEL_PRICING = {
-            // Claude 4系 (claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+            // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+            'claude-opus-5':   { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
             'claude-opus-4-8': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
             'claude-opus-4-7': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
             'claude-opus-4-6': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },

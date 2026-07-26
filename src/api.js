@@ -1,5 +1,5 @@
 // apiUtils（Phase 1 で app.js から抽出）。挙動は不変。
-import { DEEPSEEK_API_BASE_URL, DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION, DEFAULT_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_ZAI_MODEL, GEMINI_API_BASE_URL, GROQ_API_BASE_URL, INITIAL_RETRY_DELAY, MISTRAL_API_BASE_URL, OPENROUTER_API_BASE_URL, SAKANA_API_BASE_URL, XAI_API_BASE_URL, ZAI_API_BASE_URL } from './constants.js';
+import { DEEPSEEK_API_BASE_URL, DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION, DEFAULT_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_ZAI_MODEL, GEMINI_API_BASE_URL, GROQ_API_BASE_URL, INITIAL_RETRY_DELAY, MISTRAL_API_BASE_URL, OPENROUTER_API_BASE_URL, SAKANA_API_BASE_URL, XAI_API_BASE_URL, ZAI_API_BASE_URL, getAnthropicEffortLevels } from './constants.js';
 import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
@@ -1241,7 +1241,18 @@ export const apiUtils = {
         const apiKey = state.settings.anthropicApiKey;
         if (!apiKey) { const e = new Error("Anthropic APIキーが設定されていません。設定画面で追加してください。"); e.status = 401; throw e; }
 
-        const effort = state.settings.anthropicEffort || null;
+        const model = state.settings.modelName || 'claude-opus-4-6';
+        // モデルが対応する Effort だけに制限（未対応レベルを送ると400になるため）。
+        // 未対応レベルは「選択レベル以下で最も高い対応レベル」へ落とす（xhigh→high 等）。Effort非対応モデルはOFF。
+        let effort = state.settings.anthropicEffort || null;
+        const _effortLevels = getAnthropicEffortLevels(model);
+        if (effort && _effortLevels && !_effortLevels.includes(effort)) {
+            const _order = ['low', 'medium', 'high', 'xhigh', 'max'];
+            const _allowed = _order.filter((e) => _effortLevels.includes(e));
+            effort = _allowed.length === 0
+                ? null
+                : (_allowed.filter((e) => _order.indexOf(e) <= _order.indexOf(effort)).pop() || _allowed[_allowed.length - 1]);
+        }
         const useAdaptive = !!effort;
         // Anthropic の思考は「思考の深さ(effort)」のみで制御する。
         // 「OFF（思考なし）」を選んだら、Gemini 用の thinkingBudget が残っていても
@@ -1259,21 +1270,29 @@ export const apiUtils = {
             : cacheTTL === '1h' ? { type: "ephemeral", ttl: "1h" }
             : { type: "ephemeral" };
 
-        const model = state.settings.modelName || 'claude-opus-4-6';
         const requestBody = {
             model,
             messages: [],
             max_tokens: maxTokens,
         };
 
+        // 新世代モデル（Opus 4.7/4.8/5・Sonnet 5・Fable 5 等）は temperature/top_p/top_k が
+        // 廃止されており、送ると400になるため送らない。
+        const rejectsSamplingParams = ['claude-opus-4-7', 'claude-opus-4-8', 'claude-opus-5', 'claude-sonnet-5', 'claude-fable-5', 'claude-mythos-5'].some(m => model.startsWith(m));
+        // thinking パラメータ非対応の旧モデル（Claude 3.x / 2.x）には thinking を送らない。
+        const supportsThinkingParam = !model.startsWith('claude-3') && !model.startsWith('claude-2');
+
         if (useAdaptive) {
             requestBody.thinking = { type: 'adaptive' };
-            requestBody.temperature = 1;
+            if (!rejectsSamplingParams) requestBody.temperature = 1;
         } else if (useManualThinking) {
             requestBody.thinking = { type: 'enabled', budget_tokens: state.settings.thinkingBudget };
-            requestBody.temperature = 1;
+            if (!rejectsSamplingParams) requestBody.temperature = 1;
         } else {
-            requestBody.temperature = config.temperature ?? 0.7;
+            // OFF（思考なし）。Opus 5 等は思考がデフォルトONのため、明示的に disabled を送って止める。
+            // （disabled は effort high 以下限定だが、OFF時は effort を送らない＝サーバー既定 high なので問題なし）
+            if (supportsThinkingParam) requestBody.thinking = { type: 'disabled' };
+            if (!rejectsSamplingParams) requestBody.temperature = config.temperature ?? 0.7;
         }
         if (effort) {
             requestBody.output_config = { effort };

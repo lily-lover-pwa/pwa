@@ -43,6 +43,7 @@ try {
         anthropicApiKeyContainer: document.getElementById('anthropic-api-key-container'),
         anthropicCacheTTLSelect: document.getElementById('anthropic-cache-ttl'),
         anthropicEffortSelect: document.getElementById('anthropic-effort'),
+        anthropicEffortNote: document.getElementById('anthropic-effort-note'),
         novelaiApiKeyInput: document.getElementById('novelai-api-key'),
         novelaiModelSelect: document.getElementById('novelai-model'),
         groqApiKeyInput: document.getElementById('groq-api-key'),

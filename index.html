@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.42" defer></script>
+    <script src="app.js?v=1.25.43" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -364,9 +364,11 @@
                                 <option value="low">low（速度・コスト重視）</option>
                                 <option value="medium">medium（バランス型）</option>
                                 <option value="high" selected>high（デフォルト）</option>
+                                <option value="xhigh">xhigh（高品質・コーディング向け）</option>
                                 <option value="max">max（最大品質）</option>
                             </select>
-                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">※ Claude APIでの思考の深さ。adaptive thinkingを使用。<br>※ OFF にすると思考（推論）を行いません。思考表示にはInclude Thoughtsも必要。</p>
+                            <p id="anthropic-effort-note" class="hidden" style="font-size: 11px; color: var(--warning-text, #c0392b); margin-top: 4px;"></p>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">※ Claude APIでの思考の深さ。adaptive thinkingを使用。<br>※ 選択中のモデルに使えるレベルだけ表示されます（xhighはOpus 4.7以降、Effort自体はOpus 4.6以降/Sonnet 4.6が対象）。<br>※ OFF にすると思考（推論）を行いません。思考表示にはInclude Thoughtsも必要。</p>
                         </div>
 
                         <div id="groq-api-key-container" class="hidden">

@@ -1,5 +1,5 @@
 // uiUtils（Phase 1 で app.js から抽出）。挙動は不変。
-import { CHAT_TITLE_LENGTH, DARK_THEME_COLOR, DEFAULT_BEDROCK_REGION, DEFAULT_FONT_FAMILY, DEFAULT_MODEL, IMPORT_PREFIX, LIGHT_THEME_COLOR, MAX_TOTAL_ATTACHMENT_SIZE, TEXTAREA_MAX_HEIGHT } from './constants.js';
+import { CHAT_TITLE_LENGTH, DARK_THEME_COLOR, DEFAULT_BEDROCK_REGION, DEFAULT_FONT_FAMILY, DEFAULT_MODEL, IMPORT_PREFIX, LIGHT_THEME_COLOR, MAX_TOTAL_ATTACHMENT_SIZE, TEXTAREA_MAX_HEIGHT, getAnthropicEffortLevels } from './constants.js';
 import { appLogic } from './app-logic.js';
 import { base64ToBlob, formatFileSize } from './utils/format.js';
 import { dbUtils } from './db.js';
@@ -1568,6 +1568,49 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         const selectedModel = elements.modelNameSelect.value;
         const isNanoBanana = selectedModel === 'gemini-2.5-flash-image-preview';
         elements.modelWarningMessage.classList.toggle('hidden', !isNanoBanana);
+        this.updateAnthropicEffortOptions();
+    },
+    // 選択中のAnthropicモデルに応じて Effort の選択肢を絞り込み、注意書きを出す。
+    updateAnthropicEffortOptions() {
+        const sel = elements.anthropicEffortSelect;
+        if (!sel) return;
+        const model = (elements.modelNameSelect && elements.modelNameSelect.value) || state.settings.modelName || '';
+        const levels = getAnthropicEffortLevels(model); // null = 制限なし
+        for (const opt of sel.options) {
+            const ok = !levels || levels.includes(opt.value);
+            opt.hidden = !ok;
+            opt.disabled = !ok;
+        }
+        // 現在の選択が非対応なら、選択レベル以下で最も高い対応レベルへ寄せて保存する。
+        if (levels && !levels.includes(sel.value)) {
+            const order = ['low', 'medium', 'high', 'xhigh', 'max'];
+            const allowed = order.filter((e) => levels.includes(e));
+            let next = '';
+            if (allowed.length && sel.value) {
+                const idx = order.indexOf(sel.value);
+                next = allowed.filter((e) => order.indexOf(e) <= idx).pop() || allowed[allowed.length - 1];
+            }
+            if (!levels.includes(next)) next = levels.includes('high') ? 'high' : '';
+            sel.value = next;
+            if (state.settings.anthropicEffort !== next) {
+                state.settings.anthropicEffort = next;
+                if (state.activeProfile) {
+                    state.activeProfile.settings.anthropicEffort = next;
+                    dbUtils.updateProfile(state.activeProfile).catch(() => {});
+                }
+            }
+        }
+        // 注意書き
+        const note = elements.anthropicEffortNote;
+        if (note) {
+            let msg = '';
+            if (model.startsWith('claude')) {
+                if (levels && levels.length === 1) msg = '※ このモデルは Effort 非対応です（OFFのみ）。Opus 4.6以降 / Sonnet 4.6 で利用できます。';
+                else if (levels && !levels.includes('xhigh')) msg = '※ xhigh はこのモデルでは使えません（Opus 4.7以降で利用可）。';
+            }
+            note.textContent = msg;
+            note.classList.toggle('hidden', !msg);
+        }
     },
     updateProfileSwitcher() {
         const switcher = elements.profileSwitcher;

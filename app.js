@@ -1605,6 +1605,7 @@ ${relationship_context}`;
       anthropicApiKeyContainer: document.getElementById("anthropic-api-key-container"),
       anthropicCacheTTLSelect: document.getElementById("anthropic-cache-ttl"),
       anthropicEffortSelect: document.getElementById("anthropic-effort"),
+      anthropicEffortNote: document.getElementById("anthropic-effort-note"),
       novelaiApiKeyInput: document.getElementById("novelai-api-key"),
       novelaiModelSelect: document.getElementById("novelai-model"),
       groqApiKeyInput: document.getElementById("groq-api-key"),
@@ -1933,6 +1934,8 @@ ${relationship_context}`;
   ];
   var DEFAULT_OPENAI_MODEL = "gpt-4o";
   var ANTHROPIC_MODELS = [
+    { value: "claude-opus-5", label: "Claude Opus 5" },
+    { value: "claude-opus-4-8", label: "Claude Opus 4.8" },
     { value: "claude-opus-4-7", label: "Claude Opus 4.7" },
     { value: "claude-opus-4-6", label: "Claude Opus 4.6" },
     { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
@@ -1941,6 +1944,16 @@ ${relationship_context}`;
     { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" }
   ];
   var DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6";
+  function getAnthropicEffortLevels(model) {
+    if (!model) return null;
+    const full = ["claude-opus-5", "claude-opus-4-8", "claude-opus-4-7", "claude-sonnet-5", "claude-fable-5", "claude-mythos-5"];
+    if (full.some((p) => model.startsWith(p))) return ["", "low", "medium", "high", "xhigh", "max"];
+    if (model.startsWith("claude-opus-4-6") || model.startsWith("claude-sonnet-4-6")) return ["", "low", "medium", "high", "max"];
+    if (model.startsWith("claude-opus-4-5")) return ["", "low", "medium", "high"];
+    if (model.startsWith("claude-haiku") || model.startsWith("claude-sonnet-4-5") || model.startsWith("claude-3") || model.startsWith("claude-2")) return [""];
+    return null;
+  }
+  __name(getAnthropicEffortLevels, "getAnthropicEffortLevels");
   var GROQ_MODELS = [
     { value: "moonshotai/kimi-k2-instruct", label: "Kimi K2 Instruct" },
     { value: "meta-llama/llama-4-maverick-17b-128e-instruct", label: "Llama 4 Maverick 17B" },
@@ -1979,6 +1992,15 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.33": [
+      "思考の深さ(Effort)を、選択中のClaudeモデルで使えるレベルだけ表示するように改善。xhighはOpus 4.7以降、Effort自体はOpus 4.6以降/Sonnet 4.6のみ対応で、非対応のモデルでは自動的に選べなくなり、注意書きも表示されます。非対応レベルが設定に残っていてもAPI送信時に対応レベルへ自動調整するため400エラーになりません（※Opus 4.8 は max も xhigh も使えます）。"
+    ],
+    "1.32": [
+      "Claude Opus 5 に対応。Anthropicのモデル一覧に「Claude Opus 5 / 4.8」を追加しました。",
+      "Anthropic新世代モデル（Opus 4.7/4.8/5 等）で temperature が廃止され送ると400エラーになる問題に対応（該当モデルでは temperature を送信しないよう修正）。これまで Opus 4.7 選択時に失敗し得た不具合も解消。",
+      "思考の深さ(Effort)に「xhigh（高品質・コーディング向け）」を追加。Opus 5 で選べる5段階（low/medium/high/xhigh/max）に対応しました。",
+      "Opus 5 は思考がデフォルトONのため、Effort「OFF」を選んだときは明示的に思考を停止するよう修正（意図せず思考が走るのを防止）。"
+    ],
     "1.31": [
       "モデルの★お気に入りを追加。設定のモデル名の横の★ボタンで、よく使うモデルを登録できます。お気に入りはドロップダウンの先頭「★ お気に入り」グループに固定表示され、チャットヘッダーのモデル選択にも反映されるので素早く選べます（プロバイダーごとに表示）。"
     ],
@@ -3902,6 +3924,48 @@ Reason: [NGの場合の理由]`,
       const selectedModel = elements.modelNameSelect.value;
       const isNanoBanana = selectedModel === "gemini-2.5-flash-image-preview";
       elements.modelWarningMessage.classList.toggle("hidden", !isNanoBanana);
+      this.updateAnthropicEffortOptions();
+    },
+    // 選択中のAnthropicモデルに応じて Effort の選択肢を絞り込み、注意書きを出す。
+    updateAnthropicEffortOptions() {
+      const sel = elements.anthropicEffortSelect;
+      if (!sel) return;
+      const model = elements.modelNameSelect && elements.modelNameSelect.value || state.settings.modelName || "";
+      const levels = getAnthropicEffortLevels(model);
+      for (const opt of sel.options) {
+        const ok = !levels || levels.includes(opt.value);
+        opt.hidden = !ok;
+        opt.disabled = !ok;
+      }
+      if (levels && !levels.includes(sel.value)) {
+        const order = ["low", "medium", "high", "xhigh", "max"];
+        const allowed = order.filter((e) => levels.includes(e));
+        let next = "";
+        if (allowed.length && sel.value) {
+          const idx = order.indexOf(sel.value);
+          next = allowed.filter((e) => order.indexOf(e) <= idx).pop() || allowed[allowed.length - 1];
+        }
+        if (!levels.includes(next)) next = levels.includes("high") ? "high" : "";
+        sel.value = next;
+        if (state.settings.anthropicEffort !== next) {
+          state.settings.anthropicEffort = next;
+          if (state.activeProfile) {
+            state.activeProfile.settings.anthropicEffort = next;
+            dbUtils.updateProfile(state.activeProfile).catch(() => {
+            });
+          }
+        }
+      }
+      const note = elements.anthropicEffortNote;
+      if (note) {
+        let msg = "";
+        if (model.startsWith("claude")) {
+          if (levels && levels.length === 1) msg = "※ このモデルは Effort 非対応です（OFFのみ）。Opus 4.6以降 / Sonnet 4.6 で利用できます。";
+          else if (levels && !levels.includes("xhigh")) msg = "※ xhigh はこのモデルでは使えません（Opus 4.7以降で利用可）。";
+        }
+        note.textContent = msg;
+        note.classList.toggle("hidden", !msg);
+      }
     },
     updateProfileSwitcher() {
       const switcher = elements.profileSwitcher;
@@ -8941,27 +9005,36 @@ AI: ${firstModelContent}`;
         e.status = 401;
         throw e;
       }
-      const effort = state.settings.anthropicEffort || null;
+      const model = state.settings.modelName || "claude-opus-4-6";
+      let effort = state.settings.anthropicEffort || null;
+      const _effortLevels = getAnthropicEffortLevels(model);
+      if (effort && _effortLevels && !_effortLevels.includes(effort)) {
+        const _order = ["low", "medium", "high", "xhigh", "max"];
+        const _allowed = _order.filter((e) => _effortLevels.includes(e));
+        effort = _allowed.length === 0 ? null : _allowed.filter((e) => _order.indexOf(e) <= _order.indexOf(effort)).pop() || _allowed[_allowed.length - 1];
+      }
       const useAdaptive = !!effort;
       const useManualThinking = false;
       const useThinking = useAdaptive || useManualThinking;
       const maxTokens = useAdaptive ? Math.max(config.maxOutputTokens ?? 16e3, 16e3) : useManualThinking ? Math.max(config.maxOutputTokens ?? 4e3, state.settings.thinkingBudget + 1e3) : config.maxOutputTokens ?? 4e3;
       const cacheTTL = state.settings.anthropicCacheTTL || "5m";
       const cacheControl = cacheTTL === "none" ? null : cacheTTL === "1h" ? { type: "ephemeral", ttl: "1h" } : { type: "ephemeral" };
-      const model = state.settings.modelName || "claude-opus-4-6";
       const requestBody = {
         model,
         messages: [],
         max_tokens: maxTokens
       };
+      const rejectsSamplingParams = ["claude-opus-4-7", "claude-opus-4-8", "claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-mythos-5"].some((m) => model.startsWith(m));
+      const supportsThinkingParam = !model.startsWith("claude-3") && !model.startsWith("claude-2");
       if (useAdaptive) {
         requestBody.thinking = { type: "adaptive" };
-        requestBody.temperature = 1;
+        if (!rejectsSamplingParams) requestBody.temperature = 1;
       } else if (useManualThinking) {
         requestBody.thinking = { type: "enabled", budget_tokens: state.settings.thinkingBudget };
-        requestBody.temperature = 1;
+        if (!rejectsSamplingParams) requestBody.temperature = 1;
       } else {
-        requestBody.temperature = config.temperature ?? 0.7;
+        if (supportsThinkingParam) requestBody.thinking = { type: "disabled" };
+        if (!rejectsSamplingParams) requestBody.temperature = config.temperature ?? 0.7;
       }
       if (effort) {
         requestBody.output_config = { effort };
@@ -12716,7 +12789,8 @@ ${flagContent}`);
     },
     showChatStats() {
       const MODEL_PRICING = {
-        // Claude 4系 (claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+        // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+        "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
         "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
         "claude-opus-4-7": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
         "claude-opus-4-6": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
