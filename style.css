@@ -3108,3 +3108,409 @@ details.settings-group > summary:hover {
     opacity: 0.5;
     cursor: not-allowed;
 }
+/* =========================================================================
+ * 配色プリセット（ClaudeDesign「チャット用配色テンプレ5案」より）
+ * 設定の「配色プリセット」で切替。body[data-color-preset] が :root /
+ * body.dark-mode の色変数を上書きする。未指定（現行）のときは何もしない。
+ * セマンティック色（削除/編集/リトライ、エラー、ライトのテラコッタ保存）は維持。
+ * ========================================================================= */
+
+/* --- 藍墨 / aizumi --- */
+body[data-color-preset="aizumi"]:not(.dark-mode) {
+    --bg-primary: #f8f7f4;
+    --bg-secondary: #eceae5;
+    --bg-tertiary: #dedcd5;
+    --bg-input: #ffffff;
+    --bg-user-message: #dce4ef;
+    --bg-model-message: #ffffff;
+    --bg-system-message: #eceae5;
+    --bg-button: #52698a;
+    --bg-button-hover: #485c79;
+    --bg-button-action: #52698a;
+    --bg-button-action-hover: #485c79;
+    --bg-button-save: #3f5570;
+    --bg-button-save-hover: #374b63;
+    --bg-button-update: #52698a;
+    --bg-button-update-hover: #485c79;
+    --bg-button-export: #52698a;
+    --bg-button-export-hover: #485c79;
+    --bg-button-duplicate: #52698a;
+    --bg-button-duplicate-hover: #485c79;
+    --header-color-default: #3f5570;
+    /* --bg-header は :root で1回だけ var() 間接参照されるため、継承だけでは更新後の --header-color-default を拾えない。同じ要素(body)で再宣言して解決する */
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(248, 247, 244, 0.9);
+    --bg-overlay-light: rgba(248, 247, 244, var(--overlay-opacity-value));
+    --text-primary: #2c3440;
+    --text-secondary: #6b7583;
+    --text-link: #3f5570;
+    --text-placeholder: #9aa1ab;
+    --text-system: #6b7583;
+    --border-primary: #dedcd5;
+    --border-secondary: #c3c6cc;
+    --border-tertiary: #eceae5;
+}
+body.dark-mode[data-color-preset="aizumi"] {
+    --bg-primary: #14181d;
+    --bg-secondary: #1c2127;
+    --bg-tertiary: #1f252c;
+    --bg-input: #1e242b;
+    --bg-user-message: #27323f;
+    --bg-model-message: #1f252c;
+    --bg-system-message: #1f252c;
+    --bg-button: #8fa9c7;
+    --bg-button-hover: #9fb5cf;
+    --bg-button-action: #27323f;
+    --bg-button-action-hover: #454f5a;
+    --bg-button-save: #8fa9c7;
+    --bg-button-save-hover: #9fb5cf;
+    --bg-button-save-accent: #8fa9c7;
+    --bg-button-update: #8fa9c7;
+    --bg-button-update-hover: #9fb5cf;
+    --bg-button-export: #8fa9c7;
+    --bg-button-export-hover: #9fb5cf;
+    --bg-button-duplicate: #8fa9c7;
+    --bg-button-duplicate-hover: #9fb5cf;
+    --header-color-default: #2b3a4d;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(31, 37, 44, 0.9);
+    --bg-overlay-dark: rgba(20, 24, 29, var(--overlay-opacity-value));
+    --text-primary: #e5e8ec;
+    --text-secondary: #a7b0bb;
+    --text-link: #a8c6e6;
+    --text-placeholder: #6f7883;
+    --text-system: #a7b0bb;
+    --border-primary: #2f3740;
+    --border-secondary: #48525e;
+    --border-tertiary: #0e1114;
+}
+/* ダークのヘッダーは濃色背景のため文字色を明示（--text-light はダークで暗色） */
+body.dark-mode[data-color-preset="aizumi"] .app-header { color: #e5e8ec; }
+
+/* --- 青磁 / seiji --- */
+body[data-color-preset="seiji"]:not(.dark-mode) {
+    --bg-primary: #f6f8f4;
+    --bg-secondary: #e9eee6;
+    --bg-tertiary: #dbe2d7;
+    --bg-input: #ffffff;
+    --bg-user-message: #d9e7dc;
+    --bg-model-message: #ffffff;
+    --bg-system-message: #e9eee6;
+    --bg-button: #5f7f6b;
+    --bg-button-hover: #54705e;
+    --bg-button-action: #5f7f6b;
+    --bg-button-action-hover: #54705e;
+    --bg-button-save: #4c6a57;
+    --bg-button-save-hover: #435d4d;
+    --bg-button-update: #5f7f6b;
+    --bg-button-update-hover: #54705e;
+    --bg-button-export: #5f7f6b;
+    --bg-button-export-hover: #54705e;
+    --bg-button-duplicate: #5f7f6b;
+    --bg-button-duplicate-hover: #54705e;
+    --header-color-default: #4c6a57;
+    /* --bg-header は :root で1回だけ var() 間接参照されるため、継承だけでは更新後の --header-color-default を拾えない。同じ要素(body)で再宣言して解決する */
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(246, 248, 244, 0.9);
+    --bg-overlay-light: rgba(246, 248, 244, var(--overlay-opacity-value));
+    --text-primary: #2d3831;
+    --text-secondary: #68766c;
+    --text-link: #4c6a57;
+    --text-placeholder: #99a39b;
+    --text-system: #68766c;
+    --border-primary: #dbe2d7;
+    --border-secondary: #c1c9bd;
+    --border-tertiary: #e9eee6;
+}
+body.dark-mode[data-color-preset="seiji"] {
+    --bg-primary: #131814;
+    --bg-secondary: #1b211c;
+    --bg-tertiary: #1e2520;
+    --bg-input: #1d241f;
+    --bg-user-message: #27332c;
+    --bg-model-message: #1e2520;
+    --bg-system-message: #1e2520;
+    --bg-button: #93b8a1;
+    --bg-button-hover: #a2c2ae;
+    --bg-button-action: #27332c;
+    --bg-button-action-hover: #45504a;
+    --bg-button-save: #93b8a1;
+    --bg-button-save-hover: #a2c2ae;
+    --bg-button-save-accent: #93b8a1;
+    --bg-button-update: #93b8a1;
+    --bg-button-update-hover: #a2c2ae;
+    --bg-button-export: #93b8a1;
+    --bg-button-export-hover: #a2c2ae;
+    --bg-button-duplicate: #93b8a1;
+    --bg-button-duplicate-hover: #a2c2ae;
+    --header-color-default: #33493c;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(30, 37, 32, 0.9);
+    --bg-overlay-dark: rgba(19, 24, 20, var(--overlay-opacity-value));
+    --text-primary: #e4e9e3;
+    --text-secondary: #a7b3a9;
+    --text-link: #a9cdb5;
+    --text-placeholder: #717a72;
+    --text-system: #a7b3a9;
+    --border-primary: #2e372f;
+    --border-secondary: #465043;
+    --border-tertiary: #0d110e;
+}
+/* ダークのヘッダーは濃色背景のため文字色を明示（--text-light はダークで暗色） */
+body.dark-mode[data-color-preset="seiji"] .app-header { color: #e4e9e3; }
+
+/* --- 灰桜 / haizakura --- */
+body[data-color-preset="haizakura"]:not(.dark-mode) {
+    --bg-primary: #fbf8f8;
+    --bg-secondary: #f3eded;
+    --bg-tertiary: #e7dddd;
+    --bg-input: #ffffff;
+    --bg-user-message: #f0dee2;
+    --bg-model-message: #ffffff;
+    --bg-system-message: #f3eded;
+    --bg-button: #8f6673;
+    --bg-button-hover: #7e5a65;
+    --bg-button-action: #8f6673;
+    --bg-button-action-hover: #7e5a65;
+    --bg-button-save: #7a5560;
+    --bg-button-save-hover: #6b4b54;
+    --bg-button-update: #8f6673;
+    --bg-button-update-hover: #7e5a65;
+    --bg-button-export: #8f6673;
+    --bg-button-export-hover: #7e5a65;
+    --bg-button-duplicate: #8f6673;
+    --bg-button-duplicate-hover: #7e5a65;
+    --header-color-default: #7a5560;
+    /* --bg-header は :root で1回だけ var() 間接参照されるため、継承だけでは更新後の --header-color-default を拾えない。同じ要素(body)で再宣言して解決する */
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(251, 248, 248, 0.9);
+    --bg-overlay-light: rgba(251, 248, 248, var(--overlay-opacity-value));
+    --text-primary: #3b3033;
+    --text-secondary: #7b6c70;
+    --text-link: #7a5560;
+    --text-placeholder: #a49a9c;
+    --text-system: #7b6c70;
+    --border-primary: #e7dddd;
+    --border-secondary: #cbc0c2;
+    --border-tertiary: #f3eded;
+}
+body.dark-mode[data-color-preset="haizakura"] {
+    --bg-primary: #1a1618;
+    --bg-secondary: #221d20;
+    --bg-tertiary: #251f22;
+    --bg-input: #241f22;
+    --bg-user-message: #372a2f;
+    --bg-model-message: #251f22;
+    --bg-system-message: #251f22;
+    --bg-button: #c39ba5;
+    --bg-button-hover: #cba9b2;
+    --bg-button-action: #372a2f;
+    --bg-button-action-hover: #53484c;
+    --bg-button-save: #c39ba5;
+    --bg-button-save-hover: #cba9b2;
+    --bg-button-save-accent: #c39ba5;
+    --bg-button-update: #c39ba5;
+    --bg-button-update-hover: #cba9b2;
+    --bg-button-export: #c39ba5;
+    --bg-button-export-hover: #cba9b2;
+    --bg-button-duplicate: #c39ba5;
+    --bg-button-duplicate-hover: #cba9b2;
+    --header-color-default: #4d353c;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(37, 31, 34, 0.9);
+    --bg-overlay-dark: rgba(26, 22, 24, var(--overlay-opacity-value));
+    --text-primary: #ece5e7;
+    --text-secondary: #b6a8ac;
+    --text-link: #d6abb6;
+    --text-placeholder: #7a7175;
+    --text-system: #b6a8ac;
+    --border-primary: #332c2f;
+    --border-secondary: #4d4348;
+    --border-tertiary: #120f11;
+}
+/* ダークのヘッダーは濃色背景のため文字色を明示（--text-light はダークで暗色） */
+body.dark-mode[data-color-preset="haizakura"] .app-header { color: #ece5e7; }
+
+/* --- 墨 / sumi --- */
+body[data-color-preset="sumi"]:not(.dark-mode) {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f4f4f2;
+    --bg-tertiary: #e2e1dd;
+    --bg-input: #ffffff;
+    --bg-user-message: #edebe6;
+    --bg-model-message: #ffffff;
+    --bg-system-message: #f4f4f2;
+    --bg-button: #3a3a37;
+    --bg-button-hover: #333330;
+    --bg-button-action: #3a3a37;
+    --bg-button-action-hover: #333330;
+    --bg-button-save: #262624;
+    --bg-button-save-hover: #212120;
+    --bg-button-update: #3a3a37;
+    --bg-button-update-hover: #333330;
+    --bg-button-export: #3a3a37;
+    --bg-button-export-hover: #333330;
+    --bg-button-duplicate: #3a3a37;
+    --bg-button-duplicate-hover: #333330;
+    --header-color-default: #262624;
+    /* --bg-header は :root で1回だけ var() 間接参照されるため、継承だけでは更新後の --header-color-default を拾えない。同じ要素(body)で再宣言して解決する */
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(255, 255, 255, 0.9);
+    --bg-overlay-light: rgba(255, 255, 255, var(--overlay-opacity-value));
+    --text-primary: #1a1a19;
+    --text-secondary: #615f5a;
+    --text-link: #262624;
+    --text-placeholder: #96948e;
+    --text-system: #615f5a;
+    --border-primary: #e2e1dd;
+    --border-secondary: #c2c1bb;
+    --border-tertiary: #f4f4f2;
+}
+body.dark-mode[data-color-preset="sumi"] {
+    --bg-primary: #101010;
+    --bg-secondary: #191918;
+    --bg-tertiary: #1a1a19;
+    --bg-input: #1b1b1a;
+    --bg-user-message: #2c2c29;
+    --bg-model-message: #1a1a19;
+    --bg-system-message: #1a1a19;
+    --bg-button: #cfcbc0;
+    --bg-button-hover: #d6d2c9;
+    --bg-button-action: #2c2c29;
+    --bg-button-action-hover: #4a4a47;
+    --bg-button-save: #cfcbc0;
+    --bg-button-save-hover: #d6d2c9;
+    --bg-button-save-accent: #cfcbc0;
+    --bg-button-update: #cfcbc0;
+    --bg-button-update-hover: #d6d2c9;
+    --bg-button-export: #cfcbc0;
+    --bg-button-export-hover: #d6d2c9;
+    --bg-button-duplicate: #cfcbc0;
+    --bg-button-duplicate-hover: #d6d2c9;
+    --header-color-default: #232322;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(26, 26, 25, 0.9);
+    --bg-overlay-dark: rgba(16, 16, 16, var(--overlay-opacity-value));
+    --text-primary: #f1f0ea;
+    --text-secondary: #a9a8a1;
+    --text-link: #ded9cf;
+    --text-placeholder: #75746e;
+    --text-system: #a9a8a1;
+    --border-primary: #2c2c2a;
+    --border-secondary: #474641;
+    --border-tertiary: #0b0b0b;
+}
+/* ダークのヘッダーは濃色背景のため文字色を明示（--text-light はダークで暗色） */
+body.dark-mode[data-color-preset="sumi"] .app-header { color: #f1f0ea; }
+
+/* --- 琥珀 / kohaku --- */
+body[data-color-preset="kohaku"]:not(.dark-mode) {
+    --bg-primary: #fdfaf5;
+    --bg-secondary: #f5efe4;
+    --bg-tertiary: #eae1d1;
+    --bg-input: #ffffff;
+    --bg-user-message: #f6e5cb;
+    --bg-model-message: #fffdf9;
+    --bg-system-message: #f5efe4;
+    --bg-button: #a3733f;
+    --bg-button-hover: #8f6537;
+    --bg-button-action: #a3733f;
+    --bg-button-action-hover: #8f6537;
+    --bg-button-save: #8a5f38;
+    --bg-button-save-hover: #795431;
+    --bg-button-update: #a3733f;
+    --bg-button-update-hover: #8f6537;
+    --bg-button-export: #a3733f;
+    --bg-button-export-hover: #8f6537;
+    --bg-button-duplicate: #a3733f;
+    --bg-button-duplicate-hover: #8f6537;
+    --header-color-default: #8a5f38;
+    /* --bg-header は :root で1回だけ var() 間接参照されるため、継承だけでは更新後の --header-color-default を拾えない。同じ要素(body)で再宣言して解決する */
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(253, 250, 245, 0.9);
+    --bg-overlay-light: rgba(253, 250, 245, var(--overlay-opacity-value));
+    --text-primary: #3a2f24;
+    --text-secondary: #7b6a55;
+    --text-link: #8a5f38;
+    --text-placeholder: #a5967f;
+    --text-system: #7b6a55;
+    --border-primary: #eae1d1;
+    --border-secondary: #cdc0a9;
+    --border-tertiary: #f5efe4;
+}
+body.dark-mode[data-color-preset="kohaku"] {
+    --bg-primary: #17130f;
+    --bg-secondary: #1f1a14;
+    --bg-tertiary: #211b14;
+    --bg-input: #221c15;
+    --bg-user-message: #3a2c1d;
+    --bg-model-message: #211b14;
+    --bg-system-message: #211b14;
+    --bg-button: #d09f62;
+    --bg-button-hover: #d7ac78;
+    --bg-button-action: #3a2c1d;
+    --bg-button-action-hover: #564a3d;
+    --bg-button-save: #d09f62;
+    --bg-button-save-hover: #d7ac78;
+    --bg-button-save-accent: #d09f62;
+    --bg-button-update: #d09f62;
+    --bg-button-update-hover: #d7ac78;
+    --bg-button-export: #d09f62;
+    --bg-button-export-hover: #d7ac78;
+    --bg-button-duplicate: #d09f62;
+    --bg-button-duplicate-hover: #d7ac78;
+    --header-color-default: #4a3320;
+    --bg-header: var(--header-color-custom, var(--header-color-default));
+    --text-color: var(--text-primary);
+    --bg-color-main: var(--bg-primary);
+    --border-color: var(--border-primary);
+    --primary-color: var(--bg-button);
+    --bg-message-actions: rgba(33, 27, 20, 0.9);
+    --bg-overlay-dark: rgba(23, 19, 15, var(--overlay-opacity-value));
+    --text-primary: #f1e7d8;
+    --text-secondary: #bcac95;
+    --text-link: #e2ba82;
+    --text-placeholder: #7d7263;
+    --text-system: #bcac95;
+    --border-primary: #33291e;
+    --border-secondary: #4f4231;
+    --border-tertiary: #100d0a;
+}
+/* ダークのヘッダーは濃色背景のため文字色を明示（--text-light はダークで暗色） */
+body.dark-mode[data-color-preset="kohaku"] .app-header { color: #f1e7d8; }

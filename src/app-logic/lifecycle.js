@@ -1173,6 +1173,7 @@ export const lifecycleMethods = {
             overlayOpacity: { element: elements.overlayOpacitySlider, event: 'input', onUpdate: () => uiUtils.applyOverlayOpacity() },
             messageOpacity: { element: elements.messageOpacitySlider, event: 'input', onUpdate: (value) => document.documentElement.style.setProperty('--message-bubble-opacity', String(value)) },
             headerColor: { element: elements.headerColorInput, event: 'input', onUpdate: () => uiUtils.applyHeaderColor() },
+            colorPreset: { element: elements.colorPresetSelect, event: 'change', onUpdate: () => uiUtils.applyColorPreset() },
             forceFunctionCalling: { element: elements.forceFunctionCallingToggle, event: 'change' },
             autoScroll: { element: elements.autoScrollToggle, event: 'change' },
             enableWideMode: { element: elements.enableWideModeToggle, event: 'change', onUpdate: () => this.applyWideMode() },

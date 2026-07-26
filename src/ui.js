@@ -1137,9 +1137,11 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
 
         const defaultHeaderColor = state.settings.darkMode ? '#908675' : '#908675';
         elements.headerColorInput.value = state.settings.headerColor || defaultHeaderColor;
+        if (elements.colorPresetSelect) elements.colorPresetSelect.value = state.settings.colorPreset || '';
 
         this.updateUserModelOptions();
         this.updateBackgroundSettingsUI();
+        this.applyColorPreset();
         this.applyDarkMode();
         this.applyFontFamily();
         this.toggleSystemPromptVisibility();
@@ -1246,6 +1248,17 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         console.log(`ダークモード ${isDark ? '有効' : '無効'}. テーマカラー: ${elements.themeColorMeta.content}`);
         this.applyOverlayOpacity();
         this.applyHeaderColor();
+    },
+
+    // 配色プリセット（style.css 末尾の body[data-color-preset] 定義を有効化するだけ。
+    // 未指定（''）のときは属性を外し、現行の色に戻る）
+    applyColorPreset() {
+        const preset = state.settings.colorPreset || '';
+        if (preset) {
+            document.body.dataset.colorPreset = preset;
+        } else {
+            delete document.body.dataset.colorPreset;
+        }
     },
 
     // フォント設定を適用

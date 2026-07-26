@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
     <!-- CSSファイルを外部から読み込む -->
-    <link rel="stylesheet" href="style.css?v=1.25.37">
+    <link rel="stylesheet" href="style.css?v=1.25.45">
     <link rel="stylesheet" href="prism.css" />
     <script src="marked.js" defer></script>
     <!-- DOMPurify: AI出力/インポート由来HTMLのサニタイズ（XSS対策）。marked の後に読み込む -->
@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.44" defer></script>
+    <script src="app.js?v=1.25.45" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -876,6 +876,19 @@
                    <input type="text" id="font-family-input" placeholder="例: 'Meiryo', sans-serif" aria-label="アプリ全体のフォント">
                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
                        ※ 端末またはPCにインストールされているフォント名を指定。
+                   </p>
+                   <!-- 配色プリセット -->
+                   <label for="color-preset-select">配色プリセット:</label>
+                   <select id="color-preset-select" aria-label="配色プリセット">
+                       <option value="">現行（オフホワイト＋グレージュ）</option>
+                       <option value="aizumi">藍墨 ー 和紙の白地に藍。寒色で締まった長文向き</option>
+                       <option value="seiji">青磁 ー 淡い緑。白地よりも目が疲れにくい</option>
+                       <option value="haizakura">灰桜 ー くすんだ桜色。やわらかいが彩度は抑えめ</option>
+                       <option value="sumi">墨 ー 無彩色・最高コントラスト。読みやすさ最優先</option>
+                       <option value="kohaku">琥珀 ー 現行ベージュの延長。より温かく文字を締めた版</option>
+                   </select>
+                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                       ※ 選ぶと即反映されます（ライト/ダーク両対応）。「ヘッダーの色」を個別設定している場合はリセットするとプリセットの色になります。
                    </p>
                    <div class="settings-color-picker-container">
                         <label for="header-color-input">ヘッダーの色:</label>

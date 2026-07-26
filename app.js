@@ -1703,6 +1703,7 @@ ${relationship_context}`;
       overlayOpacityValue: document.getElementById("overlay-opacity-value"),
       headerColorInput: document.getElementById("header-color-input"),
       resetHeaderColorBtn: document.getElementById("reset-header-color-btn"),
+      colorPresetSelect: document.getElementById("color-preset-select"),
       messageOpacitySlider: document.getElementById("message-opacity-slider"),
       messageOpacityValue: document.getElementById("message-opacity-value"),
       modelWarningMessage: document.getElementById("model-warning-message"),
@@ -1992,6 +1993,9 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.35": [
+      "配色プリセットを追加。設定の「配色プリセット」から、藍墨・青磁・灰桜・墨・琥珀の5種類（各ライト/ダーク対応）にワンタップで切り替えられます。ClaudeDesignで作成したテンプレートを移植しました。"
+    ],
     "1.34": [
       "【重要】Dropbox同期で設定が巻き戻る不具合を修正。プロファイルのマージが「常にクラウド優先」だったため、ローカルで変更した設定（思考の深さ(Effort)など）が自動同期のたびに古い内容へ戻っていました。チャットやプロジェクトと同じく「更新が新しい方を優先」に変更しています。",
       "思考の深さ(Effort)を「OFF（思考なし）」にしていても、再読み込み後に設定画面上で「high」に戻って見える不具合を修正しました。",
@@ -3574,8 +3578,10 @@ Reason: [NGの場合の理由]`,
       elements.dropboxSyncFrequencySelect.value = state.settings.dropboxSyncFrequency || "instant";
       const defaultHeaderColor = state.settings.darkMode ? "#908675" : "#908675";
       elements.headerColorInput.value = state.settings.headerColor || defaultHeaderColor;
+      if (elements.colorPresetSelect) elements.colorPresetSelect.value = state.settings.colorPreset || "";
       this.updateUserModelOptions();
       this.updateBackgroundSettingsUI();
+      this.applyColorPreset();
       this.applyDarkMode();
       this.applyFontFamily();
       this.toggleSystemPromptVisibility();
@@ -3661,6 +3667,16 @@ Reason: [NGの場合の理由]`,
       console.log(`ダークモード ${isDark ? "有効" : "無効"}. テーマカラー: ${elements.themeColorMeta.content}`);
       this.applyOverlayOpacity();
       this.applyHeaderColor();
+    },
+    // 配色プリセット（style.css 末尾の body[data-color-preset] 定義を有効化するだけ。
+    // 未指定（''）のときは属性を外し、現行の色に戻る）
+    applyColorPreset() {
+      const preset = state.settings.colorPreset || "";
+      if (preset) {
+        document.body.dataset.colorPreset = preset;
+      } else {
+        delete document.body.dataset.colorPreset;
+      }
     },
     // フォント設定を適用
     applyFontFamily() {
@@ -5433,6 +5449,7 @@ Reason: [NGの場合の理由]`,
         overlayOpacity: { element: elements.overlayOpacitySlider, event: "input", onUpdate: /* @__PURE__ */ __name(() => uiUtils.applyOverlayOpacity(), "onUpdate") },
         messageOpacity: { element: elements.messageOpacitySlider, event: "input", onUpdate: /* @__PURE__ */ __name((value) => document.documentElement.style.setProperty("--message-bubble-opacity", String(value)), "onUpdate") },
         headerColor: { element: elements.headerColorInput, event: "input", onUpdate: /* @__PURE__ */ __name(() => uiUtils.applyHeaderColor(), "onUpdate") },
+        colorPreset: { element: elements.colorPresetSelect, event: "change", onUpdate: /* @__PURE__ */ __name(() => uiUtils.applyColorPreset(), "onUpdate") },
         forceFunctionCalling: { element: elements.forceFunctionCallingToggle, event: "change" },
         autoScroll: { element: elements.autoScrollToggle, event: "change" },
         enableWideMode: { element: elements.enableWideModeToggle, event: "change", onUpdate: /* @__PURE__ */ __name(() => this.applyWideMode(), "onUpdate") },

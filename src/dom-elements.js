@@ -141,6 +141,7 @@ try {
         overlayOpacityValue: document.getElementById('overlay-opacity-value'),
         headerColorInput: document.getElementById('header-color-input'),
         resetHeaderColorBtn: document.getElementById('reset-header-color-btn'),
+        colorPresetSelect: document.getElementById('color-preset-select'),
         messageOpacitySlider: document.getElementById('message-opacity-slider'),
         messageOpacityValue:  document.getElementById('message-opacity-value'),
         modelWarningMessage: document.getElementById('model-warning-message'),
