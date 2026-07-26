@@ -1992,6 +1992,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.34": [
+      "【重要】Dropbox同期で設定が巻き戻る不具合を修正。プロファイルのマージが「常にクラウド優先」だったため、ローカルで変更した設定（思考の深さ(Effort)など）が自動同期のたびに古い内容へ戻っていました。チャットやプロジェクトと同じく「更新が新しい方を優先」に変更しています。",
+      "思考の深さ(Effort)を「OFF（思考なし）」にしていても、再読み込み後に設定画面上で「high」に戻って見える不具合を修正しました。",
+      "※ 上記により、Anthropicのプロンプトキャッシュが設定の巻き戻りで無駄に切れることがなくなります（ページ再読み込み自体ではキャッシュは切れません）。"
+    ],
     "1.33": [
       "思考の深さ(Effort)を、選択中のClaudeモデルで使えるレベルだけ表示するように改善。xhighはOpus 4.7以降、Effort自体はOpus 4.6以降/Sonnet 4.6のみ対応で、非対応のモデルでは自動的に選べなくなり、注意書きも表示されます。非対応レベルが設定に残っていてもAPI送信時に対応レベルへ自動調整するため400エラーになりません（※Opus 4.8 は max も xhigh も使えます）。"
     ],
@@ -3477,7 +3482,7 @@ Reason: [NGの場合の理由]`,
         elements.anthropicCacheTTLSelect.value = state.settings.anthropicCacheTTL || "5m";
       }
       if (elements.anthropicEffortSelect) {
-        elements.anthropicEffortSelect.value = state.settings.anthropicEffort || "high";
+        elements.anthropicEffortSelect.value = state.settings.anthropicEffort ?? "high";
       }
       if (elements.novelaiApiKeyInput) {
         elements.novelaiApiKeyInput.value = state.settings.novelaiApiKey || "";
@@ -6306,6 +6311,24 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
     }
   };
 
+  // src/utils/merge.js
+  function mergeByNewest(lists, { key = "id", timestamp = "updatedAt" } = {}) {
+    const map = /* @__PURE__ */ new Map();
+    for (const list of lists || []) {
+      for (const item of list || []) {
+        if (!item) continue;
+        const k = item[key];
+        if (k === void 0 || k === null) continue;
+        const existing = map.get(k);
+        if (!existing || (item[timestamp] || 0) > (existing[timestamp] || 0)) {
+          map.set(k, item);
+        }
+      }
+    }
+    return Array.from(map.values());
+  }
+  __name(mergeByNewest, "mergeByNewest");
+
   // src/app-logic/sync.js
   var syncMethods = {
     // 復旧ダイアログを表示するヘルパー関数
@@ -6473,10 +6496,7 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
           existing.items = [.../* @__PURE__ */ new Set([...existing.items || [], ...m.items || []])];
         }
       });
-      const profileMap = /* @__PURE__ */ new Map();
-      [...cloudData.profiles || [], ...localData.profiles || []].forEach((p) => {
-        if (!profileMap.has(p.id)) profileMap.set(p.id, p);
-      });
+      const mergedProfiles = mergeByNewest([cloudData.profiles, localData.profiles]);
       const assetMap = /* @__PURE__ */ new Map();
       [...cloudData.assets || [], ...localData.assets || []].forEach((a) => {
         if (a.assetId && !assetMap.has(a.assetId)) assetMap.set(a.assetId, a);
@@ -6486,7 +6506,7 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
         exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
         syncId: "sync_merge_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9),
         data: {
-          profiles: Array.from(profileMap.values()),
+          profiles: mergedProfiles,
           chats: Array.from(chatMap.values()),
           memories: Array.from(memoryMap.values()),
           projects: Array.from(projectMap.values()),
@@ -13485,6 +13505,7 @@ ${summaryText}` : summaryText;
     },
     async updateProfile(profile) {
       await this.openDB();
+      profile.updatedAt = Date.now();
       return new Promise((resolve, reject) => {
         const store = this._getStore(PROFILES_STORE, "readwrite");
         const request = store.put(profile);

@@ -5,6 +5,7 @@ import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
+import { mergeByNewest } from '../utils/merge.js';
 
 export const syncMethods = {
 
@@ -209,11 +210,11 @@ export const syncMethods = {
             else { existing.items = [...new Set([...(existing.items || []), ...(m.items || [])])]; }
         });
 
-        // プロファイル: ID単位でマージ（クラウド優先で初期設定を保持）
-        const profileMap = new Map();
-        [...(cloudData.profiles || []), ...(localData.profiles || [])].forEach(p => {
-            if (!profileMap.has(p.id)) profileMap.set(p.id, p);
-        });
+        // プロファイル: ID単位でマージ、updatedAtが新しい方を優先（チャット/プロジェクトと同じ方式）。
+        // 以前は「クラウド先勝ち」だったため、ローカルでの設定変更（Effort等）が
+        // 同期のたびにクラウドの古い内容へ巻き戻っていた。
+        // updatedAtが無い旧データ同士（ともに0）の場合は、従来どおりクラウド側を保持する。
+        const mergedProfiles = mergeByNewest([cloudData.profiles, localData.profiles]);
 
         // アセット: union
         const assetMap = new Map();
@@ -227,7 +228,7 @@ export const syncMethods = {
             exportedAt: new Date().toISOString(),
             syncId: 'sync_merge_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
             data: {
-                profiles: Array.from(profileMap.values()),
+                profiles: mergedProfiles,
                 chats: Array.from(chatMap.values()),
                 memories: Array.from(memoryMap.values()),
                 projects: Array.from(projectMap.values()),

@@ -519,6 +519,9 @@ export const dbUtils = {
 
     async updateProfile(profile) {
         await this.openDB();
+        // ローカルでの変更時刻を記録する。Dropboxマージ時に「新しい方を優先」する判定に使うため、
+        // これが無いとローカルの設定変更がクラウドの古い内容に上書きされてしまう。
+        profile.updatedAt = Date.now();
         return new Promise((resolve, reject) => {
             const store = this._getStore(PROFILES_STORE, 'readwrite');
             const request = store.put(profile);

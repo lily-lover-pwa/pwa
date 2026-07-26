@@ -1041,7 +1041,8 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
             elements.anthropicCacheTTLSelect.value = state.settings.anthropicCacheTTL || '5m';
         }
         if (elements.anthropicEffortSelect) {
-            elements.anthropicEffortSelect.value = state.settings.anthropicEffort || 'high';
+            // OFF（思考なし）は空文字なので `||` だと 'high' に化ける。未設定(undefined)のみ既定値にする。
+            elements.anthropicEffortSelect.value = state.settings.anthropicEffort ?? 'high';
         }
         if (elements.novelaiApiKeyInput) {
             elements.novelaiApiKeyInput.value = state.settings.novelaiApiKey || '';
