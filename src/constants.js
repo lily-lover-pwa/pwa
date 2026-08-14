@@ -18,6 +18,8 @@ export const DEFAULT_FONT_FAMILY =
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'; // デフォルトフォント
 export const CHAT_TITLE_LENGTH = 15;
 export const TEXTAREA_MAX_HEIGHT = 120;
+export const MAX_HISTORY_EXCERPTS = 3; // 履歴検索で1チャットあたりに表示する抜粋の上限
+export const HISTORY_SEARCH_DEBOUNCE_MS = 200;
 export const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 export const ZAI_API_BASE_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 export const OPENROUTER_API_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -152,6 +154,7 @@ export const DEEPSEEK_MODELS = [
 export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 
 export const XAI_MODELS = [
+    { value: 'grok-4.6', label: 'Grok 4.6' },
     { value: 'grok-4', label: 'Grok 4' },
     { value: 'grok-3', label: 'Grok 3' },
     { value: 'grok-3-mini', label: 'Grok 3 Mini' },
@@ -176,6 +179,21 @@ export const SAKANA_MODELS = [
 export const DEFAULT_SAKANA_MODEL = 'fugu';
 
 export const VERSION_HISTORY = {
+    '1.41': [
+        '全チャットを横断した使用量サマリーを追加しました。ⓘ（会話の統計）の「全チャットの使用量」ボタンから開けます。今月／先月／過去30日／全期間で切り替えられ、推定コスト・メッセージ数・入出力トークンの合計と、モデル別の内訳が見られます。DeepSeekはピーク時間帯にかかった分も別途表示します。',
+        '※ 端末内の履歴からの推定です。削除したチャットや、同期していない端末の分は含まれません。正確な請求額は各社の使用量ページ（同じくⓘから開けます）でご確認ください。',
+        '※ 金額を計算できるのは料金表を持つモデル（Claude / GPT-5系・4.1系・o3系 / Gemini 3.x・2.5系 / DeepSeek / Grok 4.6）だけです。それ以外のモデルはトークン数のみ表示し、金額欄は「—」になります。',
+        'OpenRouter経由のモデルも金額を計算できるようにしました（モデル名が「anthropic/claude-opus-5」のような形でも判別します）。提供元の単価での概算なので、クレジット購入時の手数料ぶん実際の請求は少し高くなります。',
+        'Gemini 3.1 Pro の料金に対応しました（入力$2 / 出力$12、20万トークン超で入力2倍・出力1.5倍）。',
+        'Grok 4.6・GPT（5系/4.1系/o3系）・Gemini（3.x/2.5系）の料金に対応しました。長いプロンプトで単価が変わる仕様も反映しています（Grok 4.6 は20万トークン以上で2倍、Gemini 2.5 Pro は20万トークン超で入力2倍・出力1.5倍）。',
+        'モデル選択に Grok 4.6 を追加しました。',
+        'GPT・Gemini のキャッシュヒット分を、キャッシュ用の安い単価で計算するようにしました（これまでは通常入力として多めに見積もっていました）。',
+    ],
+    '1.40': [
+        'DeepSeek V4 の料金改定（2026年8月16日 16:00 UTC＝日本時間8月17日 1:00）に対応しました。ⓘ の推定コストが新料金で計算されます。V4-Pro は入力$0.66／出力$1.98／キャッシュヒット$0.022、V4-Flash は入力$0.22／出力$0.66／キャッシュヒット$0.007（いずれも100万トークンあたり・オフピーク）です。改定前と比べて出力が約2.3倍、入力が約1.5倍になります。',
+        '改定前に送ったメッセージは、これまでどおり旧料金で計算します。過去のチャットの推定コストが後から跳ね上がって見えることはありません。',
+        '※ ピーク時間帯（日本時間 10:00-13:00 / 15:00-19:00 は2倍）は改定後も変わりません。',
+    ],
     '1.35': [
         '配色プリセットを追加。設定の「配色プリセット」から、藍墨・青磁・灰桜・墨・琥珀の5種類（各ライト/ダーク対応）にワンタップで切り替えられます。ClaudeDesignで作成したテンプレートを移植しました。',
     ],

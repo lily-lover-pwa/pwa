@@ -1,9 +1,10 @@
 // uiUtils（Phase 1 で app.js から抽出）。挙動は不変。
-import { CHAT_TITLE_LENGTH, DARK_THEME_COLOR, DEFAULT_BEDROCK_REGION, DEFAULT_FONT_FAMILY, DEFAULT_MODEL, IMPORT_PREFIX, LIGHT_THEME_COLOR, MAX_TOTAL_ATTACHMENT_SIZE, TEXTAREA_MAX_HEIGHT, getAnthropicEffortLevels } from './constants.js';
+import { CHAT_TITLE_LENGTH, DARK_THEME_COLOR, DEFAULT_BEDROCK_REGION, DEFAULT_FONT_FAMILY, DEFAULT_MODEL, IMPORT_PREFIX, LIGHT_THEME_COLOR, MAX_HISTORY_EXCERPTS, MAX_TOTAL_ATTACHMENT_SIZE, TEXTAREA_MAX_HEIGHT, getAnthropicEffortLevels } from './constants.js';
 import { appLogic } from './app-logic.js';
 import { base64ToBlob, formatFileSize } from './utils/format.js';
 import { dbUtils } from './db.js';
 import { elements } from './dom-elements.js';
+import { searchChats } from './utils/search.js';
 import { htmlUtils } from './utils/html.js';
 import { state } from './state.js';
 
@@ -814,24 +815,91 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         }
     },
 
+    /**
+     * 検索でヒットしたメッセージを目立たせ、最初のヒットまでスクロールする。
+     * ハイライトは renderChatMessages が中身を作り直すときに自然に消える。
+     * @param {number[]} indices state.currentMessages 上のインデックス
+     * @returns {boolean} 1件でもハイライトできたか
+     */
+    highlightSearchHits(indices) {
+        if (!Array.isArray(indices) || indices.length === 0) return false;
+        let firstHitElement = null;
+        indices.forEach(index => {
+            const messageElement = elements.messageContainer.querySelector(`.message[data-index="${index}"]`);
+            if (!messageElement) return;
+            messageElement.classList.add('search-hit');
+            if (!firstHitElement) firstHitElement = messageElement;
+        });
+        if (!firstHitElement) return false;
+        // レイアウト確定後でないと位置がずれるため1フレーム待つ
+        requestAnimationFrame(() => firstHitElement.scrollIntoView({ block: 'center' }));
+        return true;
+    },
+
+    // 履歴の検索結果ヒット1件を表示する要素を作る
+    createHistoryExcerptElement(hit) {
+        const row = document.createElement('div');
+        row.className = 'history-item-excerpt';
+
+        const roleEl = document.createElement('span');
+        roleEl.className = 'history-item-excerpt-role';
+        roleEl.textContent = hit.role === 'user' ? 'あなた' : 'AI';
+        row.appendChild(roleEl);
+
+        const textEl = document.createElement('span');
+        textEl.className = 'history-item-excerpt-text';
+        if (hit.excerpt.truncatedHead) textEl.appendChild(document.createTextNode('…'));
+        textEl.appendChild(document.createTextNode(hit.excerpt.before));
+        if (hit.excerpt.match) {
+            const mark = document.createElement('mark');
+            mark.textContent = hit.excerpt.match;
+            textEl.appendChild(mark);
+        }
+        textEl.appendChild(document.createTextNode(hit.excerpt.after));
+        if (hit.excerpt.truncatedTail) textEl.appendChild(document.createTextNode('…'));
+        row.appendChild(textEl);
+
+        return row;
+    },
+
+    // 検索結果の件数表示を更新する (results が null なら検索していない状態)
+    updateHistorySearchSummary(results, totalChats) {
+        const summaryEl = elements.historySearchSummary;
+        elements.historySearchClearBtn?.classList.toggle('hidden', !state.historySearchQuery.trim());
+        if (!summaryEl) return;
+        if (!results) {
+            summaryEl.textContent = '';
+            summaryEl.classList.add('hidden');
+            return;
+        }
+        const hitCount = results.reduce((sum, result) => sum + result.hitCount, 0);
+        summaryEl.textContent = `${totalChats}件中 ${results.length}件のチャットがヒット (メッセージ ${hitCount}件)`;
+        summaryEl.classList.remove('hidden');
+    },
+
     // 履歴リストをレンダリング
     async renderHistoryList() {
         try {
-            const chats = await dbUtils.getAllChats(state.settings.historySortOrder);
+            const allChats = (await dbUtils.getAllChats(state.settings.historySortOrder)) || [];
             elements.historyList.querySelectorAll('.history-item:not(.js-history-item-template)').forEach(item => item.remove());
 
             const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-            let oldChatsCount = 0;
+            // 一括削除の対象数は検索の絞り込みに影響されないよう、常に全件から数える
+            const oldChatsCount = allChats.filter(chat => chat.updatedAt < sevenDaysAgo).length;
 
-            if (chats && chats.length > 0) {
+            // 検索語があればタイトル・本文で絞り込む
+            const searchResults = state.historySearchQuery.trim() ? searchChats(allChats, state.historySearchQuery) : null;
+            const resultByChatId = searchResults ? new Map(searchResults.map(result => [result.chat.id, result])) : null;
+            const chats = searchResults ? searchResults.map(result => result.chat) : allChats;
+            this.updateHistorySearchSummary(searchResults, allChats.length);
+
+            if (chats.length > 0) {
                 elements.noHistoryMessage.classList.add('hidden');
                 const sortOrderText = state.settings.historySortOrder === 'createdAt' ? '作成順' : '更新順';
                 elements.historyTitle.textContent = `履歴一覧 (${sortOrderText})`;
 
                 chats.forEach(chat => {
-                    if (chat.updatedAt < sevenDaysAgo) {
-                        oldChatsCount++;
-                    }
+                    const searchResult = resultByChatId ? resultByChatId.get(chat.id) : null;
 
                     const li = elements.historyItemTemplate.cloneNode(true);
                     li.classList.remove('js-history-item-template');
@@ -855,13 +923,28 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
                         li.querySelector('.history-item-stats').style.display = 'none';
                     }
 
+                    // 検索中はヒット箇所の抜粋を出す (多すぎると一覧が埋まるので上限を設ける)
+                    if (searchResult && searchResult.hits.length > 0) {
+                        const excerptsEl = li.querySelector('.js-history-excerpts');
+                        const shown = searchResult.hits.slice(0, MAX_HISTORY_EXCERPTS);
+                        shown.forEach(hit => excerptsEl.appendChild(this.createHistoryExcerptElement(hit)));
+                        if (searchResult.hits.length > shown.length) {
+                            const moreEl = document.createElement('div');
+                            moreEl.className = 'history-item-excerpt-more';
+                            moreEl.textContent = `ほか${searchResult.hits.length - shown.length}件のヒット`;
+                            excerptsEl.appendChild(moreEl);
+                        }
+                        excerptsEl.classList.remove('hidden');
+                    }
+
                     li.querySelector('.created-date').textContent = `作成: ${this.formatDate(chat.createdAt)}`;
                     li.querySelector('.updated-date').textContent = `更新: ${this.formatDate(chat.updatedAt)}`;
 
                     li.onclick = async (event) => {
                         if (!event.target.closest('.history-item-actions button')) {
+                            const highlightMessageIndices = searchResult ? searchResult.hits.map(hit => hit.index) : [];
                             const screenTransitionPromise = uiUtils.showScreen('chat');
-                            const loadChatPromise = appLogic.loadChat(chat.id);
+                            const loadChatPromise = appLogic.loadChat(chat.id, { highlightMessageIndices });
                             await Promise.all([screenTransitionPromise, loadChatPromise]);
                         }
                     };
@@ -872,6 +955,13 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
 
                     elements.historyList.appendChild(li);
                 });
+            } else if (searchResults) {
+                // 検索でヒットしなかっただけなので、DBの状態には触れずに案内だけ出す
+                elements.noHistoryMessage.classList.remove('hidden');
+                elements.historyTitle.textContent = '履歴一覧';
+                const pEl = elements.noHistoryMessage.querySelector('p') || elements.noHistoryMessage;
+                pEl.textContent = '検索に一致するチャットはありません。';
+                document.getElementById('restore-from-cloud-btn')?.classList.add('hidden');
             } else {
                 elements.noHistoryMessage.classList.remove('hidden');
                 elements.historyTitle.textContent = '履歴一覧';
@@ -1331,6 +1421,8 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
             chat.style.transform = pos.history.chat;
             historyEl.style.transform = pos.history.history;
             settings.style.transform = pos.history.settings;
+            // 画面を離れている間に検索語が変わることはないが、入力欄と状態を必ず一致させる
+            if (elements.historySearchInput) elements.historySearchInput.value = state.historySearchQuery;
             this.renderHistoryList();
           } else if (screenName === 'settings') {
 

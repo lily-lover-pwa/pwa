@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
     <!-- CSSファイルを外部から読み込む -->
-    <link rel="stylesheet" href="style.css?v=1.25.45">
+    <link rel="stylesheet" href="style.css?v=1.25.46">
     <link rel="stylesheet" href="prism.css" />
     <script src="marked.js" defer></script>
     <!-- DOMPurify: AI出力/インポート由来HTMLのサニタイズ（XSS対策）。marked の後に読み込む -->
@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.45" defer></script>
+    <script src="app.js?v=1.25.46" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -148,6 +148,12 @@
                 <input type="file" id="import-history-input" accept=".txt,text/plain" class="hidden"> <!-- インポート用ファイル入力 -->
             </header>
             <main class="main-content">
+                <div class="history-search">
+                    <span class="material-symbols-outlined history-search-icon">search</span>
+                    <input type="search" id="history-search-input" placeholder="タイトル・本文を検索" autocomplete="off">
+                    <button id="history-search-clear-btn" class="history-search-clear hidden" type="button" title="検索をクリア"><span class="material-symbols-outlined">close</span></button>
+                </div>
+                <p id="history-search-summary" class="history-search-summary hidden"></p>
                 <ul id="history-list" class="history-list">
                     <!-- 履歴アイテムはここに読み込まれる -->
                     <li class="js-history-item-template history-item">
@@ -1082,7 +1088,25 @@
                 <div id="chat-stats-content" class="chat-stats-content"></div>
             </div>
             <div class="dialog-actions">
+                <button id="usage-summary-open-btn" class="dialog-cancel-btn">全チャットの使用量</button>
                 <button id="chat-stats-close-btn" class="dialog-ok-btn">閉じる</button>
+            </div>
+        </dialog>
+
+        <!-- Usage Summary Dialog (全チャット横断) -->
+        <dialog id="usageSummaryDialog" class="custom-dialog">
+            <h3 class="dialog-title">使用量（全チャット）</h3>
+            <div class="dialog-content">
+                <div class="usage-range-tabs">
+                    <button class="usage-range-tab" data-range="thisMonth">今月</button>
+                    <button class="usage-range-tab" data-range="lastMonth">先月</button>
+                    <button class="usage-range-tab" data-range="last30d">過去30日</button>
+                    <button class="usage-range-tab" data-range="all">全期間</button>
+                </div>
+                <div id="usage-summary-content" class="chat-stats-content"></div>
+            </div>
+            <div class="dialog-actions">
+                <button id="usage-summary-close-btn" class="dialog-ok-btn">閉じる</button>
             </div>
         </dialog>
 

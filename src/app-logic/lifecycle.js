@@ -1,6 +1,6 @@
 // appLogic 機能モジュール: lifecycle（Phase 3 で app-logic.js から分割）。挙動は不変。
 import { registerServiceWorker, setupBroadcastChannel, updateMessageMaxWidthVar } from '../app.js';
-import { ANTHROPIC_MODELS, APP_VERSION, BEDROCK_MODELS, DEEPSEEK_MODELS, DEFAULT_ANTHROPIC_MODEL, DEFAULT_BEDROCK_MODEL, DEFAULT_DEEPSEEK_MODEL, DEFAULT_GROQ_MODEL, DEFAULT_MISTRAL_MODEL, DEFAULT_MODEL, DEFAULT_OPENAI_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_XAI_MODEL, DEFAULT_ZAI_MODEL, GEMINI_MODELS, GROQ_MODELS, IMAGE_STORE, MISTRAL_MODELS, OPENAI_MODELS, SAKANA_MODELS, SETTINGS_STORE, SWIPE_THRESHOLD, VERSION_ACK_STORAGE_KEY, VERSION_HISTORY, VERSION_LEGACY_STORAGE_KEY, VERSION_NOTICE_SESSION_KEY, XAI_MODELS, ZAI_MODELS, ZOOM_THRESHOLD } from '../constants.js';
+import { ANTHROPIC_MODELS, APP_VERSION, BEDROCK_MODELS, DEEPSEEK_MODELS, DEFAULT_ANTHROPIC_MODEL, DEFAULT_BEDROCK_MODEL, DEFAULT_DEEPSEEK_MODEL, DEFAULT_GROQ_MODEL, DEFAULT_MISTRAL_MODEL, DEFAULT_MODEL, DEFAULT_OPENAI_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_XAI_MODEL, DEFAULT_ZAI_MODEL, GEMINI_MODELS, GROQ_MODELS, HISTORY_SEARCH_DEBOUNCE_MS, IMAGE_STORE, MISTRAL_MODELS, OPENAI_MODELS, SAKANA_MODELS, SETTINGS_STORE, SWIPE_THRESHOLD, VERSION_ACK_STORAGE_KEY, VERSION_HISTORY, VERSION_LEGACY_STORAGE_KEY, VERSION_NOTICE_SESSION_KEY, XAI_MODELS, ZAI_MODELS, ZOOM_THRESHOLD } from '../constants.js';
 import { dbUtils } from '../db.js';
 import { DebugLogger } from '../debug-logger.js';
 import { elements } from '../dom-elements.js';
@@ -1230,6 +1230,22 @@ export const lifecycleMethods = {
         // --- メモリ機能の個別イベントリスナー ---
         elements.memoryToggleBtn.addEventListener('click', () => this.toggleChatMemory());
         elements.manageMemoryBtn.addEventListener('click', () => this.openMemoryManagementDialog());
+        // 履歴の全文検索 (入力のたびに全チャットを走査するので少し待ってからにする)
+        let historySearchTimer = null;
+        elements.historySearchInput?.addEventListener('input', () => {
+            clearTimeout(historySearchTimer);
+            historySearchTimer = setTimeout(() => {
+                state.historySearchQuery = elements.historySearchInput.value;
+                uiUtils.renderHistoryList();
+            }, HISTORY_SEARCH_DEBOUNCE_MS);
+        });
+        elements.historySearchClearBtn?.addEventListener('click', () => {
+            clearTimeout(historySearchTimer);
+            elements.historySearchInput.value = '';
+            state.historySearchQuery = '';
+            uiUtils.renderHistoryList();
+            elements.historySearchInput.focus();
+        });
         elements.closeMemoryDialogBtn.addEventListener('click', () => elements.memoryManagementDialog.close());
         elements.addMemoryBtn.addEventListener('click', () => this.addMemoryItem());
         elements.deleteAllMemoryBtn.addEventListener('click', () => this.confirmDeleteAllMemory());
@@ -1472,6 +1488,16 @@ export const lifecycleMethods = {
 
         // --- Chat Stats ---
         elements.chatStatsBtn.addEventListener('click', () => this.showChatStats());
+        // 全チャット横断の使用量サマリー
+        elements.usageSummaryOpenBtn?.addEventListener('click', () => {
+            elements.chatStatsDialog.close();
+            this.showUsageSummary('thisMonth');
+        });
+        elements.usageRangeTabs?.forEach(tab => {
+            tab.addEventListener('click', () => this.showUsageSummary(tab.dataset.range));
+        });
+        // showCustomDialog はフォーカスを当てるだけなので、閉じる処理は自前で配線する
+        elements.usageSummaryCloseBtn?.addEventListener('click', () => elements.usageSummaryDialog.close());
         elements.chatStatsCloseBtn.addEventListener('click', () => elements.chatStatsDialog.close());
 
         // --- History Summary ---

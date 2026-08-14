@@ -1,0 +1,135 @@
+// 料金テーブルと単価の選択。DB・DOMには触らない純粋関数だけを置く。
+// 単位はいずれも USD / 100万トークン。in=入力(キャッシュミス), out=出力,
+// cw5m/cw1h=キャッシュ書込, cr=キャッシュ読込(ヒット)。
+
+export const MODEL_PRICING = {
+    // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+    'claude-opus-5':   { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
+    'claude-opus-4-8': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
+    'claude-opus-4-7': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
+    'claude-opus-4-6': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
+    'claude-opus-4-5': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
+    'claude-opus-4-1': { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
+    'claude-opus-4':   { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
+    'claude-sonnet-4': { in: 3,    out: 15,  cw5m: 3.75,  cw1h: 6,    cr: 0.30 },
+    'claude-haiku-4':  { in: 1,    out: 5,   cw5m: 1.25,  cw1h: 2,    cr: 0.10 },
+    // Claude 3系 (旧モデル)
+    'claude-opus-3':   { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
+    'claude-opus':     { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
+    'claude-sonnet':   { in: 3,    out: 15,  cw5m: 3.75,  cw1h: 6,    cr: 0.30 },
+    'claude-haiku':    { in: 0.80, out: 4,   cw5m: 1.00,  cw1h: 1.60, cr: 0.08 },
+    // DeepSeek（in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
+    // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
+    // V4系は 2026-08-16 の改定後の価格。
+    'deepseek-reasoner': { in: 0.55,  out: 2.19, cw5m: 0.55,  cw1h: 0.55,  cr: 0.14 },
+    'deepseek-chat':     { in: 0.27,  out: 1.10, cw5m: 0.27,  cw1h: 0.27,  cr: 0.07 },
+    'deepseek-v4-pro':   { in: 0.66,  out: 1.98, cw5m: 0.66,  cw1h: 0.66,  cr: 0.022,    peakMul: 2 },
+    'deepseek-v4-flash': { in: 0.22,  out: 0.66, cw5m: 0.22,  cw1h: 0.22,  cr: 0.007,    peakMul: 2 },
+    'deepseek-':         { in: 0.27,  out: 1.10, cw5m: 0.27,  cw1h: 0.27,  cr: 0.07 },
+
+    // 以下は cw5m/cw1h を持たない。キャッシュ書き込みに別料金が無く、通常入力と同額のため
+    // （calcMessageCost が in にフォールバックする）。
+    // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
+
+    // xAI Grok — https://docs.x.ai/developers/pricing
+    'grok-4-6': { in: 2, out: 6, cr: 0.50, longCtx: { threshold: 200_000, in: 4, out: 12, cr: 1 } },
+
+    // OpenAI — https://developers.openai.com/api/docs/pricing
+    // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
+    'gpt-5-6-sol':   { in: 5,    out: 30,   cr: 0.50 },
+    'gpt-5-6-terra': { in: 2,    out: 12,   cr: 0.20 },
+    'gpt-5-6-luna':  { in: 0.20, out: 1.20, cr: 0.02 },
+    'gpt-5-5-pro':   { in: 30,   out: 180,  cr: 30 },    // キャッシュ割引の提供なし
+    'gpt-5-5':       { in: 5,    out: 30,   cr: 0.50 },
+    'gpt-5-4-mini':  { in: 0.75, out: 4.50, cr: 0.075 },
+    'gpt-5-4-nano':  { in: 0.20, out: 1.25, cr: 0.02 },
+    'gpt-5-4-pro':   { in: 30,   out: 180,  cr: 30 },    // 同上
+    'gpt-5-4':       { in: 2.50, out: 15,   cr: 0.25 },
+    'gpt-5-2':       { in: 1.75, out: 14,   cr: 0.175 },
+    'gpt-5-1':       { in: 1.25, out: 10,   cr: 0.125 },
+    'gpt-5-mini':    { in: 0.25, out: 2,    cr: 0.025 },
+    'gpt-5':         { in: 1.25, out: 10,   cr: 0.125 },
+    'gpt-4-1-mini':  { in: 0.40, out: 1.60, cr: 0.10 },
+    'gpt-4-1-nano':  { in: 0.10, out: 0.40, cr: 0.025 },
+    'gpt-4-1':       { in: 2,    out: 8,    cr: 0.50 },
+    'o4-mini':       { in: 1.10, out: 4.40, cr: 0.275 },
+    'o3-mini':       { in: 1.10, out: 4.40, cr: 0.55 },
+    'o3-pro':        { in: 20,   out: 80,   cr: 20 },    // 同上
+    'o3':            { in: 2,    out: 8,    cr: 0.50 },
+
+    // Google Gemini — https://ai.google.dev/gemini-api/docs/pricing
+    // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
+    'gemini-3-6-flash':      { in: 1.50, out: 7.50, cr: 0.15 },
+    'gemini-3-5-flash-lite': { in: 0.30, out: 2.50, cr: 0.03 },
+    'gemini-3-5-flash':      { in: 1.50, out: 9,    cr: 0.15 },
+    // 3.1 Pro も 200k 超で単価が上がる（入力2倍・出力1.5倍・キャッシュ2倍）
+    'gemini-3-1-pro':        { in: 2,    out: 12,   cr: 0.20,  longCtx: { threshold: 200_000, in: 4, out: 18, cr: 0.40 } },
+    'gemini-3-1-flash-lite': { in: 0.25, out: 1.50, cr: 0.025 },
+    // 2.5 Pro は 200k 超で入力2倍・出力1.5倍と倍率が異なるため、上位段の単価をそのまま持つ
+    'gemini-2-5-pro':        { in: 1.25, out: 10,   cr: 0.125, longCtx: { threshold: 200_000, in: 2.50, out: 15, cr: 0.25 } },
+    'gemini-2-5-flash-lite': { in: 0.10, out: 0.40, cr: 0.01 },
+    'gemini-2-5-flash':      { in: 0.30, out: 2.50, cr: 0.03 },
+};
+
+// DeepSeek V4 の値上げ時刻（2026-08-16 16:00 UTC = 日本時間 8/17 01:00）。
+export const DEEPSEEK_V4_PRICE_CHANGE_AT = Date.UTC(2026, 7, 16, 16, 0, 0);
+
+// 改定前の V4 料金。過去のメッセージを当時の単価で計算するために残してある。
+export const MODEL_PRICING_BEFORE_V4_CHANGE = {
+    'deepseek-v4-pro':   { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 0.003625, peakMul: 2 },
+    'deepseek-v4-flash': { in: 0.14,  out: 0.28, cw5m: 0.14,  cw1h: 0.14,  cr: 0.0028,   peakMul: 2 },
+};
+
+/**
+ * OpenRouter形式のモデル名を料金表のキーに合わせて整える。
+ * 例: 'anthropic/claude-opus-4.5:beta' → 'claude-opus-4-5'
+ * OpenRouterは提供元の価格をほぼそのまま通すため、上流の単価で概算できる
+ * （クレジット購入時の手数料ぶんだけ実際の請求は少し高くなる）。
+ * @param {string} modelName
+ * @returns {string} 正規化した名前（小文字）
+ */
+export function normalizeModelName(modelName) {
+    if (typeof modelName !== 'string') return '';
+    return modelName
+        .toLowerCase()
+        .trim()
+        .replace(/^[^/]+\//, '')  // 'anthropic/' などのベンダー接頭辞を外す
+        .replace(/:.*$/, '')      // ':free' ':beta' などのバリアント指定を外す
+        .replace(/(\d)\.(\d)/g, '$1-$2'); // 'claude-opus-4.5' → 'claude-opus-4-5'
+}
+
+/**
+ * モデル名から単価を引く。料金表のキーはすべて正規化済みの表記なので、
+ * 引く側も必ず正規化してから前方一致させる。
+ * 生の名前のまま引くと 'gpt-5.6-sol' が（'gpt-5-6-sol' ではなく）'gpt-5' に
+ * 先に一致してしまうため、正規化を挟むこと自体が正しさの条件になっている。
+ * @param {string} modelName
+ * @param {number} [timestamp] メッセージの生成時刻(epoch ms)。値上げ前後の切り替えに使う
+ * @returns {object|null} 単価。該当が無ければ null
+ */
+export function getPricing(modelName, timestamp) {
+    if (!modelName) return null;
+    const m = normalizeModelName(modelName);
+    if (!m) return null;
+    // 時刻を持たないのは改定前の古いデータなので、旧料金として扱う
+    if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
+        for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
+            if (m.startsWith(key)) return price;
+        }
+    }
+    for (const [key, price] of Object.entries(MODEL_PRICING)) {
+        if (m.startsWith(key)) return price;
+    }
+    return null;
+}
+
+/**
+ * DeepSeek のピーク時間帯かどうか（UTC 01:00-04:00 / 06:00-10:00 = 日本時間 10-13時 / 15-19時）。
+ * タイムゾーンに依存しないよう UTC 時刻で判定する。
+ * @param {number} timestamp モデル応答生成時刻(epoch ms)
+ */
+export function isDeepSeekPeak(timestamp) {
+    if (!timestamp) return false;
+    const h = new Date(timestamp).getUTCHours();
+    return (h >= 1 && h < 4) || (h >= 6 && h < 10);
+}

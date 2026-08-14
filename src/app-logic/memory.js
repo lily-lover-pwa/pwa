@@ -15,6 +15,8 @@ import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { isRetiredModelError, resolveRetiredModel } from './retired-model.js';
+import { calcMessageCost, getUsageRange, summarizeUsage } from '../utils/usage.js';
+import { htmlUtils } from '../utils/html.js';
 
 // Gemini のセーフティ設定（全カテゴリ BLOCK_NONE）。要約・メモリ学習で共通利用。
 const GEMINI_SAFETY_OFF = [
@@ -507,48 +509,6 @@ export const memoryMethods = {
 
 
     showChatStats() {
-        // 料金テーブル（USD / 100万トークン）。in=入力, out=出力, cw=キャッシュ書込, cr=キャッシュ読込(ヒット)。
-        const MODEL_PRICING = {
-            // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
-            'claude-opus-5':   { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
-            'claude-opus-4-8': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
-            'claude-opus-4-7': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
-            'claude-opus-4-6': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
-            'claude-opus-4-5': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
-            'claude-opus-4-1': { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
-            'claude-opus-4':   { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
-            'claude-sonnet-4': { in: 3,    out: 15,  cw5m: 3.75,  cw1h: 6,    cr: 0.30 },
-            'claude-haiku-4':  { in: 1,    out: 5,   cw5m: 1.25,  cw1h: 2,    cr: 0.10 },
-            // Claude 3系 (旧モデル)
-            'claude-opus-3':   { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
-            'claude-opus':     { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
-            'claude-sonnet':   { in: 3,    out: 15,  cw5m: 3.75,  cw1h: 6,    cr: 0.30 },
-            'claude-haiku':    { in: 0.80, out: 4,   cw5m: 1.00,  cw1h: 1.60, cr: 0.08 },
-            // DeepSeek（標準料金。in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
-            // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
-            // ピーク時間帯(UTC): 01:00-04:00 / 06:00-10:00 （日本時間 10:00-13:00 / 15:00-19:00）。
-            'deepseek-reasoner': { in: 0.55,  out: 2.19, cw5m: 0.55,  cw1h: 0.55,  cr: 0.14 },
-            'deepseek-chat':     { in: 0.27,  out: 1.10, cw5m: 0.27,  cw1h: 0.27,  cr: 0.07 },
-            'deepseek-v4-pro':   { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 0.003625, peakMul: 2 },
-            'deepseek-v4-flash': { in: 0.14,  out: 0.28, cw5m: 0.14,  cw1h: 0.14,  cr: 0.0028,   peakMul: 2 },
-            'deepseek-':         { in: 0.27,  out: 1.10, cw5m: 0.27,  cw1h: 0.27,  cr: 0.07 },
-        };
-        const getPricing = (modelName) => {
-            if (!modelName) return null;
-            const m = modelName.toLowerCase();
-            for (const [key, price] of Object.entries(MODEL_PRICING)) {
-                if (m.startsWith(key)) return price;
-            }
-            return null;
-        };
-        // DeepSeek のピーク時間帯判定（UTC 01:00-04:00 / 06:00-10:00 = 日本時間 10-13時 / 15-19時）。
-        // タイムゾーンに依存しないよう UTC 時刻で判定する。timestamp はモデル応答生成時刻(epoch ms)。
-        const isDeepSeekPeak = (timestamp) => {
-            if (!timestamp) return false;
-            const h = new Date(timestamp).getUTCHours();
-            return (h >= 1 && h < 4) || (h >= 6 && h < 10);
-        };
-
         const msgs = state.currentMessages.filter(m => !m.isHidden);
         let totalTokens = 0, totalInput = 0, totalOutput = 0;
         let totalCacheRead = 0, totalCacheWrite = 0;
@@ -561,12 +521,9 @@ export const memoryMethods = {
             if (!u) continue;
             const cr = u.cacheReadInputTokens || 0;
             const cw = u.cacheCreationInputTokens || 0;
-            const cw5m = u.cacheCreation5mInputTokens ?? cw;
-            const cw1h = u.cacheCreation1hInputTokens || 0;
             const out = u.candidatesTokenCount || 0;
             const total = u.totalTokenCount || 0;
             const inp = (u.promptTokenCount || 0);
-            const regular = inp - cr - cw;
 
             totalTokens += total;
             totalInput += inp;
@@ -577,11 +534,11 @@ export const memoryMethods = {
             const modelName = msg.modelName || '';
             const displayModel = modelName || state.settings.modelName || '';
             if (displayModel) modelsUsed.add(displayModel);
-            const pricing = getPricing(modelName);
-            if (pricing) {
+            // 全チャットの集計と同じ計算を使う（二重実装だと片方だけ古くなるため）
+            const cost = calcMessageCost(msg);
+            if (cost !== null) {
                 hasCost = true;
-                const mul = (pricing.peakMul && isDeepSeekPeak(msg.timestamp)) ? pricing.peakMul : 1;
-                totalCost += mul * (Math.max(0, regular) * pricing.in + cw5m * pricing.cw5m + cw1h * pricing.cw1h + cr * pricing.cr + out * pricing.out) / 1_000_000;
+                totalCost += cost;
             }
         }
 
@@ -620,6 +577,57 @@ export const memoryMethods = {
         ).join('') + linksHtml;
 
         uiUtils.showCustomDialog(elements.chatStatsDialog, elements.chatStatsCloseBtn);
+    },
+
+
+    // 全チャットを横断した使用量サマリー。プロジェクトの絞り込みに関係なく全件を対象にする。
+    async showUsageSummary(range = 'thisMonth') {
+        elements.usageRangeTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.range === range));
+        elements.usageSummaryContent.innerHTML = '<div class="stats-row"><span class="stats-label">集計中...</span></div>';
+        if (!elements.usageSummaryDialog.open) {
+            uiUtils.showCustomDialog(elements.usageSummaryDialog, elements.usageSummaryCloseBtn);
+        }
+
+        let chats;
+        try {
+            const getAllUnfiltered = window.dbUtils.getAllChatsUnfiltered || dbUtils.getAllChats.bind(dbUtils);
+            chats = await getAllUnfiltered();
+        } catch (error) {
+            console.error('使用量の集計に失敗:', error);
+            elements.usageSummaryContent.innerHTML = '<div class="stats-row"><span class="stats-label">履歴の読み込みに失敗しました。</span></div>';
+            return;
+        }
+
+        const summary = summarizeUsage(chats, getUsageRange(range, Date.now()));
+        const toK = n => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
+        const cost = n => `$${n < 0.01 && n > 0 ? n.toFixed(4) : n.toFixed(2)}`;
+
+        const rows = [
+            ['推定コスト合計', cost(summary.totalCost)],
+            summary.peakCost > 0 ? ['　うちピーク時間帯', cost(summary.peakCost)] : null,
+            ['メッセージ数', `${summary.totalMessages.toLocaleString()} 件`],
+            ['入力トークン', toK(summary.totalInput)],
+            ['出力トークン', toK(summary.totalOutput)],
+        ].filter(Boolean);
+
+        const modelRows = summary.byModel.map(m =>
+            `<div class="stats-row"><span class="stats-label">${htmlUtils.escapeHtml(m.model)}`
+            + `<span class="usage-model-sub">${m.messages}件 / 入${toK(m.input)} 出${toK(m.output)}</span></span>`
+            + `<span class="stats-value">${m.priced ? cost(m.cost) : '—'}</span></div>`
+        ).join('');
+
+        // OpenRouter経由のモデル名は 'anthropic/claude-...' のようにベンダー名がつく
+        const hasOpenRouter = summary.byModel.some(m => m.model.includes('/'));
+        const notes = [
+            '※ 端末内の履歴からの推定です。削除したチャットや、同期していない端末の分は含まれません。',
+            summary.hasUnpriced ? '※ 「—」は料金表を持たないモデルです（Claude / GPT / Gemini / DeepSeek / Grok 4.6 の最近のモデルに対応）。' : null,
+            hasOpenRouter ? '※ OpenRouter経由は提供元の単価で概算しています。クレジット購入時の手数料ぶん、実際の請求は少し高くなります。' : null,
+        ].filter(Boolean);
+
+        elements.usageSummaryContent.innerHTML =
+            rows.map(([label, value]) => `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value">${value}</span></div>`).join('')
+            + (modelRows ? `<div class="usage-model-title">モデル別</div>${modelRows}` : '<div class="usage-model-title">この期間の記録はありません</div>')
+            + `<div class="usage-notes">${notes.join('<br>')}</div>`;
     },
 
 

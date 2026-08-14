@@ -1579,6 +1579,9 @@ ${relationship_context}`;
       historyTitle: document.getElementById("history-title"),
       noHistoryMessage: document.getElementById("no-history-message"),
       historyItemTemplate: document.querySelector(".js-history-item-template"),
+      historySearchInput: document.getElementById("history-search-input"),
+      historySearchClearBtn: document.getElementById("history-search-clear-btn"),
+      historySearchSummary: document.getElementById("history-search-summary"),
       themeColorMeta: document.getElementById("theme-color-meta"),
       systemPromptArea: document.getElementById("system-prompt-area"),
       systemPromptDetails: document.getElementById("system-prompt-details"),
@@ -1763,6 +1766,11 @@ ${relationship_context}`;
       chatStatsDialog: document.getElementById("chatStatsDialog"),
       chatStatsContent: document.getElementById("chat-stats-content"),
       chatStatsCloseBtn: document.getElementById("chat-stats-close-btn"),
+      usageSummaryOpenBtn: document.getElementById("usage-summary-open-btn"),
+      usageSummaryDialog: document.getElementById("usageSummaryDialog"),
+      usageSummaryContent: document.getElementById("usage-summary-content"),
+      usageSummaryCloseBtn: document.getElementById("usage-summary-close-btn"),
+      usageRangeTabs: document.querySelectorAll(".usage-range-tab"),
       summarizeHistoryBtn: document.getElementById("summarize-history-btn"),
       summaryModelNameSelect: document.getElementById("summary-model-name"),
       summarySystemPromptTextarea: document.getElementById("summary-system-prompt"),
@@ -1858,6 +1866,8 @@ ${relationship_context}`;
   var DEFAULT_FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
   var CHAT_TITLE_LENGTH = 15;
   var TEXTAREA_MAX_HEIGHT = 120;
+  var MAX_HISTORY_EXCERPTS = 3;
+  var HISTORY_SEARCH_DEBOUNCE_MS = 200;
   var GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
   var ZAI_API_BASE_URL = "https://api.z.ai/api/paas/v4/chat/completions";
   var OPENROUTER_API_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -1973,6 +1983,7 @@ ${relationship_context}`;
   ];
   var DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
   var XAI_MODELS = [
+    { value: "grok-4.6", label: "Grok 4.6" },
     { value: "grok-4", label: "Grok 4" },
     { value: "grok-3", label: "Grok 3" },
     { value: "grok-3-mini", label: "Grok 3 Mini" },
@@ -1993,6 +2004,21 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.41": [
+      "全チャットを横断した使用量サマリーを追加しました。ⓘ（会話の統計）の「全チャットの使用量」ボタンから開けます。今月／先月／過去30日／全期間で切り替えられ、推定コスト・メッセージ数・入出力トークンの合計と、モデル別の内訳が見られます。DeepSeekはピーク時間帯にかかった分も別途表示します。",
+      "※ 端末内の履歴からの推定です。削除したチャットや、同期していない端末の分は含まれません。正確な請求額は各社の使用量ページ（同じくⓘから開けます）でご確認ください。",
+      "※ 金額を計算できるのは料金表を持つモデル（Claude / GPT-5系・4.1系・o3系 / Gemini 3.x・2.5系 / DeepSeek / Grok 4.6）だけです。それ以外のモデルはトークン数のみ表示し、金額欄は「—」になります。",
+      "OpenRouter経由のモデルも金額を計算できるようにしました（モデル名が「anthropic/claude-opus-5」のような形でも判別します）。提供元の単価での概算なので、クレジット購入時の手数料ぶん実際の請求は少し高くなります。",
+      "Gemini 3.1 Pro の料金に対応しました（入力$2 / 出力$12、20万トークン超で入力2倍・出力1.5倍）。",
+      "Grok 4.6・GPT（5系/4.1系/o3系）・Gemini（3.x/2.5系）の料金に対応しました。長いプロンプトで単価が変わる仕様も反映しています（Grok 4.6 は20万トークン以上で2倍、Gemini 2.5 Pro は20万トークン超で入力2倍・出力1.5倍）。",
+      "モデル選択に Grok 4.6 を追加しました。",
+      "GPT・Gemini のキャッシュヒット分を、キャッシュ用の安い単価で計算するようにしました（これまでは通常入力として多めに見積もっていました）。"
+    ],
+    "1.40": [
+      "DeepSeek V4 の料金改定（2026年8月16日 16:00 UTC＝日本時間8月17日 1:00）に対応しました。ⓘ の推定コストが新料金で計算されます。V4-Pro は入力$0.66／出力$1.98／キャッシュヒット$0.022、V4-Flash は入力$0.22／出力$0.66／キャッシュヒット$0.007（いずれも100万トークンあたり・オフピーク）です。改定前と比べて出力が約2.3倍、入力が約1.5倍になります。",
+      "改定前に送ったメッセージは、これまでどおり旧料金で計算します。過去のチャットの推定コストが後から跳ね上がって見えることはありません。",
+      "※ ピーク時間帯（日本時間 10:00-13:00 / 15:00-19:00 は2倍）は改定後も変わりません。"
+    ],
     "1.35": [
       "配色プリセットを追加。設定の「配色プリセット」から、藍墨・青磁・灰桜・墨・琥珀の5種類（各ライト/ダーク対応）にワンタップで切り替えられます。ClaudeDesignで作成したテンプレートを移植しました。"
     ],
@@ -2107,6 +2133,8 @@ ${relationship_context}`;
     profileIconUrls: /* @__PURE__ */ new Map(),
     videoUrlCache: /* @__PURE__ */ new Map(),
     imageUrlCache: /* @__PURE__ */ new Map(),
+    historySearchQuery: "",
+    // 履歴画面の検索語（一時的な表示状態なので保存しない）
     settings: {
       apiProvider: "gemini",
       apiKey: "",
@@ -2523,6 +2551,108 @@ Reason: [NGの場合の理由]`,
     return fetch(`data:${mimeType};base64,${base64}`).then((res) => res.blob());
   }
   __name(base64ToBlob, "base64ToBlob");
+
+  // src/utils/search.js
+  var EXCERPT_RADIUS = 30;
+  function parseSearchQuery(query) {
+    if (typeof query !== "string") return [];
+    const terms = query.trim().split(/[\s\u3000]+/).filter(Boolean).map((term) => term.toLowerCase());
+    return Array.from(new Set(terms));
+  }
+  __name(parseSearchQuery, "parseSearchQuery");
+  function collectSearchableMessages(messages) {
+    if (!Array.isArray(messages)) return [];
+    const found = [];
+    const processedGroupIds = /* @__PURE__ */ new Set();
+    messages.forEach((message, index) => {
+      if (!message || message.isHidden || message.role === "tool") return;
+      if (message.isCascaded && message.siblingGroupId) {
+        if (processedGroupIds.has(message.siblingGroupId)) return;
+        processedGroupIds.add(message.siblingGroupId);
+        const siblings = [];
+        messages.forEach((sibling, siblingIndex) => {
+          if (sibling && !sibling.isHidden && sibling.siblingGroupId === message.siblingGroupId) {
+            siblings.push({ message: sibling, index: siblingIndex });
+          }
+        });
+        const selected = siblings.find((s) => s.message.isSelected) || siblings[siblings.length - 1];
+        if (selected) found.push(selected);
+        return;
+      }
+      found.push({ message, index });
+    });
+    return found;
+  }
+  __name(collectSearchableMessages, "collectSearchableMessages");
+  function collapseWhitespace(text) {
+    return text.replace(/\s+/g, " ");
+  }
+  __name(collapseWhitespace, "collapseWhitespace");
+  function buildExcerpt(text, terms, radius = EXCERPT_RADIUS) {
+    const source = typeof text === "string" ? text : "";
+    const lower = source.toLowerCase();
+    let at = -1;
+    let matchLength = 0;
+    for (const term of terms || []) {
+      const index = lower.indexOf(term);
+      if (index !== -1 && (at === -1 || index < at)) {
+        at = index;
+        matchLength = term.length;
+      }
+    }
+    if (at === -1) {
+      const head = source.slice(0, radius * 2);
+      return {
+        before: "",
+        match: "",
+        after: collapseWhitespace(head),
+        truncatedHead: false,
+        truncatedTail: source.length > head.length
+      };
+    }
+    const start = Math.max(0, at - radius);
+    const end = Math.min(source.length, at + matchLength + radius);
+    return {
+      before: collapseWhitespace(source.slice(start, at)),
+      match: source.slice(at, at + matchLength),
+      after: collapseWhitespace(source.slice(at + matchLength, end)),
+      truncatedHead: start > 0,
+      truncatedTail: end < source.length
+    };
+  }
+  __name(buildExcerpt, "buildExcerpt");
+  function searchChat(chat, terms) {
+    if (!chat || !Array.isArray(terms) || terms.length === 0) return null;
+    const title = typeof chat.title === "string" ? chat.title : "";
+    const lowerTitle = title.toLowerCase();
+    const foundTerms = new Set(terms.filter((term) => lowerTitle.includes(term)));
+    const titleHit = foundTerms.size > 0;
+    const hits = [];
+    for (const { message, index } of collectSearchableMessages(chat.messages)) {
+      const content = typeof message.content === "string" ? message.content : "";
+      if (!content) continue;
+      const lower = content.toLowerCase();
+      const matched = terms.filter((term) => lower.includes(term));
+      if (matched.length === 0) continue;
+      matched.forEach((term) => foundTerms.add(term));
+      hits.push({ index, role: message.role, excerpt: buildExcerpt(content, matched) });
+    }
+    if (foundTerms.size !== terms.length) return null;
+    if (!titleHit && hits.length === 0) return null;
+    return { chat, titleHit, hits, hitCount: hits.length };
+  }
+  __name(searchChat, "searchChat");
+  function searchChats(chats, query) {
+    const terms = parseSearchQuery(query);
+    if (terms.length === 0 || !Array.isArray(chats)) return [];
+    const results = [];
+    for (const chat of chats) {
+      const result = searchChat(chat, terms);
+      if (result) results.push(result);
+    }
+    return results;
+  }
+  __name(searchChats, "searchChats");
 
   // src/utils/html.js
   var htmlUtils = {
@@ -3282,21 +3412,78 @@ Reason: [NGの場合の理由]`,
         return `${String(d.getFullYear()).slice(-2)}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
       }
     },
+    /**
+     * 検索でヒットしたメッセージを目立たせ、最初のヒットまでスクロールする。
+     * ハイライトは renderChatMessages が中身を作り直すときに自然に消える。
+     * @param {number[]} indices state.currentMessages 上のインデックス
+     * @returns {boolean} 1件でもハイライトできたか
+     */
+    highlightSearchHits(indices) {
+      if (!Array.isArray(indices) || indices.length === 0) return false;
+      let firstHitElement = null;
+      indices.forEach((index) => {
+        const messageElement = elements.messageContainer.querySelector(`.message[data-index="${index}"]`);
+        if (!messageElement) return;
+        messageElement.classList.add("search-hit");
+        if (!firstHitElement) firstHitElement = messageElement;
+      });
+      if (!firstHitElement) return false;
+      requestAnimationFrame(() => firstHitElement.scrollIntoView({ block: "center" }));
+      return true;
+    },
+    // 履歴の検索結果ヒット1件を表示する要素を作る
+    createHistoryExcerptElement(hit) {
+      const row = document.createElement("div");
+      row.className = "history-item-excerpt";
+      const roleEl = document.createElement("span");
+      roleEl.className = "history-item-excerpt-role";
+      roleEl.textContent = hit.role === "user" ? "あなた" : "AI";
+      row.appendChild(roleEl);
+      const textEl = document.createElement("span");
+      textEl.className = "history-item-excerpt-text";
+      if (hit.excerpt.truncatedHead) textEl.appendChild(document.createTextNode("…"));
+      textEl.appendChild(document.createTextNode(hit.excerpt.before));
+      if (hit.excerpt.match) {
+        const mark = document.createElement("mark");
+        mark.textContent = hit.excerpt.match;
+        textEl.appendChild(mark);
+      }
+      textEl.appendChild(document.createTextNode(hit.excerpt.after));
+      if (hit.excerpt.truncatedTail) textEl.appendChild(document.createTextNode("…"));
+      row.appendChild(textEl);
+      return row;
+    },
+    // 検索結果の件数表示を更新する (results が null なら検索していない状態)
+    updateHistorySearchSummary(results, totalChats) {
+      const summaryEl = elements.historySearchSummary;
+      elements.historySearchClearBtn?.classList.toggle("hidden", !state.historySearchQuery.trim());
+      if (!summaryEl) return;
+      if (!results) {
+        summaryEl.textContent = "";
+        summaryEl.classList.add("hidden");
+        return;
+      }
+      const hitCount = results.reduce((sum, result) => sum + result.hitCount, 0);
+      summaryEl.textContent = `${totalChats}件中 ${results.length}件のチャットがヒット (メッセージ ${hitCount}件)`;
+      summaryEl.classList.remove("hidden");
+    },
     // 履歴リストをレンダリング
     async renderHistoryList() {
       try {
-        const chats = await dbUtils.getAllChats(state.settings.historySortOrder);
+        const allChats = await dbUtils.getAllChats(state.settings.historySortOrder) || [];
         elements.historyList.querySelectorAll(".history-item:not(.js-history-item-template)").forEach((item) => item.remove());
         const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1e3;
-        let oldChatsCount = 0;
-        if (chats && chats.length > 0) {
+        const oldChatsCount = allChats.filter((chat) => chat.updatedAt < sevenDaysAgo).length;
+        const searchResults = state.historySearchQuery.trim() ? searchChats(allChats, state.historySearchQuery) : null;
+        const resultByChatId = searchResults ? new Map(searchResults.map((result) => [result.chat.id, result])) : null;
+        const chats = searchResults ? searchResults.map((result) => result.chat) : allChats;
+        this.updateHistorySearchSummary(searchResults, allChats.length);
+        if (chats.length > 0) {
           elements.noHistoryMessage.classList.add("hidden");
           const sortOrderText = state.settings.historySortOrder === "createdAt" ? "作成順" : "更新順";
           elements.historyTitle.textContent = `履歴一覧 (${sortOrderText})`;
           chats.forEach((chat) => {
-            if (chat.updatedAt < sevenDaysAgo) {
-              oldChatsCount++;
-            }
+            const searchResult = resultByChatId ? resultByChatId.get(chat.id) : null;
             const li = elements.historyItemTemplate.cloneNode(true);
             li.classList.remove("js-history-item-template");
             li.dataset.chatId = chat.id;
@@ -3314,12 +3501,25 @@ Reason: [NGの場合の理由]`,
             } else {
               li.querySelector(".history-item-stats").style.display = "none";
             }
+            if (searchResult && searchResult.hits.length > 0) {
+              const excerptsEl = li.querySelector(".js-history-excerpts");
+              const shown = searchResult.hits.slice(0, MAX_HISTORY_EXCERPTS);
+              shown.forEach((hit) => excerptsEl.appendChild(this.createHistoryExcerptElement(hit)));
+              if (searchResult.hits.length > shown.length) {
+                const moreEl = document.createElement("div");
+                moreEl.className = "history-item-excerpt-more";
+                moreEl.textContent = `ほか${searchResult.hits.length - shown.length}件のヒット`;
+                excerptsEl.appendChild(moreEl);
+              }
+              excerptsEl.classList.remove("hidden");
+            }
             li.querySelector(".created-date").textContent = `作成: ${this.formatDate(chat.createdAt)}`;
             li.querySelector(".updated-date").textContent = `更新: ${this.formatDate(chat.updatedAt)}`;
             li.onclick = async (event) => {
               if (!event.target.closest(".history-item-actions button")) {
+                const highlightMessageIndices = searchResult ? searchResult.hits.map((hit) => hit.index) : [];
                 const screenTransitionPromise = uiUtils.showScreen("chat");
-                const loadChatPromise = appLogic.loadChat(chat.id);
+                const loadChatPromise = appLogic.loadChat(chat.id, { highlightMessageIndices });
                 await Promise.all([screenTransitionPromise, loadChatPromise]);
               }
             };
@@ -3341,6 +3541,12 @@ Reason: [NGの場合の理由]`,
             };
             elements.historyList.appendChild(li);
           });
+        } else if (searchResults) {
+          elements.noHistoryMessage.classList.remove("hidden");
+          elements.historyTitle.textContent = "履歴一覧";
+          const pEl = elements.noHistoryMessage.querySelector("p") || elements.noHistoryMessage;
+          pEl.textContent = "検索に一致するチャットはありません。";
+          document.getElementById("restore-from-cloud-btn")?.classList.add("hidden");
         } else {
           elements.noHistoryMessage.classList.remove("hidden");
           elements.historyTitle.textContent = "履歴一覧";
@@ -3738,6 +3944,7 @@ Reason: [NGの場合の理由]`,
           chat.style.transform = pos.history.chat;
           historyEl.style.transform = pos.history.history;
           settings.style.transform = pos.history.settings;
+          if (elements.historySearchInput) elements.historySearchInput.value = state.historySearchQuery;
           this.renderHistoryList();
         } else if (screenName === "settings") {
           chat.style.transform = pos.settings.chat;
@@ -5498,6 +5705,21 @@ Reason: [NGの場合の理由]`,
       }
       elements.memoryToggleBtn.addEventListener("click", () => this.toggleChatMemory());
       elements.manageMemoryBtn.addEventListener("click", () => this.openMemoryManagementDialog());
+      let historySearchTimer = null;
+      elements.historySearchInput?.addEventListener("input", () => {
+        clearTimeout(historySearchTimer);
+        historySearchTimer = setTimeout(() => {
+          state.historySearchQuery = elements.historySearchInput.value;
+          uiUtils.renderHistoryList();
+        }, HISTORY_SEARCH_DEBOUNCE_MS);
+      });
+      elements.historySearchClearBtn?.addEventListener("click", () => {
+        clearTimeout(historySearchTimer);
+        elements.historySearchInput.value = "";
+        state.historySearchQuery = "";
+        uiUtils.renderHistoryList();
+        elements.historySearchInput.focus();
+      });
       elements.closeMemoryDialogBtn.addEventListener("click", () => elements.memoryManagementDialog.close());
       elements.addMemoryBtn.addEventListener("click", () => this.addMemoryItem());
       elements.deleteAllMemoryBtn.addEventListener("click", () => this.confirmDeleteAllMemory());
@@ -5696,6 +5918,14 @@ Reason: [NGの場合の理由]`,
         this.applyFloatingPanelBehavior();
       });
       elements.chatStatsBtn.addEventListener("click", () => this.showChatStats());
+      elements.usageSummaryOpenBtn?.addEventListener("click", () => {
+        elements.chatStatsDialog.close();
+        this.showUsageSummary("thisMonth");
+      });
+      elements.usageRangeTabs?.forEach((tab) => {
+        tab.addEventListener("click", () => this.showUsageSummary(tab.dataset.range));
+      });
+      elements.usageSummaryCloseBtn?.addEventListener("click", () => elements.usageSummaryDialog.close());
       elements.chatStatsCloseBtn.addEventListener("click", () => elements.chatStatsDialog.close());
       elements.summarizeHistoryBtn.addEventListener("click", () => this.startSummaryProcess());
       elements.summaryCancelBtn.addEventListener("click", () => elements.summaryDialog.close("cancel"));
@@ -7327,7 +7557,8 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
       state.currentStyleProfiles = {};
     },
     // app.js の appLogic オブジェクト内
-    async loadChat(id) {
+    // options.highlightMessageIndices: 履歴検索から開いたときのヒット位置
+    async loadChat(id, options = {}) {
       state.pendingCascadeResponses = null;
       const loadChatStartTime = performance.now();
       state.syncMessageCounter = 0;
@@ -7394,7 +7625,9 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
           const renderStartTime = performance.now();
           uiUtils.renderChatMessages();
           const renderEndTime = performance.now();
-          this.scrollToBottom();
+          if (!uiUtils.highlightSearchHits(options.highlightMessageIndices)) {
+            this.scrollToBottom();
+          }
           elements.userInput.value = "";
           uiUtils.adjustTextareaHeight();
           uiUtils.setSendingState(false);
@@ -8202,8 +8435,9 @@ AI: ${firstModelContent}`;
         promptTokenCount: openAIResponse.usage.prompt_tokens,
         candidatesTokenCount: openAIResponse.usage.completion_tokens,
         totalTokenCount: openAIResponse.usage.total_tokens,
-        // DeepSeek はキャッシュヒット入力トークンを返すので、コスト計算の精度向上に取り込む
-        ...openAIResponse.usage.prompt_cache_hit_tokens != null ? { cacheReadInputTokens: openAIResponse.usage.prompt_cache_hit_tokens } : {}
+        // キャッシュヒット入力トークンを返すプロバイダーは、コスト計算の精度向上に取り込む
+        // （DeepSeek は prompt_cache_hit_tokens、OpenAI は prompt_tokens_details.cached_tokens）
+        ...openAIResponse.usage.prompt_cache_hit_tokens != null ? { cacheReadInputTokens: openAIResponse.usage.prompt_cache_hit_tokens } : openAIResponse.usage.prompt_tokens_details?.cached_tokens != null ? { cacheReadInputTokens: openAIResponse.usage.prompt_tokens_details.cached_tokens } : {}
       } : void 0;
       return {
         candidates,
@@ -12408,6 +12642,188 @@ ${msg}`);
     }, "runQualityChecker")
   };
 
+  // src/utils/pricing.js
+  var MODEL_PRICING = {
+    // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+    "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-7": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-6": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-1": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    "claude-opus-4": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    "claude-sonnet-4": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
+    "claude-haiku-4": { in: 1, out: 5, cw5m: 1.25, cw1h: 2, cr: 0.1 },
+    // Claude 3系 (旧モデル)
+    "claude-opus-3": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    "claude-opus": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-sonnet": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
+    "claude-haiku": { in: 0.8, out: 4, cw5m: 1, cw1h: 1.6, cr: 0.08 },
+    // DeepSeek（in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
+    // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
+    // V4系は 2026-08-16 の改定後の価格。
+    "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
+    "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
+    "deepseek-v4-pro": { in: 0.66, out: 1.98, cw5m: 0.66, cw1h: 0.66, cr: 0.022, peakMul: 2 },
+    "deepseek-v4-flash": { in: 0.22, out: 0.66, cw5m: 0.22, cw1h: 0.22, cr: 7e-3, peakMul: 2 },
+    "deepseek-": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
+    // 以下は cw5m/cw1h を持たない。キャッシュ書き込みに別料金が無く、通常入力と同額のため
+    // （calcMessageCost が in にフォールバックする）。
+    // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
+    // xAI Grok — https://docs.x.ai/developers/pricing
+    "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
+    // OpenAI — https://developers.openai.com/api/docs/pricing
+    // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
+    "gpt-5-6-sol": { in: 5, out: 30, cr: 0.5 },
+    "gpt-5-6-terra": { in: 2, out: 12, cr: 0.2 },
+    "gpt-5-6-luna": { in: 0.2, out: 1.2, cr: 0.02 },
+    "gpt-5-5-pro": { in: 30, out: 180, cr: 30 },
+    // キャッシュ割引の提供なし
+    "gpt-5-5": { in: 5, out: 30, cr: 0.5 },
+    "gpt-5-4-mini": { in: 0.75, out: 4.5, cr: 0.075 },
+    "gpt-5-4-nano": { in: 0.2, out: 1.25, cr: 0.02 },
+    "gpt-5-4-pro": { in: 30, out: 180, cr: 30 },
+    // 同上
+    "gpt-5-4": { in: 2.5, out: 15, cr: 0.25 },
+    "gpt-5-2": { in: 1.75, out: 14, cr: 0.175 },
+    "gpt-5-1": { in: 1.25, out: 10, cr: 0.125 },
+    "gpt-5-mini": { in: 0.25, out: 2, cr: 0.025 },
+    "gpt-5": { in: 1.25, out: 10, cr: 0.125 },
+    "gpt-4-1-mini": { in: 0.4, out: 1.6, cr: 0.1 },
+    "gpt-4-1-nano": { in: 0.1, out: 0.4, cr: 0.025 },
+    "gpt-4-1": { in: 2, out: 8, cr: 0.5 },
+    "o4-mini": { in: 1.1, out: 4.4, cr: 0.275 },
+    "o3-mini": { in: 1.1, out: 4.4, cr: 0.55 },
+    "o3-pro": { in: 20, out: 80, cr: 20 },
+    // 同上
+    "o3": { in: 2, out: 8, cr: 0.5 },
+    // Google Gemini — https://ai.google.dev/gemini-api/docs/pricing
+    // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
+    "gemini-3-6-flash": { in: 1.5, out: 7.5, cr: 0.15 },
+    "gemini-3-5-flash-lite": { in: 0.3, out: 2.5, cr: 0.03 },
+    "gemini-3-5-flash": { in: 1.5, out: 9, cr: 0.15 },
+    // 3.1 Pro も 200k 超で単価が上がる（入力2倍・出力1.5倍・キャッシュ2倍）
+    "gemini-3-1-pro": { in: 2, out: 12, cr: 0.2, longCtx: { threshold: 2e5, in: 4, out: 18, cr: 0.4 } },
+    "gemini-3-1-flash-lite": { in: 0.25, out: 1.5, cr: 0.025 },
+    // 2.5 Pro は 200k 超で入力2倍・出力1.5倍と倍率が異なるため、上位段の単価をそのまま持つ
+    "gemini-2-5-pro": { in: 1.25, out: 10, cr: 0.125, longCtx: { threshold: 2e5, in: 2.5, out: 15, cr: 0.25 } },
+    "gemini-2-5-flash-lite": { in: 0.1, out: 0.4, cr: 0.01 },
+    "gemini-2-5-flash": { in: 0.3, out: 2.5, cr: 0.03 }
+  };
+  var DEEPSEEK_V4_PRICE_CHANGE_AT = Date.UTC(2026, 7, 16, 16, 0, 0);
+  var MODEL_PRICING_BEFORE_V4_CHANGE = {
+    "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
+    "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 }
+  };
+  function normalizeModelName(modelName) {
+    if (typeof modelName !== "string") return "";
+    return modelName.toLowerCase().trim().replace(/^[^/]+\//, "").replace(/:.*$/, "").replace(/(\d)\.(\d)/g, "$1-$2");
+  }
+  __name(normalizeModelName, "normalizeModelName");
+  function getPricing(modelName, timestamp) {
+    if (!modelName) return null;
+    const m = normalizeModelName(modelName);
+    if (!m) return null;
+    if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    for (const [key, price] of Object.entries(MODEL_PRICING)) {
+      if (m.startsWith(key)) return price;
+    }
+    return null;
+  }
+  __name(getPricing, "getPricing");
+  function isDeepSeekPeak(timestamp) {
+    if (!timestamp) return false;
+    const h = new Date(timestamp).getUTCHours();
+    return h >= 1 && h < 4 || h >= 6 && h < 10;
+  }
+  __name(isDeepSeekPeak, "isDeepSeekPeak");
+
+  // src/utils/usage.js
+  function getUsageRange(range, now) {
+    const base = new Date(now);
+    switch (range) {
+      case "thisMonth": {
+        const from = new Date(base.getFullYear(), base.getMonth(), 1).getTime();
+        return { from, to: Infinity };
+      }
+      case "lastMonth": {
+        const from = new Date(base.getFullYear(), base.getMonth() - 1, 1).getTime();
+        const to = new Date(base.getFullYear(), base.getMonth(), 1).getTime();
+        return { from, to };
+      }
+      case "last30d":
+        return { from: now - 30 * 24 * 60 * 60 * 1e3, to: Infinity };
+      default:
+        return { from: -Infinity, to: Infinity };
+    }
+  }
+  __name(getUsageRange, "getUsageRange");
+  function calcMessageCost(msg) {
+    const pricing = getPricing(msg?.modelName, msg?.timestamp);
+    if (!pricing) return null;
+    const u = msg.usageMetadata || {};
+    const prompt = u.promptTokenCount || 0;
+    const cr = u.cacheReadInputTokens ?? u.cachedContentTokenCount ?? 0;
+    const cw = u.cacheCreationInputTokens || 0;
+    const cw5m = u.cacheCreation5mInputTokens ?? cw;
+    const cw1h = u.cacheCreation1hInputTokens || 0;
+    const out = u.candidatesTokenCount || 0;
+    const regular = Math.max(0, prompt - cr - cw);
+    const rate = pricing.longCtx && prompt >= pricing.longCtx.threshold ? { ...pricing, ...pricing.longCtx } : pricing;
+    const cwRate5m = rate.cw5m ?? rate.in;
+    const cwRate1h = rate.cw1h ?? rate.in;
+    const mul = pricing.peakMul && isDeepSeekPeak(msg.timestamp) ? pricing.peakMul : 1;
+    return mul * (regular * rate.in + cw5m * cwRate5m + cw1h * cwRate1h + cr * rate.cr + out * rate.out) / 1e6;
+  }
+  __name(calcMessageCost, "calcMessageCost");
+  function summarizeUsage(chats, period = {}) {
+    const from = period.from ?? -Infinity;
+    const to = period.to ?? Infinity;
+    const models = /* @__PURE__ */ new Map();
+    let totalCost = 0, totalInput = 0, totalOutput = 0, totalMessages = 0;
+    let hasUnpriced = false;
+    let peakCost = 0;
+    for (const chat of Array.isArray(chats) ? chats : []) {
+      for (const msg of chat?.messages || []) {
+        if (!msg || !msg.usageMetadata) continue;
+        const ts = msg.timestamp;
+        if (!ts ? from !== -Infinity : ts < from || ts >= to) continue;
+        const u = msg.usageMetadata;
+        const input = u.promptTokenCount || 0;
+        const output = u.candidatesTokenCount || 0;
+        const name = msg.modelName || "(不明)";
+        const cost = calcMessageCost(msg);
+        const entry = models.get(name) || { model: name, messages: 0, input: 0, output: 0, cost: 0, priced: false };
+        entry.messages += 1;
+        entry.input += input;
+        entry.output += output;
+        if (cost === null) {
+          hasUnpriced = true;
+        } else {
+          entry.priced = true;
+          entry.cost += cost;
+          totalCost += cost;
+          if (isDeepSeekPeak(ts) && getPricing(name, ts)?.peakMul) peakCost += cost;
+        }
+        models.set(name, entry);
+        totalMessages += 1;
+        totalInput += input;
+        totalOutput += output;
+      }
+    }
+    const byModel = [...models.values()].sort((a, b) => {
+      if (a.priced !== b.priced) return a.priced ? -1 : 1;
+      if (a.priced) return b.cost - a.cost;
+      return b.input + b.output - (a.input + a.output);
+    });
+    return { byModel, totalCost, totalInput, totalOutput, totalMessages, hasUnpriced, peakCost };
+  }
+  __name(summarizeUsage, "summarizeUsage");
+
   // src/app-logic/memory.js
   var GEMINI_SAFETY_OFF = [
     { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -12825,44 +13241,6 @@ ${flagContent}`);
       elements.summarizeHistoryBtn.disabled = messageCount < 5;
     },
     showChatStats() {
-      const MODEL_PRICING = {
-        // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
-        "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-        "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-        "claude-opus-4-7": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-        "claude-opus-4-6": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-        "claude-opus-4-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-        "claude-opus-4-1": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
-        "claude-opus-4": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
-        "claude-sonnet-4": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
-        "claude-haiku-4": { in: 1, out: 5, cw5m: 1.25, cw1h: 2, cr: 0.1 },
-        // Claude 3系 (旧モデル)
-        "claude-opus-3": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
-        "claude-opus": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-        "claude-sonnet": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
-        "claude-haiku": { in: 0.8, out: 4, cw5m: 1, cw1h: 1.6, cr: 0.08 },
-        // DeepSeek（標準料金。in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
-        // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
-        // ピーク時間帯(UTC): 01:00-04:00 / 06:00-10:00 （日本時間 10:00-13:00 / 15:00-19:00）。
-        "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
-        "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
-        "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
-        "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 },
-        "deepseek-": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 }
-      };
-      const getPricing = /* @__PURE__ */ __name((modelName) => {
-        if (!modelName) return null;
-        const m = modelName.toLowerCase();
-        for (const [key, price] of Object.entries(MODEL_PRICING)) {
-          if (m.startsWith(key)) return price;
-        }
-        return null;
-      }, "getPricing");
-      const isDeepSeekPeak = /* @__PURE__ */ __name((timestamp) => {
-        if (!timestamp) return false;
-        const h = new Date(timestamp).getUTCHours();
-        return h >= 1 && h < 4 || h >= 6 && h < 10;
-      }, "isDeepSeekPeak");
       const msgs = state.currentMessages.filter((m) => !m.isHidden);
       let totalTokens = 0, totalInput = 0, totalOutput = 0;
       let totalCacheRead = 0, totalCacheWrite = 0;
@@ -12874,12 +13252,9 @@ ${flagContent}`);
         if (!u) continue;
         const cr = u.cacheReadInputTokens || 0;
         const cw = u.cacheCreationInputTokens || 0;
-        const cw5m = u.cacheCreation5mInputTokens ?? cw;
-        const cw1h = u.cacheCreation1hInputTokens || 0;
         const out = u.candidatesTokenCount || 0;
         const total = u.totalTokenCount || 0;
         const inp = u.promptTokenCount || 0;
-        const regular = inp - cr - cw;
         totalTokens += total;
         totalInput += inp;
         totalOutput += out;
@@ -12888,11 +13263,10 @@ ${flagContent}`);
         const modelName = msg.modelName || "";
         const displayModel = modelName || state.settings.modelName || "";
         if (displayModel) modelsUsed.add(displayModel);
-        const pricing = getPricing(modelName);
-        if (pricing) {
+        const cost = calcMessageCost(msg);
+        if (cost !== null) {
           hasCost = true;
-          const mul = pricing.peakMul && isDeepSeekPeak(msg.timestamp) ? pricing.peakMul : 1;
-          totalCost += mul * (Math.max(0, regular) * pricing.in + cw5m * pricing.cw5m + cw1h * pricing.cw1h + cr * pricing.cr + out * pricing.out) / 1e6;
+          totalCost += cost;
         }
       }
       const sizeKb = (new TextEncoder().encode(JSON.stringify(state.currentMessages)).byteLength / 1024).toFixed(2);
@@ -12921,6 +13295,43 @@ ${flagContent}`);
         ([label, value]) => `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value">${value}</span></div>`
       ).join("") + linksHtml;
       uiUtils.showCustomDialog(elements.chatStatsDialog, elements.chatStatsCloseBtn);
+    },
+    // 全チャットを横断した使用量サマリー。プロジェクトの絞り込みに関係なく全件を対象にする。
+    async showUsageSummary(range = "thisMonth") {
+      elements.usageRangeTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.range === range));
+      elements.usageSummaryContent.innerHTML = '<div class="stats-row"><span class="stats-label">集計中...</span></div>';
+      if (!elements.usageSummaryDialog.open) {
+        uiUtils.showCustomDialog(elements.usageSummaryDialog, elements.usageSummaryCloseBtn);
+      }
+      let chats;
+      try {
+        const getAllUnfiltered = window.dbUtils.getAllChatsUnfiltered || dbUtils.getAllChats.bind(dbUtils);
+        chats = await getAllUnfiltered();
+      } catch (error) {
+        console.error("使用量の集計に失敗:", error);
+        elements.usageSummaryContent.innerHTML = '<div class="stats-row"><span class="stats-label">履歴の読み込みに失敗しました。</span></div>';
+        return;
+      }
+      const summary = summarizeUsage(chats, getUsageRange(range, Date.now()));
+      const toK = /* @__PURE__ */ __name((n) => n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n), "toK");
+      const cost = /* @__PURE__ */ __name((n) => `$${n < 0.01 && n > 0 ? n.toFixed(4) : n.toFixed(2)}`, "cost");
+      const rows = [
+        ["推定コスト合計", cost(summary.totalCost)],
+        summary.peakCost > 0 ? ["　うちピーク時間帯", cost(summary.peakCost)] : null,
+        ["メッセージ数", `${summary.totalMessages.toLocaleString()} 件`],
+        ["入力トークン", toK(summary.totalInput)],
+        ["出力トークン", toK(summary.totalOutput)]
+      ].filter(Boolean);
+      const modelRows = summary.byModel.map(
+        (m) => `<div class="stats-row"><span class="stats-label">${htmlUtils.escapeHtml(m.model)}<span class="usage-model-sub">${m.messages}件 / 入${toK(m.input)} 出${toK(m.output)}</span></span><span class="stats-value">${m.priced ? cost(m.cost) : "—"}</span></div>`
+      ).join("");
+      const hasOpenRouter = summary.byModel.some((m) => m.model.includes("/"));
+      const notes = [
+        "※ 端末内の履歴からの推定です。削除したチャットや、同期していない端末の分は含まれません。",
+        summary.hasUnpriced ? "※ 「—」は料金表を持たないモデルです（Claude / GPT / Gemini / DeepSeek / Grok 4.6 の最近のモデルに対応）。" : null,
+        hasOpenRouter ? "※ OpenRouter経由は提供元の単価で概算しています。クレジット購入時の手数料ぶん、実際の請求は少し高くなります。" : null
+      ].filter(Boolean);
+      elements.usageSummaryContent.innerHTML = rows.map(([label, value]) => `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value">${value}</span></div>`).join("") + (modelRows ? `<div class="usage-model-title">モデル別</div>${modelRows}` : '<div class="usage-model-title">この期間の記録はありません</div>') + `<div class="usage-notes">${notes.join("<br>")}</div>`;
     },
     async startSummaryProcess() {
       if (state.isSending || state.editingMessageIndex !== null || state.isEditingSystemPrompt) {

@@ -15,6 +15,7 @@ export const state = {
     profileIconUrls: new Map(),
     videoUrlCache: new Map(),
     imageUrlCache: new Map(),
+    historySearchQuery: '', // 履歴画面の検索語（一時的な表示状態なので保存しない）
     settings: {
         apiProvider: 'gemini',
         apiKey: '',

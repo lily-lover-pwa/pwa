@@ -79,7 +79,8 @@ export const chatMethods = {
 
 
     // app.js の appLogic オブジェクト内
-    async loadChat(id) {
+    // options.highlightMessageIndices: 履歴検索から開いたときのヒット位置
+    async loadChat(id, options = {}) {
         state.pendingCascadeResponses = null; // 保留中のカスケードデータをクリア
         const loadChatStartTime = performance.now();
         state.syncMessageCounter = 0;
@@ -158,8 +159,11 @@ export const chatMethods = {
                 const renderStartTime = performance.now();
                 uiUtils.renderChatMessages();
                 const renderEndTime = performance.now();
-                
-                this.scrollToBottom();
+
+                // 検索から開いた場合はヒット位置へ、それ以外は従来どおり末尾へ
+                if (!uiUtils.highlightSearchHits(options.highlightMessageIndices)) {
+                    this.scrollToBottom();
+                }
 
                 elements.userInput.value = '';
                 uiUtils.adjustTextareaHeight();
