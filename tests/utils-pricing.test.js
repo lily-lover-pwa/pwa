@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT } from '../src/utils/pricing.js';
+import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT } from '../src/utils/pricing.js';
 
 const BEFORE = DEEPSEEK_V4_PRICE_CHANGE_AT - 1;
 const AFTER = DEEPSEEK_V4_PRICE_CHANGE_AT;
@@ -151,7 +151,8 @@ describe('getPricing — OpenAI / Gemini', () => {
     });
 
     it('Geminiを引ける', () => {
-        expect(getPricing('gemini-3.6-flash', AFTER)).toMatchObject({ in: 1.50, out: 7.50, cr: 0.15 });
+        // 3.6 Flash は 2026-12-31 まで半額のため、AFTER（2026-08）時点では割引単価になる
+        expect(getPricing('gemini-3.6-flash', AFTER)).toMatchObject({ in: 0.75, out: 3.75, cr: 0.075 });
         expect(getPricing('gemini-2.5-pro', AFTER)).toMatchObject({ in: 1.25, out: 10 });
     });
 
@@ -204,5 +205,42 @@ describe('isDeepSeekPeak', () => {
     it('時刻が無ければオフピーク扱い', () => {
         expect(isDeepSeekPeak(undefined)).toBe(false);
         expect(isDeepSeekPeak(0)).toBe(false);
+    });
+});
+
+describe('getPricing — Gemini Flash の期間限定割引（2026-12-31まで半額）', () => {
+    const DURING = GEMINI_FLASH_PROMO_END_AT - 1; // 2026-12-31 23:59:59.999 UTC
+    const AFTER_PROMO = GEMINI_FLASH_PROMO_END_AT; // 2027-01-01 00:00 UTC
+
+    it('割引期間中の 3.7 Flash は半額', () => {
+        const p = getPricing('gemini-3.7-flash', DURING);
+        expect(p.in).toBe(0.75);
+        expect(p.out).toBe(3.75);
+        expect(p.cr).toBe(0.075);
+    });
+
+    it('割引終了後の 3.7 Flash は通常単価（ちょうど2倍）', () => {
+        const p = getPricing('gemini-3.7-flash', AFTER_PROMO);
+        expect(p.in).toBe(1.50);
+        expect(p.out).toBe(7.50);
+        expect(p.cr).toBe(0.15);
+    });
+
+    it('3.6 Flash も同じ割引対象', () => {
+        expect(getPricing('gemini-3.6-flash', DURING).in).toBe(0.75);
+        expect(getPricing('gemini-3.6-flash', AFTER_PROMO).in).toBe(1.50);
+    });
+
+    it('時刻を持たない古いデータは割引価格で計算する', () => {
+        expect(getPricing('gemini-3.7-flash').in).toBe(0.75);
+    });
+
+    it('OpenRouter経由の表記でも割引が効く', () => {
+        expect(getPricing('google/gemini-3.7-flash', DURING).in).toBe(0.75);
+    });
+
+    it('割引対象外の Gemini は影響を受けない', () => {
+        expect(getPricing('gemini-3.5-flash', DURING).in).toBe(1.50);
+        expect(getPricing('gemini-2.5-flash', DURING).in).toBe(0.30);
     });
 });

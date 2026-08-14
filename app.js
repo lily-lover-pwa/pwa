@@ -1887,6 +1887,7 @@ ${relationship_context}`;
   var VERSION_ACK_STORAGE_KEY = "appVersionAcknowledged";
   var VERSION_LEGACY_STORAGE_KEY = "appVersion";
   var GEMINI_MODELS = [
+    { value: "gemini-3.7-flash", label: "gemini-3.7-flash (2026年内は半額)" },
     { value: "gemini-flash-latest", label: "gemini-flash-latest (常に最新Flash)" },
     { value: "gemini-2.5-pro", label: "gemini-2.5-pro" },
     { value: "gemini-2.5-flash", label: "gemini-2.5-flash" },
@@ -2004,6 +2005,10 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.42": [
+      "Gemini 3.7 Flash に対応しました。モデル選択から選べます。2026年12月31日までは半額（入力$0.75／出力$3.75／キャッシュヒット$0.075、100万トークンあたり）で、2027年1月1日から通常単価（それぞれ2倍）に戻ります。ⓘ の推定コストは日付に応じて自動で切り替わります。",
+      "Gemini 3.6 Flash の推定コストが実際の2倍になっていた問題を修正しました。3.6 Flash も 3.7 Flash と同じく2026年内は半額のため、割引を反映して計算します。"
+    ],
     "1.41": [
       "全チャットを横断した使用量サマリーを追加しました。ⓘ（会話の統計）の「全チャットの使用量」ボタンから開けます。今月／先月／過去30日／全期間で切り替えられ、推定コスト・メッセージ数・入出力トークンの合計と、モデル別の内訳が見られます。DeepSeekはピーク時間帯にかかった分も別途表示します。",
       "※ 端末内の履歴からの推定です。削除したチャットや、同期していない端末の分は含まれません。正確な請求額は各社の使用量ページ（同じくⓘから開けます）でご確認ください。",
@@ -12699,6 +12704,9 @@ ${msg}`);
     "o3": { in: 2, out: 8, cr: 0.5 },
     // Google Gemini — https://ai.google.dev/gemini-api/docs/pricing
     // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
+    // 3.7 / 3.6 Flash は 2026-12-31 まで半額。ここには割引終了後の通常単価を置き、
+    // 割引期間中は MODEL_PRICING_GEMINI_FLASH_PROMO を優先して引く。
+    "gemini-3-7-flash": { in: 1.5, out: 7.5, cr: 0.15 },
     "gemini-3-6-flash": { in: 1.5, out: 7.5, cr: 0.15 },
     "gemini-3-5-flash-lite": { in: 0.3, out: 2.5, cr: 0.03 },
     "gemini-3-5-flash": { in: 1.5, out: 9, cr: 0.15 },
@@ -12715,6 +12723,11 @@ ${msg}`);
     "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
     "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 }
   };
+  var GEMINI_FLASH_PROMO_END_AT = Date.UTC(2027, 0, 1, 0, 0, 0);
+  var MODEL_PRICING_GEMINI_FLASH_PROMO = {
+    "gemini-3-7-flash": { in: 0.75, out: 3.75, cr: 0.075 },
+    "gemini-3-6-flash": { in: 0.75, out: 3.75, cr: 0.075 }
+  };
   function normalizeModelName(modelName) {
     if (typeof modelName !== "string") return "";
     return modelName.toLowerCase().trim().replace(/^[^/]+\//, "").replace(/:.*$/, "").replace(/(\d)\.(\d)/g, "$1-$2");
@@ -12726,6 +12739,11 @@ ${msg}`);
     if (!m) return null;
     if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
       for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < GEMINI_FLASH_PROMO_END_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_GEMINI_FLASH_PROMO)) {
         if (m.startsWith(key)) return price;
       }
     }

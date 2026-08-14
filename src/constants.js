@@ -41,6 +41,7 @@ export const VERSION_LEGACY_STORAGE_KEY = 'appVersion';
 
 // プロバイダーごとのモデルリスト
 export const GEMINI_MODELS = [
+    { value: 'gemini-3.7-flash', label: 'gemini-3.7-flash (2026年内は半額)' },
     { value: 'gemini-flash-latest', label: 'gemini-flash-latest (常に最新Flash)' },
     { value: 'gemini-2.5-pro', label: 'gemini-2.5-pro' },
     { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
@@ -179,6 +180,10 @@ export const SAKANA_MODELS = [
 export const DEFAULT_SAKANA_MODEL = 'fugu';
 
 export const VERSION_HISTORY = {
+    '1.42': [
+        'Gemini 3.7 Flash に対応しました。モデル選択から選べます。2026年12月31日までは半額（入力$0.75／出力$3.75／キャッシュヒット$0.075、100万トークンあたり）で、2027年1月1日から通常単価（それぞれ2倍）に戻ります。ⓘ の推定コストは日付に応じて自動で切り替わります。',
+        'Gemini 3.6 Flash の推定コストが実際の2倍になっていた問題を修正しました。3.6 Flash も 3.7 Flash と同じく2026年内は半額のため、割引を反映して計算します。',
+    ],
     '1.41': [
         '全チャットを横断した使用量サマリーを追加しました。ⓘ（会話の統計）の「全チャットの使用量」ボタンから開けます。今月／先月／過去30日／全期間で切り替えられ、推定コスト・メッセージ数・入出力トークンの合計と、モデル別の内訳が見られます。DeepSeekはピーク時間帯にかかった分も別途表示します。',
         '※ 端末内の履歴からの推定です。削除したチャットや、同期していない端末の分は含まれません。正確な請求額は各社の使用量ページ（同じくⓘから開けます）でご確認ください。',

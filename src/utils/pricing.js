@@ -59,6 +59,9 @@ export const MODEL_PRICING = {
 
     // Google Gemini — https://ai.google.dev/gemini-api/docs/pricing
     // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
+    // 3.7 / 3.6 Flash は 2026-12-31 まで半額。ここには割引終了後の通常単価を置き、
+    // 割引期間中は MODEL_PRICING_GEMINI_FLASH_PROMO を優先して引く。
+    'gemini-3-7-flash':      { in: 1.50, out: 7.50, cr: 0.15 },
     'gemini-3-6-flash':      { in: 1.50, out: 7.50, cr: 0.15 },
     'gemini-3-5-flash-lite': { in: 0.30, out: 2.50, cr: 0.03 },
     'gemini-3-5-flash':      { in: 1.50, out: 9,    cr: 0.15 },
@@ -78,6 +81,17 @@ export const DEEPSEEK_V4_PRICE_CHANGE_AT = Date.UTC(2026, 7, 16, 16, 0, 0);
 export const MODEL_PRICING_BEFORE_V4_CHANGE = {
     'deepseek-v4-pro':   { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 0.003625, peakMul: 2 },
     'deepseek-v4-flash': { in: 0.14,  out: 0.28, cw5m: 0.14,  cw1h: 0.14,  cr: 0.0028,   peakMul: 2 },
+};
+
+// Gemini 3.7 / 3.6 Flash の期間限定割引の終了時刻。
+// 料金ページの表記は「$0.75 through December 31, 2026. $1.50 starting January 1, 2027.」で
+// タイムゾーンの明記が無いため UTC 基準で切り替える（日本時間では1/1 09:00に通常単価へ）。
+export const GEMINI_FLASH_PROMO_END_AT = Date.UTC(2027, 0, 1, 0, 0, 0);
+
+// 割引期間中の Gemini Flash 料金（通常単価のちょうど半額）。
+export const MODEL_PRICING_GEMINI_FLASH_PROMO = {
+    'gemini-3-7-flash': { in: 0.75, out: 3.75, cr: 0.075 },
+    'gemini-3-6-flash': { in: 0.75, out: 3.75, cr: 0.075 },
 };
 
 /**
@@ -114,6 +128,13 @@ export function getPricing(modelName, timestamp) {
     // 時刻を持たないのは改定前の古いデータなので、旧料金として扱う
     if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
         for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
+            if (m.startsWith(key)) return price;
+        }
+    }
+    // Gemini Flash の期間限定割引。割引終了より前のメッセージは半額で計算する
+    // （時刻が無い古いデータも、割引開始より前に存在しえないので割引期間として扱う）
+    if (!timestamp || timestamp < GEMINI_FLASH_PROMO_END_AT) {
+        for (const [key, price] of Object.entries(MODEL_PRICING_GEMINI_FLASH_PROMO)) {
             if (m.startsWith(key)) return price;
         }
     }
