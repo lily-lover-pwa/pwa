@@ -7,6 +7,7 @@ import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { appLogic } from '../app-logic.js';
+import { resolveSelectedModel } from '../utils/model-select.js';
 
 export const lifecycleMethods = {
     _setupEventListenersCallCount: 0,
@@ -439,42 +440,44 @@ export const lifecycleMethods = {
             }
         }
 
-        // 現在の値が新しいリストに含まれているか確認（標準・手動追加・API取得モデルすべて）
-        const allAvailableValues = Array.from(modelSelect.querySelectorAll('option')).map(o => o.value);
-        if (allAvailableValues.includes(currentValue)) {
-            modelSelect.value = currentValue;
+        // プロバイダーごとのハードコード既定値（どれも使えないときの最後の受け皿）
+        let defaultModel;
+        if (provider === 'zai') {
+            defaultModel = DEFAULT_ZAI_MODEL;
+        } else if (provider === 'openrouter') {
+            defaultModel = DEFAULT_OPENROUTER_MODEL;
+        } else if (provider === 'bedrock') {
+            defaultModel = DEFAULT_BEDROCK_MODEL;
+        } else if (provider === 'openai') {
+            defaultModel = DEFAULT_OPENAI_MODEL;
+        } else if (provider === 'anthropic') {
+            defaultModel = DEFAULT_ANTHROPIC_MODEL;
+        } else if (provider === 'groq') {
+            defaultModel = DEFAULT_GROQ_MODEL;
+        } else if (provider === 'deepseek') {
+            defaultModel = DEFAULT_DEEPSEEK_MODEL;
+        } else if (provider === 'xai') {
+            defaultModel = DEFAULT_XAI_MODEL;
+        } else if (provider === 'mistral') {
+            defaultModel = DEFAULT_MISTRAL_MODEL;
+        } else if (provider === 'sakana') {
+            defaultModel = DEFAULT_SAKANA_MODEL;
         } else {
-            // プロバイダーごとに最後に選んだモデルを優先、なければハードコードのデフォルト
-            const lastUsed = state.settings.lastModelPerProvider?.[provider];
-            let defaultModel;
-            if (lastUsed && allAvailableValues.includes(lastUsed)) {
-                defaultModel = lastUsed;
-            } else if (provider === 'zai') {
-                defaultModel = DEFAULT_ZAI_MODEL;
-            } else if (provider === 'openrouter') {
-                defaultModel = DEFAULT_OPENROUTER_MODEL;
-            } else if (provider === 'bedrock') {
-                defaultModel = DEFAULT_BEDROCK_MODEL;
-            } else if (provider === 'openai') {
-                defaultModel = DEFAULT_OPENAI_MODEL;
-            } else if (provider === 'anthropic') {
-                defaultModel = DEFAULT_ANTHROPIC_MODEL;
-            } else if (provider === 'groq') {
-                defaultModel = DEFAULT_GROQ_MODEL;
-            } else if (provider === 'deepseek') {
-                defaultModel = DEFAULT_DEEPSEEK_MODEL;
-            } else if (provider === 'xai') {
-                defaultModel = DEFAULT_XAI_MODEL;
-            } else if (provider === 'mistral') {
-                defaultModel = DEFAULT_MISTRAL_MODEL;
-            } else if (provider === 'sakana') {
-                defaultModel = DEFAULT_SAKANA_MODEL;
-            } else {
-                defaultModel = DEFAULT_MODEL;
-            }
-            modelSelect.value = defaultModel;
-            state.settings.modelName = defaultModel;
+            defaultModel = DEFAULT_MODEL;
         }
+
+        // 保存済みのモデルを最優先で復元する。DOMの現在値を優先すると、再読み込み直後は
+        // index.html の静的な既定値のままなので、保存済みモデルが既定値で潰れてしまう。
+        const allAvailableValues = Array.from(modelSelect.querySelectorAll('option')).map(o => o.value);
+        const { model, isFallback } = resolveSelectedModel({
+            savedModel: (state.settings && state.settings.modelName) || currentValue,
+            availableValues: allAvailableValues,
+            lastUsed: state.settings.lastModelPerProvider?.[provider],
+            defaultModel,
+        });
+        modelSelect.value = model;
+        // 保存済みモデルが使えたときに書き戻すと、プロバイダー切替以外でも設定を触ることになる
+        if (isFallback) state.settings.modelName = model;
         
         // モデル警告メッセージを更新
         uiUtils.updateModelWarningMessage();
@@ -1106,6 +1109,17 @@ export const lifecycleMethods = {
                 onUpdate: () => {
                     uiUtils.updateModelWarningMessage();
                     this.updateApiUsageUI();
+                    // プロバイダーごとに最後に選んだモデルを記憶する（ヘッダーの切替と同じ扱い）。
+                    // ここで記録しないと、プロバイダーを往復したときに既定値へ戻ってしまう。
+                    // setupInstantSave の保存は onUpdate より前に終わっているため、ここで別途保存する。
+                    const currentProvider = state.settings.apiProvider;
+                    if (currentProvider && state.settings.modelName && state.activeProfile) {
+                        state.settings.lastModelPerProvider = state.settings.lastModelPerProvider || {};
+                        state.settings.lastModelPerProvider[currentProvider] = state.settings.modelName;
+                        state.activeProfile.settings = state.activeProfile.settings || {};
+                        state.activeProfile.settings.lastModelPerProvider = state.settings.lastModelPerProvider;
+                        dbUtils.updateProfile(state.activeProfile).catch(e => console.error('最後に選んだモデルの保存に失敗:', e));
+                    }
                     // ユーザー指定モデルを選択した場合、プロバイダーを自動切り替え
                     const sel = elements.modelNameSelect;
                     if (sel) {

@@ -2005,6 +2005,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.43": [
+      "【重要】ページが再読み込みされると、選んでいたモデルが既定のモデル（Claude Sonnet 4.6 など）に勝手に変わってしまう不具合を修正しました。タイムアウトなどで再読み込みが起きるたびに発生していたため、気づかないまま別のモデルで会話が続き、想定より料金がかかることがありました。",
+      "※ モデルが変わるとプロンプトキャッシュも切れるため、Anthropic利用時は再読み込みのたびに履歴全体が再課金されていました。この修正で解消されます。",
+      "プロバイダーを切り替えて戻したときに、そのプロバイダーで最後に選んでいたモデルへ戻るようになりました（これまでは設定画面から選んだ分が記録されず、既定のモデルに戻っていました）。"
+    ],
     "1.42": [
       "Gemini 3.7 Flash に対応しました。モデル選択から選べます。2026年12月31日までは半額（入力$0.75／出力$3.75／キャッシュヒット$0.075、100万トークンあたり）で、2027年1月1日から通常単価（それぞれ2倍）に戻ります。ⓘ の推定コストは日付に応じて自動で切り替わります。",
       "Gemini 3.6 Flash の推定コストが実際の2倍になっていた問題を修正しました。3.6 Flash も 3.7 Flash と同じく2026年内は半額のため、割引を反映して計算します。"
@@ -4706,6 +4711,19 @@ Reason: [NGの場合の理由]`,
     }
   };
 
+  // src/utils/model-select.js
+  function resolveSelectedModel({ savedModel, availableValues, lastUsed, defaultModel } = {}) {
+    const values = Array.isArray(availableValues) ? availableValues : [];
+    if (savedModel && values.includes(savedModel)) {
+      return { model: savedModel, isFallback: false };
+    }
+    if (lastUsed && values.includes(lastUsed)) {
+      return { model: lastUsed, isFallback: true };
+    }
+    return { model: defaultModel, isFallback: true };
+  }
+  __name(resolveSelectedModel, "resolveSelectedModel");
+
   // src/app-logic/lifecycle.js
   var lifecycleMethods = {
     _setupEventListenersCallCount: 0,
@@ -4972,22 +4990,22 @@ Reason: [NGの場合の理由]`,
         models = GEMINI_MODELS;
       }
       const groups = {};
-      models.forEach((model) => {
-        if (model.group) {
-          if (!groups[model.group]) {
+      models.forEach((model2) => {
+        if (model2.group) {
+          if (!groups[model2.group]) {
             const optgroup = document.createElement("optgroup");
-            optgroup.label = model.group;
+            optgroup.label = model2.group;
             modelSelect.appendChild(optgroup);
-            groups[model.group] = optgroup;
+            groups[model2.group] = optgroup;
           }
           const option = document.createElement("option");
-          option.value = model.value;
-          option.textContent = model.label;
-          groups[model.group].appendChild(option);
+          option.value = model2.value;
+          option.textContent = model2.label;
+          groups[model2.group].appendChild(option);
         } else {
           const option = document.createElement("option");
-          option.value = model.value;
-          option.textContent = model.label;
+          option.value = model2.value;
+          option.textContent = model2.label;
           modelSelect.appendChild(option);
         }
       });
@@ -5034,40 +5052,39 @@ Reason: [NGの場合の理由]`,
           modelSelect.insertBefore(favGroup, modelSelect.firstChild);
         }
       }
-      const allAvailableValues = Array.from(modelSelect.querySelectorAll("option")).map((o) => o.value);
-      if (allAvailableValues.includes(currentValue)) {
-        modelSelect.value = currentValue;
+      let defaultModel;
+      if (provider === "zai") {
+        defaultModel = DEFAULT_ZAI_MODEL;
+      } else if (provider === "openrouter") {
+        defaultModel = DEFAULT_OPENROUTER_MODEL;
+      } else if (provider === "bedrock") {
+        defaultModel = DEFAULT_BEDROCK_MODEL;
+      } else if (provider === "openai") {
+        defaultModel = DEFAULT_OPENAI_MODEL;
+      } else if (provider === "anthropic") {
+        defaultModel = DEFAULT_ANTHROPIC_MODEL;
+      } else if (provider === "groq") {
+        defaultModel = DEFAULT_GROQ_MODEL;
+      } else if (provider === "deepseek") {
+        defaultModel = DEFAULT_DEEPSEEK_MODEL;
+      } else if (provider === "xai") {
+        defaultModel = DEFAULT_XAI_MODEL;
+      } else if (provider === "mistral") {
+        defaultModel = DEFAULT_MISTRAL_MODEL;
+      } else if (provider === "sakana") {
+        defaultModel = DEFAULT_SAKANA_MODEL;
       } else {
-        const lastUsed = state.settings.lastModelPerProvider?.[provider];
-        let defaultModel;
-        if (lastUsed && allAvailableValues.includes(lastUsed)) {
-          defaultModel = lastUsed;
-        } else if (provider === "zai") {
-          defaultModel = DEFAULT_ZAI_MODEL;
-        } else if (provider === "openrouter") {
-          defaultModel = DEFAULT_OPENROUTER_MODEL;
-        } else if (provider === "bedrock") {
-          defaultModel = DEFAULT_BEDROCK_MODEL;
-        } else if (provider === "openai") {
-          defaultModel = DEFAULT_OPENAI_MODEL;
-        } else if (provider === "anthropic") {
-          defaultModel = DEFAULT_ANTHROPIC_MODEL;
-        } else if (provider === "groq") {
-          defaultModel = DEFAULT_GROQ_MODEL;
-        } else if (provider === "deepseek") {
-          defaultModel = DEFAULT_DEEPSEEK_MODEL;
-        } else if (provider === "xai") {
-          defaultModel = DEFAULT_XAI_MODEL;
-        } else if (provider === "mistral") {
-          defaultModel = DEFAULT_MISTRAL_MODEL;
-        } else if (provider === "sakana") {
-          defaultModel = DEFAULT_SAKANA_MODEL;
-        } else {
-          defaultModel = DEFAULT_MODEL;
-        }
-        modelSelect.value = defaultModel;
-        state.settings.modelName = defaultModel;
+        defaultModel = DEFAULT_MODEL;
       }
+      const allAvailableValues = Array.from(modelSelect.querySelectorAll("option")).map((o) => o.value);
+      const { model, isFallback } = resolveSelectedModel({
+        savedModel: state.settings && state.settings.modelName || currentValue,
+        availableValues: allAvailableValues,
+        lastUsed: state.settings.lastModelPerProvider?.[provider],
+        defaultModel
+      });
+      modelSelect.value = model;
+      if (isFallback) state.settings.modelName = model;
       uiUtils.updateModelWarningMessage();
       this.updateApiUsageUI();
     },
@@ -5596,6 +5613,14 @@ Reason: [NGの場合の理由]`,
           onUpdate: /* @__PURE__ */ __name(() => {
             uiUtils.updateModelWarningMessage();
             this.updateApiUsageUI();
+            const currentProvider = state.settings.apiProvider;
+            if (currentProvider && state.settings.modelName && state.activeProfile) {
+              state.settings.lastModelPerProvider = state.settings.lastModelPerProvider || {};
+              state.settings.lastModelPerProvider[currentProvider] = state.settings.modelName;
+              state.activeProfile.settings = state.activeProfile.settings || {};
+              state.activeProfile.settings.lastModelPerProvider = state.settings.lastModelPerProvider;
+              dbUtils.updateProfile(state.activeProfile).catch((e) => console.error("最後に選んだモデルの保存に失敗:", e));
+            }
             const sel = elements.modelNameSelect;
             if (sel) {
               const opt = sel.options[sel.selectedIndex];
