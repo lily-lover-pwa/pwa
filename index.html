@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
     <!-- CSSファイルを外部から読み込む -->
-    <link rel="stylesheet" href="style.css?v=1.25.46">
+    <link rel="stylesheet" href="style.css?v=1.25.49">
     <link rel="stylesheet" href="prism.css" />
     <script src="marked.js" defer></script>
     <!-- DOMPurify: AI出力/インポート由来HTMLのサニタイズ（XSS対策）。marked の後に読み込む -->
@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.48" defer></script>
+    <script src="app.js?v=1.25.49" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -1159,13 +1159,15 @@
     </div>
     
     <!-- プロジェクト管理ダイアログ -->
-    <dialog id="projectManagementDialog" class="dialog-overlay">
-        <div class="dialog-box" style="max-height: 80vh; overflow-y: auto; width: 500px; max-width: 90vw;">
+    <dialog id="projectManagementDialog" class="custom-dialog">
+        <div class="dialog-box" style="width: 460px; max-width: 100%;">
+            <!-- スクロールは中身側だけにする。箱ごとスクロールさせると、下へ送ったときに
+                 ヘッダーの✕が画面外へ流れて閉じられなくなるため -->
             <div class="dialog-header">
                 <h2>プロジェクト管理</h2>
                 <button type="button" class="dialog-close-btn" id="close-project-dialog-btn"><span class="material-symbols-outlined">close</span></button>
             </div>
-            <div class="dialog-content">
+            <div class="dialog-content" style="max-height: 65vh; overflow-y: auto; margin-bottom: 0;">
                 <div class="settings-group">
                     <label for="new-project-name">新規プロジェクト名</label>
                     <input type="text" id="new-project-name" placeholder="プロジェクト名を入力" class="dialog-input">

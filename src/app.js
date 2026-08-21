@@ -214,6 +214,7 @@ export function setupBroadcastChannel() {
 
 // --- アプリケーションロジック (appLogic) ---
 import { appLogic } from './app-logic.js';
+import { uiUtils } from './ui.js';
 
 window.appLogic = appLogic;
 window.state = state;
@@ -690,6 +691,9 @@ window.dbUtils = dbUtils;
                     const projectId = parseInt(btn.dataset.projectId, 10);
                     const project = projectsCache.find(p => p.id === projectId);
                     if (!project) return;
+                    // 元に戻せないので確認する（編集中に押してしまう位置にあるため）
+                    const confirmed = await uiUtils.showCustomConfirm(`ナレッジ「${btn.dataset.fileName}」を削除しますか？\nこの操作は元に戻せません。`);
+                    if (!confirmed) return;
                     project.knowledgeFiles = (project.knowledgeFiles || []).filter(f => f.name !== btn.dataset.fileName);
                     await window.dbUtils.updateProject(project);
                     if (window.state.activeProjectId === projectId) {
