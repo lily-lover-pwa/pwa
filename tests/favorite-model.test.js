@@ -59,3 +59,42 @@ describe('お気に入りモデル: 先頭ピン留めの挿入ロジック', ()
         expect(sel.querySelector('#favorite-models-group')).toBeNull();
     });
 });
+
+// OpenRouter は選択肢の作り方が違い（追加モデルのみ／標準リストを消す）、
+// その削除で ★お気に入り グループごと消えていた回帰を防ぐ。
+function openRouterCleanup(selectEl) {
+    Array.from(selectEl.querySelectorAll('optgroup')).forEach((g) => {
+        if (g.id !== 'user-defined-models-group') g.remove();
+    });
+    Array.from(selectEl.querySelectorAll('option:not([data-user-defined])')).forEach((o) => o.remove());
+}
+
+describe('お気に入りモデル: OpenRouter でも★が残る', () => {
+    function buildOpenRouterSelect() {
+        const sel = doc.getElementById('model-name').cloneNode(true);
+        const grp = sel.querySelector('#user-defined-models-group');
+        const opt = doc.createElement('option');
+        opt.value = 'openrouter/ox-alpha';
+        opt.textContent = 'openrouter/ox-alpha (openrouter)';
+        opt.dataset.provider = 'openrouter';
+        opt.dataset.userDefined = 'true';
+        grp.appendChild(opt);
+        return sel;
+    }
+
+    it('削除処理のあとに作り直せば★グループが先頭に残る', () => {
+        const sel = buildOpenRouterSelect();
+        openRouterCleanup(sel);
+        const favGroup = insertFavoriteGroup(sel, ['openrouter/ox-alpha']);
+        expect(favGroup.children.length).toBe(1);
+        expect(sel.firstElementChild.id).toBe('favorite-models-group');
+        expect(favGroup.children[0].value).toBe('openrouter/ox-alpha');
+    });
+
+    it('作り直さないと★は消えたまま（修正前の挙動）', () => {
+        const sel = buildOpenRouterSelect();
+        insertFavoriteGroup(sel, ['openrouter/ox-alpha']); // 先に作っても
+        openRouterCleanup(sel);                            // 削除で消える
+        expect(sel.querySelector('#favorite-models-group')).toBeNull();
+    });
+});

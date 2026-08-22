@@ -3,6 +3,7 @@ import { DEEPSEEK_API_BASE_URL, DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION, D
 import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
+import { extractReasoningText } from './utils/reasoning.js';
 import { state } from './state.js';
 import { uiUtils } from './ui.js';
 
@@ -159,9 +160,10 @@ export const apiUtils = {
                 const parts = [];
                 const message = choice.message;
 
-                // reasoning_content (DeepSeek-R1等) を思考プロセスとして追加
-                if (message.reasoning_content) {
-                    parts.push({ text: message.reasoning_content, thought: true });
+                // 思考プロセス（項目名はプロバイダーごとに異なるため utils で吸収する）
+                const reasoningText = extractReasoningText(message);
+                if (reasoningText) {
+                    parts.push({ text: reasoningText, thought: true });
                 }
 
                 if (message.content) {
@@ -848,6 +850,16 @@ export const apiUtils = {
             if (generationConfig.topP !== undefined) {
                 requestBody.top_p = generationConfig.topP;
             }
+        }
+
+        // 思考プロセスの要求（OpenRouter のみ）。
+        // OpenRouter は reasoning パラメータで明示しないとモデルが推論を返さないことがある。
+        // 他のOpenAI互換プロバイダーは未知のキーで 400 を返す場合があるため送らない。
+        // 予算は Gemini/Anthropic と同じ Thinking Budget を流用する（未設定なら有効化のみ）。
+        if (cfg.supportsReasoning && state.settings.includeThoughts) {
+            requestBody.reasoning = state.settings.thinkingBudget > 0
+                ? { enabled: true, max_tokens: state.settings.thinkingBudget }
+                : { enabled: true };
         }
 
         // Function Callingの処理
@@ -1631,6 +1643,7 @@ export const apiUtils = {
                     getApiKey: () => state.settings.openrouterApiKey,
                     missingKeyMessage: 'OpenRouter APIキーが設定されていません。',
                     extraHeaders: () => ({ 'HTTP-Referer': window.location.origin, 'X-Title': 'PWA-lily' }),
+                    supportsReasoning: true,
                     verboseError: true
                 }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
             case 'bedrock':
