@@ -3,7 +3,8 @@ import { getUsageRange, calcMessageCost, summarizeUsage } from '../src/utils/usa
 
 // 料金改定後の時刻を使う（V4-Pro: in 0.66 / out 1.98 / cr 0.022、ピークは2倍）
 const AFTER_OFFPEAK = Date.UTC(2026, 8, 20, 12, 0); // 2026-09-20 12:00 UTC = オフピーク
-const AFTER_PEAK = Date.UTC(2026, 8, 20, 2, 0);     // 2026-09-20 02:00 UTC = ピーク
+const AFTER_PEAK = Date.UTC(2026, 8, 21, 2, 0);     // 2026-09-21(月) 02:00 UTC = 北京10:00 ピーク
+// ※ 週末(北京時間の土日)は終日オフピークになったため、ピークの検証には平日を使う
 
 const msg = (overrides = {}) => ({
     role: 'model',

@@ -2005,6 +2005,10 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.49": [
+      "DeepSeek の週末オフピーク（2026年8月23日 0:00 北京時間から）に対応しました。北京時間の土日は終日オフピーク単価になるため、ⓘ の推定コストも週末はピーク倍率をかけずに計算します。平日はこれまでどおりピーク／オフピークの区分が適用されます。",
+      "※ 曜日は北京時間で判定します（日本時間とは1時間ずれるため、日本の土曜1:00〜日曜23:59 が週末扱いになります）。改定前に送ったメッセージは当時の規則のまま計算するので、過去のコストが変わることはありません。"
+    ],
     "1.48": [
       "OpenRouterを選んでいるときだけ★お気に入りが効かず、チャット画面のモデル一覧に出てこない不具合を修正しました。OpenRouterは他と選択肢の作り方が違い、一覧を作り直すときに★のグループごと消えていたためです。",
       "※ OpenRouterのモデルを一覧に出すには、設定の「OpenRouter 追加モデル (カンマ区切り)」にモデルIDを書いてください（モデル数が多いため自動取得はしていません）。書いたモデルは★で先頭に固定できます。"
@@ -12827,8 +12831,14 @@ ${msg}`);
     return null;
   }
   __name(getPricing, "getPricing");
+  var DEEPSEEK_WEEKEND_OFFPEAK_AT = Date.UTC(2026, 7, 22, 16, 0, 0);
+  var BEIJING_OFFSET_MS = 8 * 60 * 60 * 1e3;
   function isDeepSeekPeak(timestamp) {
     if (!timestamp) return false;
+    if (timestamp >= DEEPSEEK_WEEKEND_OFFPEAK_AT) {
+      const beijingDay = new Date(timestamp + BEIJING_OFFSET_MS).getUTCDay();
+      if (beijingDay === 0 || beijingDay === 6) return false;
+    }
     const h = new Date(timestamp).getUTCHours();
     return h >= 1 && h < 4 || h >= 6 && h < 10;
   }
