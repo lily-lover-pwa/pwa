@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT } from '../src/utils/pricing.js';
+import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT, DEEPSEEK_WEEKEND_OFFPEAK_AT } from '../src/utils/pricing.js';
 
 const BEFORE = DEEPSEEK_V4_PRICE_CHANGE_AT - 1;
 const AFTER = DEEPSEEK_V4_PRICE_CHANGE_AT;
@@ -242,5 +242,47 @@ describe('getPricing — Gemini Flash の期間限定割引（2026-12-31まで�
     it('割引対象外の Gemini は影響を受けない', () => {
         expect(getPricing('gemini-3.5-flash', DURING).in).toBe(1.50);
         expect(getPricing('gemini-2.5-flash', DURING).in).toBe(0.30);
+    });
+});
+
+describe('isDeepSeekPeak — 週末のピーク廃止（2026-08-23 00:00 北京時間〜）', () => {
+    // 北京時間 = UTC+8。UTC 01:00-04:00 / 06:00-10:00 がピーク帯。
+    // 2026-08-24(月) 02:00 UTC = 北京 10:00（平日・ピーク帯）
+    const MON_PEAK = Date.UTC(2026, 7, 24, 2, 0, 0);
+    // 2026-08-29(土) 02:00 UTC = 北京 10:00（週末・ピーク帯だが対象外になる）
+    const SAT_PEAK_HOUR = Date.UTC(2026, 7, 29, 2, 0, 0);
+    // 2026-08-30(日) 07:00 UTC = 北京 15:00（週末・ピーク帯だが対象外になる）
+    const SUN_PEAK_HOUR = Date.UTC(2026, 7, 30, 7, 0, 0);
+
+    it('改定後の平日はこれまでどおりピークになる', () => {
+        expect(isDeepSeekPeak(MON_PEAK)).toBe(true);
+    });
+
+    it('改定後の週末はピーク帯の時刻でもオフピーク扱い', () => {
+        expect(isDeepSeekPeak(SAT_PEAK_HOUR)).toBe(false);
+        expect(isDeepSeekPeak(SUN_PEAK_HOUR)).toBe(false);
+    });
+
+    it('改定前の週末は従来どおりピークのまま（過去の請求額が変わらない）', () => {
+        // 2026-08-15(土) 02:00 UTC = 北京 10:00。改定前なので peak のまま
+        expect(isDeepSeekPeak(Date.UTC(2026, 7, 15, 2, 0, 0))).toBe(true);
+    });
+
+    it('曜日は北京時間で判定する（UTCで見ると境界が8時間ずれる）', () => {
+        // 2026-08-28(金) 17:00 UTC = 北京 8/29(土) 01:00 → 週末側。
+        // ただし 17時UTC はそもそもピーク帯ではないので、境界の確認は下の平日側で行う。
+        expect(isDeepSeekPeak(Date.UTC(2026, 7, 28, 17, 0, 0))).toBe(false);
+        // 2026-08-30(日) 16:00 UTC = 北京 8/31(月) 00:00 → 平日側に戻る。
+        // 00時台はピーク帯外なので false だが、北京月曜の 10:00（=8/31 02:00 UTC）は true
+        expect(isDeepSeekPeak(Date.UTC(2026, 7, 31, 2, 0, 0))).toBe(true);
+    });
+
+    it('切替時刻ちょうど（北京 8/23 00:00 = 日曜）から週末オフピークが効く', () => {
+        // 切替の1ミリ秒前は旧規則。ただし 16:00 UTC はピーク帯外なのでどちらも false。
+        // 効き目が見えるのは同じ日曜のピーク帯 = 8/23 02:00 UTC（北京 10:00）
+        expect(isDeepSeekPeak(Date.UTC(2026, 7, 23, 2, 0, 0))).toBe(false);
+        // その直前の日曜（8/16 02:00 UTC）は旧規則でピーク
+        expect(isDeepSeekPeak(Date.UTC(2026, 7, 16, 2, 0, 0))).toBe(true);
+        expect(DEEPSEEK_WEEKEND_OFFPEAK_AT).toBe(Date.UTC(2026, 7, 22, 16, 0, 0));
     });
 });

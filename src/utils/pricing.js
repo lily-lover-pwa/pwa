@@ -144,13 +144,28 @@ export function getPricing(modelName, timestamp) {
     return null;
 }
 
+// 週末のピーク料金が廃止される時刻（2026-08-23 00:00 北京時間 = 2026-08-22 16:00 UTC）。
+// これ以降、北京時間の土日は終日オフピーク単価になる。平日は従来どおり。
+export const DEEPSEEK_WEEKEND_OFFPEAK_AT = Date.UTC(2026, 7, 22, 16, 0, 0);
+
+// 北京時間は UTC+8。曜日判定に使う。
+const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
+
 /**
  * DeepSeek のピーク時間帯かどうか（UTC 01:00-04:00 / 06:00-10:00 = 日本時間 10-13時 / 15-19時）。
  * タイムゾーンに依存しないよう UTC 時刻で判定する。
+ *
+ * 2026-08-23 00:00（北京時間）以降は、北京時間の土日が終日オフピークになる。
+ * 改定前のメッセージは当時の規則のまま計算するため、時刻で切り替える。
  * @param {number} timestamp モデル応答生成時刻(epoch ms)
  */
 export function isDeepSeekPeak(timestamp) {
     if (!timestamp) return false;
+    if (timestamp >= DEEPSEEK_WEEKEND_OFFPEAK_AT) {
+        // 曜日は「北京時間で」判定する（UTCで見ると境界が8時間ずれる）
+        const beijingDay = new Date(timestamp + BEIJING_OFFSET_MS).getUTCDay(); // 0=日, 6=土
+        if (beijingDay === 0 || beijingDay === 6) return false;
+    }
     const h = new Date(timestamp).getUTCHours();
     return (h >= 1 && h < 4) || (h >= 6 && h < 10);
 }
