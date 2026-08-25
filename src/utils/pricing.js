@@ -32,7 +32,9 @@ export const MODEL_PRICING = {
     // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
 
     // xAI Grok — https://docs.x.ai/developers/pricing
-    'grok-4-6': { in: 2, out: 6, cr: 0.50, longCtx: { threshold: 200_000, in: 4, out: 12, cr: 1 } },
+    'grok-4-6': { in: 2,    out: 6,    cr: 0.50, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 1    } },
+    'grok-4-5': { in: 2,    out: 6,    cr: 0.30, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 0.60 } },
+    'grok-4-3': { in: 1.25, out: 2.50, cr: 0.20, longCtx: { threshold: 200_000, in: 2.50, out: 5,    cr: 0.40 } },
 
     // OpenAI — https://developers.openai.com/api/docs/pricing
     // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
@@ -68,6 +70,8 @@ export const MODEL_PRICING = {
     // 3.1 Pro も 200k 超で単価が上がる（入力2倍・出力1.5倍・キャッシュ2倍）
     'gemini-3-1-pro':        { in: 2,    out: 12,   cr: 0.20,  longCtx: { threshold: 200_000, in: 4, out: 18, cr: 0.40 } },
     'gemini-3-1-flash-lite': { in: 0.25, out: 1.50, cr: 0.025 },
+    // 3 Flash（プレビュー）。'gemini-3-7-flash' 等とは前方一致で衝突しない
+    'gemini-3-flash':        { in: 0.50, out: 3,    cr: 0.05 },
     // 2.5 Pro は 200k 超で入力2倍・出力1.5倍と倍率が異なるため、上位段の単価をそのまま持つ
     'gemini-2-5-pro':        { in: 1.25, out: 10,   cr: 0.125, longCtx: { threshold: 200_000, in: 2.50, out: 15, cr: 0.25 } },
     'gemini-2-5-flash-lite': { in: 0.10, out: 0.40, cr: 0.01 },

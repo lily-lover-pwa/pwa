@@ -43,33 +43,54 @@ export const VERSION_LEGACY_STORAGE_KEY = 'appVersion';
 export const GEMINI_MODELS = [
     { value: 'gemini-3.7-flash', label: 'gemini-3.7-flash (2026年内は半額)' },
     { value: 'gemini-flash-latest', label: 'gemini-flash-latest (常に最新Flash)' },
+    { value: 'gemini-3.6-flash', label: 'gemini-3.6-flash (2026年内は半額)' },
+    { value: 'gemini-3.5-flash', label: 'gemini-3.5-flash' },
+    { value: 'gemini-3.5-flash-lite', label: 'gemini-3.5-flash-lite' },
+    { value: 'gemini-3.1-flash-lite', label: 'gemini-3.1-flash-lite (軽量・安価)' },
     { value: 'gemini-2.5-pro', label: 'gemini-2.5-pro' },
     { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
     { value: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite' },
-    { value: 'gemini-2.0-flash', label: 'gemini-2.0-flash' },
-    { value: 'gemini-2.0-flash-lite', label: 'gemini-2.0-flash-lite' },
-    {
-        value: 'gemini-2.5-flash-preview-09-2025',
-        label: 'gemini-2.5-flash-preview-09-2025',
-        group: 'プレビュー版',
-    },
-    {
-        value: 'gemini-2.5-flash-lite-preview-09-2025',
-        label: 'gemini-2.5-flash-lite-preview-09-2025',
-        group: 'プレビュー版',
-    },
-    {
-        value: 'gemini-2.5-flash-image-preview',
-        label: 'gemini-2.5-flash-image-preview (Nano Banana)',
-        group: 'プレビュー版',
-    },
     { value: 'gemini-3.1-pro-preview', label: 'gemini-3.1-pro-preview', group: 'プレビュー版' },
+    { value: 'gemini-3-flash-preview', label: 'gemini-3-flash-preview', group: 'プレビュー版' },
 ];
 
-// Google が提供終了したモデルを後継へ自動移行するためのマップ（旧モデル名 → 新モデル名）。
+// 提供終了したモデルを後継へ自動移行するためのマップ（旧モデル名 → 新モデル名）。
 // プロファイル適用時に保存済みのモデル設定を書き換える。
+// 後継は各社が公式に案内している移行先に合わせている。
 export const RETIRED_MODEL_MAP = {
+    // Gemini（2026-06-01 提供終了）
+    'gemini-2.0-flash': 'gemini-3.5-flash',
+    'gemini-2.0-flash-lite': 'gemini-3.1-flash-lite',
+    // Gemini プレビュー版（2026-03-31 / 2026-01-15 提供終了）
+    'gemini-2.5-flash-preview-09-2025': 'gemini-2.5-flash',
+    'gemini-2.5-flash-lite-preview-09-2025': 'gemini-2.5-flash-lite',
+    'gemini-2.5-flash-image-preview': 'gemini-3.1-flash-image',
     'gemini-3-pro-preview': 'gemini-3.1-pro-preview',
+    // Claude（Claude API）
+    'claude-3-5-sonnet-20241022': 'claude-sonnet-4-6',
+    'claude-3-5-sonnet-20240620': 'claude-sonnet-4-6',
+    'claude-3-5-haiku-20241022': 'claude-haiku-4-5-20251001',
+    'claude-3-opus-20240229': 'claude-opus-4-8',
+    'claude-3-sonnet-20240229': 'claude-sonnet-4-6',
+    'claude-3-haiku-20240307': 'claude-haiku-4-5-20251001',
+    // Claude（Bedrock）
+    'anthropic.claude-3-5-sonnet-20241022-v2:0': 'global.anthropic.claude-sonnet-4-6',
+    'anthropic.claude-3-5-sonnet-20240620-v1:0': 'global.anthropic.claude-sonnet-4-6',
+    'anthropic.claude-3-opus-20240229-v1:0': 'global.anthropic.claude-opus-4-6-v1',
+    'anthropic.claude-3-sonnet-20240229-v1:0': 'global.anthropic.claude-sonnet-4-6',
+    'anthropic.claude-3-haiku-20240307-v1:0': 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+    // Groq
+    'moonshotai/kimi-k2-instruct': 'openai/gpt-oss-120b',
+    'meta-llama/llama-4-maverick-17b-128e-instruct': 'openai/gpt-oss-120b',
+    'meta-llama/llama-4-scout-17b-16e-instruct': 'openai/gpt-oss-120b',
+    'qwen/qwen3-32b': 'openai/gpt-oss-120b',
+    'gemma2-9b-it': 'openai/gpt-oss-20b',
+    // xAI（2026-05-15 提供終了。旧スラッグは grok-4.3 へ転送されるが単価は 4.3 のものになる）
+    'grok-4': 'grok-4.6',
+    'grok-4-0709': 'grok-4.3',
+    'grok-3': 'grok-4.3',
+    'grok-3-mini': 'grok-4.3',
+    'grok-2-1212': 'grok-4.6',
 };
 
 export const ZAI_MODELS = [
@@ -78,20 +99,29 @@ export const ZAI_MODELS = [
     { value: 'glm-4.5-flash', label: 'GLM-4.5 Flash' },
 ];
 
+// Bedrock は基本モデルIDのままだと on-demand で呼べず、推論プロファイルの接頭辞
+// （global. / us. / jp. など）が要る。東京リージョンで使えるものは jp. を用意している。
 export const BEDROCK_MODELS = [
     {
         value: 'jp.anthropic.claude-sonnet-4-5-20250929-v1:0',
         label: 'Claude Sonnet 4.5 (推奨・東京リージョン用)',
     },
     {
-        value: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
-        label: 'Claude Sonnet 4.5 (標準リージョン用)',
+        value: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+        label: 'Claude Sonnet 4.5 (グローバル)',
     },
-    { value: 'anthropic.claude-3-5-sonnet-20241022-v2:0', label: 'Claude 3.5 Sonnet v2' },
-    { value: 'anthropic.claude-3-5-sonnet-20240620-v1:0', label: 'Claude 3.5 Sonnet v1' },
-    { value: 'anthropic.claude-3-opus-20240229-v1:0', label: 'Claude 3 Opus' },
-    { value: 'anthropic.claude-3-sonnet-20240229-v1:0', label: 'Claude 3 Sonnet' },
-    { value: 'anthropic.claude-3-haiku-20240307-v1:0', label: 'Claude 3 Haiku' },
+    { value: 'global.anthropic.claude-opus-4-6-v1', label: 'Claude Opus 4.6 (グローバル)' },
+    { value: 'jp.anthropic.claude-opus-4-6-v1', label: 'Claude Opus 4.6 (東京リージョン用)' },
+    { value: 'global.anthropic.claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (グローバル)' },
+    { value: 'jp.anthropic.claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (東京リージョン用)' },
+    {
+        value: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+        label: 'Claude Haiku 4.5 (グローバル・軽量/安価)',
+    },
+    {
+        value: 'global.anthropic.claude-opus-4-5-20251101-v1:0',
+        label: 'Claude Opus 4.5 (グローバル)',
+    },
 ];
 
 export const DEFAULT_BEDROCK_MODEL = 'jp.anthropic.claude-sonnet-4-5-20250929-v1:0';
@@ -112,10 +142,10 @@ export const ANTHROPIC_MODELS = [
     { value: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
     { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+    { value: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
     { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
     { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
 ];
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 
@@ -135,16 +165,20 @@ export function getAnthropicEffortLevels(model) {
     return null;
 }
 
+// Llama 3.3 70B / 3.1 8B は廃止予定日（2026-08-16）を過ぎているが、
+// Groq のモデル一覧にはまだ本番モデルとして載っている。取り除くと使えている人が
+// 困るため残しつつ、ラベルで注意を促す。
 export const GROQ_MODELS = [
-    { value: 'moonshotai/kimi-k2-instruct', label: 'Kimi K2 Instruct' },
-    { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick 17B' },
-    { value: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout 17B' },
-    { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
-    { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
-    { value: 'qwen/qwen3-32b', label: 'Qwen3 32B' },
-    { value: 'gemma2-9b-it', label: 'Gemma 2 9B' },
+    { value: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B' },
+    { value: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B (軽量/安価)' },
+    { value: 'groq/compound', label: 'Compound (ツール内蔵)' },
+    { value: 'groq/compound-mini', label: 'Compound Mini (ツール内蔵・軽量)' },
+    { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (廃止予定)' },
+    { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (廃止予定)' },
+    { value: 'qwen/qwen3.6-27b', label: 'Qwen3.6 27B', group: 'プレビュー版' },
+    { value: 'minimaxai/minimax-m2.7', label: 'MiniMax M2.7', group: 'プレビュー版' },
 ];
-export const DEFAULT_GROQ_MODEL = 'moonshotai/kimi-k2-instruct';
+export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
 
 export const DEEPSEEK_MODELS = [
     { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
@@ -155,13 +189,12 @@ export const DEEPSEEK_MODELS = [
 export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 
 export const XAI_MODELS = [
-    { value: 'grok-4.6', label: 'Grok 4.6' },
-    { value: 'grok-4', label: 'Grok 4' },
-    { value: 'grok-3', label: 'Grok 3' },
-    { value: 'grok-3-mini', label: 'Grok 3 Mini' },
-    { value: 'grok-2-1212', label: 'Grok 2' },
+    { value: 'grok-4.6', label: 'Grok 4.6 (推奨)' },
+    { value: 'grok-4.5', label: 'Grok 4.5' },
+    { value: 'grok-4.3', label: 'Grok 4.3 (安価)' },
+    { value: 'grok-build-0.1', label: 'Grok Build 0.1 (コーディング向け)' },
 ];
-export const DEFAULT_XAI_MODEL = 'grok-4';
+export const DEFAULT_XAI_MODEL = 'grok-4.6';
 
 export const MISTRAL_MODELS = [
     { value: 'mistral-large-latest', label: 'Mistral Large (latest)' },
@@ -180,6 +213,17 @@ export const SAKANA_MODELS = [
 export const DEFAULT_SAKANA_MODEL = 'fugu';
 
 export const VERSION_HISTORY = {
+    '1.52': [
+        '提供が終了したモデルをモデル一覧から取り除き、各社の現行モデルに入れ替えました。Gemini は 2.0 Flash / 2.0 Flash-Lite と旧プレビュー版を外し、3.6 / 3.5 Flash・3.5 Flash-Lite・3.1 Flash-Lite・3 Flash（プレビュー）を追加しています。',
+        'Groq と xAI は既定モデル自体が提供終了していて、選び直さないと最初のメッセージでエラーになる状態でした。Groq は GPT-OSS 120B、xAI は Grok 4.6 を既定にし、現行モデルへ入れ替えています。Claude と Bedrock も 3系（3.5 Sonnet / 3 Opus など）を外し、Sonnet 5 / Opus 4.6 / Haiku 4.5 などを追加しました。',
+        '設定に廃止モデルが保存されたままでも、送信時に後継モデルを案内するようになりました（自動で切り替わるのは後継がはっきりしているものだけで、それ以外は必ず確認します）。',
+        '画像生成モデルの判定を名前の形（〜-image）で行うようにしました。Nano Banana の後継（gemini-3.1-flash-image など）を「追加モデル」に入れても画像生成として扱われます。',
+        '※ Groq の Llama 3.3 70B / 3.1 8B は廃止予定日を過ぎていますが、まだ一覧に載っているため残しています（ラベルに「廃止予定」と表示）。',
+    ],
+    '1.51': [
+        'モデル一覧で「追加モデル」が標準モデルより前（一覧の中途半端な位置）に出ていたのを直しました。これからは 標準モデル → 追加モデル → API取得モデル の順に並びます。',
+        '※ 表示位置が変わるだけで、選べるモデルや★お気に入りの並び（常に先頭）は変わりません。',
+    ],
     '1.50': [
         'GPT-5.6 Sol の値下げ（2026年8月21日）に対応しました。100万トークンあたり入力$5→$4（20%減）、出力$30→$20（33%減）、キャッシュヒット$0.50→$0.40 です。ⓘ の推定コストが新単価で計算されます。',
         '値下げ前に送ったメッセージは、これまでどおり当時の単価で計算します。過去のチャットの推定コストが後から下がって見えることはありません。',

@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.52" defer></script>
+    <script src="app.js?v=1.25.53" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -304,7 +304,7 @@
                             <label for="api-key">Gemini APIキー:</label>
                             <input type="password" autocomplete="new-password" id="api-key" placeholder="APIキーを入力" aria-label="Gemini APIキー">
                             <label for="gemini-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
-                            <textarea id="gemini-custom-models" placeholder="例: gemini-2.0-pro-exp-02-05, gemini-2.0-flash"></textarea>
+                            <textarea id="gemini-custom-models" placeholder="例: gemini-3.1-flash-image, gemini-3-pro-image"></textarea>
                         </div>
 
                         <div id="zai-api-key-container" class="hidden">
@@ -356,7 +356,7 @@
                             <label for="anthropic-api-key">Anthropic APIキー:</label>
                             <input type="password" autocomplete="new-password" id="anthropic-api-key" placeholder="sk-ant-..." aria-label="Anthropic APIキー">
                             <label for="anthropic-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
-                            <textarea id="anthropic-custom-models" placeholder="例: claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022"></textarea>
+                            <textarea id="anthropic-custom-models" placeholder="例: claude-fable-5, claude-opus-4-5-20251101"></textarea>
                             <label for="anthropic-cache-ttl" style="margin-top: 15px;">プロンプトキャッシュ保持時間:</label>
                             <select id="anthropic-cache-ttl">
                                 <option value="none">なし（キャッシュ未使用）</option>
@@ -433,15 +433,12 @@
                             <label for="model-name" id="model-name-label">モデル名:</label>
                             <div class="model-name-row" style="display:flex; gap:6px; align-items:stretch;">
                             <select id="model-name" aria-label="モデル名" style="flex:1; min-width:0;">
-                                <option value="gemini-2.0-flash" selected>gemini-2.0-flash</option>
-                                <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
-                                <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
-                                <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                                <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                <!-- 実際の選択肢は updateModelOptions() が作り直す。ここは読み込み直後の
+                                     一瞬だけ使われる仮の値なので、既定値と同じ現行モデルを置いておく。 -->
+                                <option value="gemini-2.5-pro" selected>gemini-2.5-pro</option>
+                                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
                                 <optgroup label="プレビュー版">
-                                    <option value="gemini-2.5-flash-preview-09-2025">gemini-2.5-flash-preview-09-2025</option>
-                                    <option value="gemini-2.5-flash-lite-preview-09-2025">gemini-2.5-flash-lite-preview-09-2025</option>
-                                    <option value="gemini-2.5-flash-image-preview">gemini-2.5-flash-image-preview (Nano Banana)</option>
+                                    <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
                                 </optgroup>
                                 <optgroup label="追加モデル" id="user-defined-models-group">
                                     <!-- JSで動的挿入 -->
@@ -456,7 +453,7 @@
                             </div>
 
                             <p id="model-warning-message" class="hidden model-warning">
-                                ※Nano Banana等はテスト中のため不具合が発生する可能性があります。
+                                ※画像生成モデルはテスト中のため不具合が発生する可能性があります。
                             </p>
                         </div>
                     </div>
@@ -801,14 +798,14 @@
                             <option value="deepseek-chat">deepseek-chat (V3)</option>
                             <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
                         </optgroup>
-                        <optgroup label="旧バージョン">
-                            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-                            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+                        <optgroup label="Gemini 3系">
+                            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (軽量・安価)</option>
+                            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                            <option value="gemini-3.5-flash">gemini-3.5-flash</option>
                         </optgroup>
                         <optgroup label="プレビュー版">
-                            <option value="gemini-2.5-flash-preview-09-2025">gemini-2.5-flash-preview-09-2025</option>
-                            <option value="gemini-2.5-flash-lite-preview-09-2025">gemini-2.5-flash-lite-preview-09-2025</option>
                             <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
+                            <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
                         </optgroup>
                         <optgroup label="ユーザー指定" id="summary-user-models">
                         </optgroup>
@@ -903,7 +900,7 @@
                     </div>
                    <!-- 追加モデル入力欄 -->
                    <label for="additional-models">追加モデル (カンマ区切り):</label>
-                   <textarea id="additional-models" placeholder="例: gemini-2.0-pro,gemini-2.0-flash-lite" aria-label="追加モデル"></textarea>
+                   <textarea id="additional-models" placeholder="例: gemini-3.1-flash-image,gemini-3-pro-image" aria-label="追加モデル"></textarea>
 
                    <label class="checkbox-label" style="margin-top: 15px;">
                     <input type="checkbox" id="debug-mode-toggle">

@@ -4,6 +4,7 @@ import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
 import { extractReasoningText } from './utils/reasoning.js';
+import { isImageGenerationModel } from './utils/model-select.js';
 import { state } from './state.js';
 import { uiUtils } from './ui.js';
 
@@ -520,8 +521,7 @@ export const apiUtils = {
             await appLogic._updateApiUsageCount(state.activeProfileId); 
         }
 
-        const isImageGenModel = model === 'gemini-2.5-flash-image-preview' ||
-            model.includes('image-generation') || model.includes('imagen');
+        const isImageGenModel = isImageGenerationModel(model);
 
         const endpointMethod = 'generateContent?';
 
