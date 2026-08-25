@@ -126,7 +126,13 @@ describe('getPricing — Grok', () => {
         expect(getPricing('grok-4.6', AFTER).longCtx).toMatchObject({ threshold: 200000, in: 4, out: 12, cr: 1 });
     });
 
-    it('4.6以外のGrokは料金表に無い', () => {
+    it('現行の 4.5 / 4.3 も引ける（キャッシュ単価だけ 4.6 と違う）', () => {
+        expect(getPricing('grok-4.5', AFTER)).toMatchObject({ in: 2, out: 6, cr: 0.30 });
+        expect(getPricing('grok-4.3', AFTER)).toMatchObject({ in: 1.25, out: 2.50, cr: 0.20 });
+        expect(getPricing('grok-4.3', AFTER).longCtx).toMatchObject({ threshold: 200000, in: 2.50, out: 5, cr: 0.40 });
+    });
+
+    it('提供終了したGrokは料金表に無い', () => {
         expect(getPricing('grok-4', AFTER)).toBeNull();
         expect(getPricing('grok-3-mini', AFTER)).toBeNull();
     });
@@ -173,6 +179,13 @@ describe('getPricing — OpenAI / Gemini', () => {
 
     it('Gemini 2.5 Pro は上位段で入力2倍・出力1.5倍', () => {
         expect(getPricing('gemini-2.5-pro', AFTER).longCtx).toMatchObject({ threshold: 200000, in: 2.50, out: 15, cr: 0.25 });
+    });
+
+    // 'gemini-3-flash' は 'gemini-3-7-flash' などと前方一致で衝突しないこと
+    it('Gemini 3 Flash（プレビュー）を引ける', () => {
+        expect(getPricing('gemini-3-flash-preview', AFTER)).toMatchObject({ in: 0.50, out: 3, cr: 0.05 });
+        expect(getPricing('gemini-3.7-flash', AFTER).in).not.toBe(0.50);
+        expect(getPricing('gemini-3.1-flash-lite', AFTER)).toMatchObject({ in: 0.25, out: 1.50 });
     });
 
     it('日付サフィックス付きやOpenRouter経由でも引ける', () => {

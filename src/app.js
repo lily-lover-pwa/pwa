@@ -967,16 +967,19 @@ window.dbUtils = dbUtils;
 
         const providers = ['gemini', 'zai', 'openrouter', 'bedrock', 'openai', 'anthropic', 'groq', 'deepseek', 'xai', 'mistral', 'sakana'];
         const defaultModelLists = {
-            gemini: 'gemini-2.0-flash, gemini-2.0-flash-lite-preview-02-05, gemini-2.0-pro-exp-02-05, gemini-1.5-pro, gemini-1.5-flash',
-            openai: 'gpt-4o, gpt-4o-mini, o1, o1-mini, o3-mini',
-            anthropic: 'claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022',
-            groq: 'llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768, gemma2-9b-it',
+            // ここは「追加モデル」の初期値として実際に保存される。提供終了したモデルを
+            // 置くと、新しく使い始めた人の一覧が最初から使えないモデルで埋まるため、
+            // 標準リストに無い現行モデルだけを挙げること。
+            gemini: 'gemini-3.1-flash-image, gemini-3-pro-image',
+            openai: 'gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna',
+            anthropic: 'claude-fable-5, claude-opus-4-5-20251101',
+            groq: 'openai/gpt-oss-safeguard-20b',
             deepseek: 'deepseek-chat, deepseek-reasoner',
-            xai: 'grok-3, grok-3-mini, grok-2-1212',
+            xai: 'grok-4.20-0309-reasoning, grok-4.20-0309-non-reasoning',
             mistral: 'mistral-large-latest, mistral-small-latest, open-mistral-nemo',
-            zai: 'deepseek-v3, deepseek-r1',
-            openrouter: 'deepseek/deepseek-chat, deepseek/deepseek-r1, google/gemini-2.0-flash-001, anthropic/claude-3.5-sonnet',
-            bedrock: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0, us.anthropic.claude-3-5-haiku-20241022-v1:0',
+            zai: 'glm-4.6, glm-4.5-flash',
+            openrouter: 'deepseek/deepseek-chat, anthropic/claude-opus-4.6, google/gemini-3.5-flash',
+            bedrock: 'us.anthropic.claude-sonnet-4-6, us.anthropic.claude-opus-4-6-v1',
             sakana: 'fugu, fugu-ultra'
         };
 

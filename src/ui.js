@@ -5,6 +5,7 @@ import { base64ToBlob, formatFileSize } from './utils/format.js';
 import { dbUtils } from './db.js';
 import { elements } from './dom-elements.js';
 import { searchChats } from './utils/search.js';
+import { isImageGenerationModel } from './utils/model-select.js';
 import { htmlUtils } from './utils/html.js';
 import { state } from './state.js';
 
@@ -1672,8 +1673,8 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
     // モデル選択に応じた警告メッセージの表示/非表示を切り替え
     updateModelWarningMessage() {
         const selectedModel = elements.modelNameSelect.value;
-        const isNanoBanana = selectedModel === 'gemini-2.5-flash-image-preview';
-        elements.modelWarningMessage.classList.toggle('hidden', !isNanoBanana);
+        const isImageModel = isImageGenerationModel(selectedModel);
+        elements.modelWarningMessage.classList.toggle('hidden', !isImageModel);
         this.updateAnthropicEffortOptions();
     },
     // 選択中のAnthropicモデルに応じて Effort の選択肢を絞り込み、注意書きを出す。

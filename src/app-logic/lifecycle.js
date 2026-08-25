@@ -7,7 +7,7 @@ import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { appLogic } from '../app-logic.js';
-import { resolveSelectedModel } from '../utils/model-select.js';
+import { moveUserDefinedGroupToEnd, resolveSelectedModel } from '../utils/model-select.js';
 
 export const lifecycleMethods = {
     _setupEventListenersCallCount: 0,
@@ -418,10 +418,10 @@ export const lifecycleMethods = {
             }
         });
         
-        // ユーザー指定モデルグループを最後に追加
-        if (userDefinedGroup && userDefinedGroup.parentNode !== modelSelect) {
-            modelSelect.appendChild(userDefinedGroup);
-        }
+        // ユーザー指定(追加モデル)グループは常に末尾へ移動させる。
+        // この直後に API取得モデルグループを追加するので、最終的な並びは
+        // 標準モデル → 追加モデル → API取得モデル になる。
+        moveUserDefinedGroupToEnd(modelSelect, userDefinedGroup);
 
         // ユーザー指定(追加モデル)グループは renderCustomModels(initPhase7)が
         // 全プロバイダー横断で単独管理する。ここで現プロバイダー分だけに作り替えると、
