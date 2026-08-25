@@ -2005,6 +2005,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.50": [
+      "GPT-5.6 Sol の値下げ（2026年8月21日）に対応しました。100万トークンあたり入力$5→$4（20%減）、出力$30→$20（33%減）、キャッシュヒット$0.50→$0.40 です。ⓘ の推定コストが新単価で計算されます。",
+      "値下げ前に送ったメッセージは、これまでどおり当時の単価で計算します。過去のチャットの推定コストが後から下がって見えることはありません。",
+      "※ OpenAI は「少なくとも2026年11月21日まで」の特別価格としています。期間が終わって元の単価に戻った場合は、あらためて対応が必要です。"
+    ],
     "1.49": [
       "DeepSeek の週末オフピーク（2026年8月23日 0:00 北京時間から）に対応しました。北京時間の土日は終日オフピーク単価になるため、ⓘ の推定コストも週末はピーク倍率をかけずに計算します。平日はこれまでどおりピーク／オフピークの区分が適用されます。",
       "※ 曜日は北京時間で判定します（日本時間とは1時間ずれるため、日本の土曜1:00〜日曜23:59 が週末扱いになります）。改定前に送ったメッセージは当時の規則のまま計算するので、過去のコストが変わることはありません。"
@@ -12757,7 +12762,8 @@ ${msg}`);
     "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
     // OpenAI — https://developers.openai.com/api/docs/pricing
     // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
-    "gpt-5-6-sol": { in: 5, out: 30, cr: 0.5 },
+    "gpt-5-6-sol": { in: 4, out: 20, cr: 0.4 },
+    // 2026-08-21 値下げ（少なくとも11/21まで）
     "gpt-5-6-terra": { in: 2, out: 12, cr: 0.2 },
     "gpt-5-6-luna": { in: 0.2, out: 1.2, cr: 0.02 },
     "gpt-5-5-pro": { in: 30, out: 180, cr: 30 },
@@ -12801,6 +12807,10 @@ ${msg}`);
     "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
     "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 }
   };
+  var GPT_56_SOL_PRICE_CUT_AT = Date.UTC(2026, 7, 21, 0, 0, 0);
+  var MODEL_PRICING_BEFORE_SOL_CUT = {
+    "gpt-5-6-sol": { in: 5, out: 30, cr: 0.5 }
+  };
   var GEMINI_FLASH_PROMO_END_AT = Date.UTC(2027, 0, 1, 0, 0, 0);
   var MODEL_PRICING_GEMINI_FLASH_PROMO = {
     "gemini-3-7-flash": { in: 0.75, out: 3.75, cr: 0.075 },
@@ -12817,6 +12827,11 @@ ${msg}`);
     if (!m) return null;
     if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
       for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < GPT_56_SOL_PRICE_CUT_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_SOL_CUT)) {
         if (m.startsWith(key)) return price;
       }
     }

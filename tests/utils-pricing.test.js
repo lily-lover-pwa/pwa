@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT, DEEPSEEK_WEEKEND_OFFPEAK_AT } from '../src/utils/pricing.js';
+import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT, DEEPSEEK_WEEKEND_OFFPEAK_AT, GPT_56_SOL_PRICE_CUT_AT } from '../src/utils/pricing.js';
 
 const BEFORE = DEEPSEEK_V4_PRICE_CHANGE_AT - 1;
 const AFTER = DEEPSEEK_V4_PRICE_CHANGE_AT;
@@ -284,5 +284,36 @@ describe('isDeepSeekPeak — 週末のピーク廃止（2026-08-23 00:00 北京�
         // その直前の日曜（8/16 02:00 UTC）は旧規則でピーク
         expect(isDeepSeekPeak(Date.UTC(2026, 7, 16, 2, 0, 0))).toBe(true);
         expect(DEEPSEEK_WEEKEND_OFFPEAK_AT).toBe(Date.UTC(2026, 7, 22, 16, 0, 0));
+    });
+});
+
+describe('getPricing — GPT-5.6 Sol の値下げ（2026-08-21）', () => {
+    const AFTER_CUT = GPT_56_SOL_PRICE_CUT_AT;
+    const BEFORE_CUT = GPT_56_SOL_PRICE_CUT_AT - 1;
+
+    it('値下げ後は新単価（入力$4／出力$20／キャッシュ$0.40）', () => {
+        expect(getPricing('gpt-5.6-sol', AFTER_CUT)).toMatchObject({ in: 4, out: 20, cr: 0.40 });
+    });
+
+    // 回帰: 過去のチャットのコストが後から下がって見えないようにする
+    it('値下げ前のメッセージは旧単価で計算する', () => {
+        expect(getPricing('gpt-5.6-sol', BEFORE_CUT)).toMatchObject({ in: 5, out: 30, cr: 0.50 });
+    });
+
+    it('発表どおりの下げ幅（入力20%・出力33%）', () => {
+        const before = getPricing('gpt-5.6-sol', BEFORE_CUT);
+        const after = getPricing('gpt-5.6-sol', AFTER_CUT);
+        expect(1 - after.in / before.in).toBeCloseTo(0.20, 2);
+        expect(1 - after.out / before.out).toBeCloseTo(0.333, 2);
+    });
+
+    it('OpenRouter経由の表記でも切り替わる', () => {
+        expect(getPricing('openai/gpt-5.6-sol', AFTER_CUT).out).toBe(20);
+        expect(getPricing('openai/gpt-5.6-sol', BEFORE_CUT).out).toBe(30);
+    });
+
+    it('値下げの対象は Sol だけで、他のGPTは時刻で変わらない', () => {
+        expect(getPricing('gpt-5.5', BEFORE_CUT)).toEqual(getPricing('gpt-5.5', AFTER_CUT));
+        expect(getPricing('gpt-5', BEFORE_CUT)).toEqual(getPricing('gpt-5', AFTER_CUT));
     });
 });
