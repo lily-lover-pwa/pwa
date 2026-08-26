@@ -5,6 +5,7 @@ import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
 import { extractReasoningText } from './utils/reasoning.js';
 import { isImageGenerationModel } from './utils/model-select.js';
+import { getGeminiSafetySettings } from './utils/safety.js';
 import { state } from './state.js';
 import { uiUtils } from './ui.js';
 
@@ -549,21 +550,11 @@ export const apiUtils = {
         const requestBody = {
             contents: messagesForApi,
             ...(Object.keys(finalGenerationConfig).length > 0 && { generationConfig: finalGenerationConfig }),
-            safetySettings : [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-            ]
+            safetySettings : getGeminiSafetySettings()
         };
 
         if (isImageGenModel) {
-            requestBody.safetySettings = [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-            ];
+            requestBody.safetySettings = getGeminiSafetySettings();
         } else {
             if (systemInstruction && systemInstruction.parts && systemInstruction.parts.length > 0 && systemInstruction.parts[0].text) {
                 const { _staticText, _dynamicText, ...cleanSystemInstruction } = systemInstruction;
@@ -699,12 +690,7 @@ export const apiUtils = {
                 contents: [{ role: 'user', parts: [{ text: textToTranslate }] }],
                 systemInstruction: { parts: [{ text: translationSystemPrompt }] },
                 generationConfig: { temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } },
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-                ]
+                safetySettings: getGeminiSafetySettings()
             };
         }
 

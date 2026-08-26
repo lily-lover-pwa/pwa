@@ -8,6 +8,7 @@ import { uiUtils } from '../ui.js';
 import { htmlUtils } from '../utils/html.js';
 import { interruptibleSleep, sleep } from '../utils/format.js';
 import { isRetiredModelError, resolveRetiredModel } from './retired-model.js';
+import { getGeminiSafetySettings } from '../utils/safety.js';
 
 export const messageMethods = {
 
@@ -41,12 +42,7 @@ export const messageMethods = {
             contents: [{ role: 'user', parts: [{ text: textToProofread }] }],
             ...(Object.keys(generationConfig).length > 0 && { generationConfig }),
             ...(systemInstruction && { systemInstruction }),
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-            ]
+            safetySettings: getGeminiSafetySettings()
         };
 
         if (state.settings.dummyEnabled && state.settings.applyDummyToProofread && state.settings.dummyUser) {

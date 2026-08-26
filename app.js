@@ -2032,6 +2032,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.53": [
+      "Gemini のセンシティブフィルター設定を1箇所にまとめました。これまで同じ内容が6箇所（チャット送信・思考プロセスの翻訳・要約/メモリ学習・タイトル生成・校正）にコピーされていて、片方だけ直すと食い違う状態でした。内部の整理なので、フィルターの効き方はこれまでと変わりません。",
+      "設定内容もこれまでどおり、調整できる4カテゴリ（ハラスメント・ヘイト・性的表現・危険な行為）すべてを BLOCK_NONE にしています。つまり以前から実質フィルターオフのままです。",
+      "※ 児童安全に関わる内容など、中核的な危害への保護は設定に関係なく常にブロックされます（API側で固定されており、変更できません）。"
+    ],
     "1.52": [
       "提供が終了したモデルをモデル一覧から取り除き、各社の現行モデルに入れ替えました。Gemini は 2.0 Flash / 2.0 Flash-Lite と旧プレビュー版を外し、3.6 / 3.5 Flash・3.5 Flash-Lite・3.1 Flash-Lite・3 Flash（プレビュー）を追加しています。",
       "Groq と xAI は既定モデル自体が提供終了していて、選び直さないと最初のメッセージでエラーになる状態でした。Groq は GPT-OSS 120B、xAI は Grok 4.6 を既定にし、現行モデルへ入れ替えています。Claude と Bedrock も 3系（3.5 Sonnet / 3 Opus など）を外し、Sonnet 5 / Opus 4.6 / Haiku 4.5 などを追加しました。",
@@ -7615,6 +7620,22 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
     }
   };
 
+  // src/utils/safety.js
+  var GEMINI_ADJUSTABLE_HARM_CATEGORIES = [
+    "HARM_CATEGORY_HARASSMENT",
+    "HARM_CATEGORY_HATE_SPEECH",
+    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+    "HARM_CATEGORY_DANGEROUS_CONTENT"
+  ];
+  var GEMINI_SAFETY_THRESHOLD = "BLOCK_NONE";
+  function getGeminiSafetySettings() {
+    return GEMINI_ADJUSTABLE_HARM_CATEGORIES.map((category) => ({
+      category,
+      threshold: GEMINI_SAFETY_THRESHOLD
+    }));
+  }
+  __name(getGeminiSafetySettings, "getGeminiSafetySettings");
+
   // src/app-logic/chat.js
   var chatMethods = {
     // --- スワイプ処理ここまで ---
@@ -8285,19 +8306,15 @@ AI: ${firstModelContent}`;
           const apiKey = state.settings.apiKey;
           if (!apiKey) return;
           const endpoint = `${GEMINI_API_BASE_URL}gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+          const titleRequestBody = {
+            contents: [{ role: "user", parts: [{ text: titlePrompt }] }],
+            generationConfig: { maxOutputTokens: 30, temperature: 0.3 },
+            safetySettings: getGeminiSafetySettings()
+          };
           const resp = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: titlePrompt }] }],
-              generationConfig: { maxOutputTokens: 30, temperature: 0.3 },
-              safetySettings: [
-                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-              ]
-            })
+            body: JSON.stringify(titleRequestBody)
           });
           if (resp.ok) {
             const data = await resp.json();
@@ -8823,20 +8840,10 @@ AI: ${firstModelContent}`;
       const requestBody = {
         contents: messagesForApi,
         ...Object.keys(finalGenerationConfig).length > 0 && { generationConfig: finalGenerationConfig },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
+        safetySettings: getGeminiSafetySettings()
       };
       if (isImageGenModel) {
-        requestBody.safetySettings = [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ];
+        requestBody.safetySettings = getGeminiSafetySettings();
       } else {
         if (systemInstruction && systemInstruction.parts && systemInstruction.parts.length > 0 && systemInstruction.parts[0].text) {
           const { _staticText, _dynamicText, ...cleanSystemInstruction } = systemInstruction;
@@ -8955,12 +8962,7 @@ AI: ${firstModelContent}`;
           contents: [{ role: "user", parts: [{ text: textToTranslate }] }],
           systemInstruction: { parts: [{ text: translationSystemPrompt }] },
           generationConfig: { temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-          ]
+          safetySettings: getGeminiSafetySettings()
         };
       }
       if (state.settings.dummyEnabled && state.settings.applyDummyToTranslate && state.settings.dummyUser) {
@@ -9878,12 +9880,7 @@ ${knowledgeText}`;
         contents: [{ role: "user", parts: [{ text: textToProofread }] }],
         ...Object.keys(generationConfig).length > 0 && { generationConfig },
         ...systemInstruction && { systemInstruction },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
+        safetySettings: getGeminiSafetySettings()
       };
       if (state.settings.dummyEnabled && state.settings.applyDummyToProofread && state.settings.dummyUser) {
         requestBody.contents.push({
@@ -12994,12 +12991,6 @@ ${msg}`);
   __name(summarizeUsage, "summarizeUsage");
 
   // src/app-logic/memory.js
-  var GEMINI_SAFETY_OFF = [
-    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-  ];
   function getOpenAICompatConfig(provider) {
     const keys = {
       openai: state.settings.openaiApiKey,
@@ -13053,7 +13044,7 @@ ${msg}`);
         contents: [{ role: "user", parts: [{ text: userContent }] }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
         generationConfig: { temperature, maxOutputTokens: maxTokens },
-        safetySettings: GEMINI_SAFETY_OFF
+        safetySettings: getGeminiSafetySettings()
       };
       parse = /* @__PURE__ */ __name((d) => d.candidates?.[0]?.content?.parts?.[0]?.text, "parse");
     } else {
