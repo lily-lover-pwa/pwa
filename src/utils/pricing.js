@@ -3,6 +3,12 @@
 // cw5m/cw1h=キャッシュ書込, cr=キャッシュ読込(ヒット)。
 
 export const MODEL_PRICING = {
+    // Claude — https://platform.claude.com/docs/en/about-claude/pricing
+    // Fable/Mythos 5.1 はキャッシュヒットが基本入力の0.025倍（他モデルは0.1倍）。
+    'claude-fable-5-1':  { in: 10, out: 50, cw5m: 12.50, cw1h: 20, cr: 0.25 },
+    'claude-mythos-5-1': { in: 10, out: 50, cw5m: 12.50, cw1h: 20, cr: 0.25 },
+    'claude-fable-5':    { in: 10, out: 50, cw5m: 12.50, cw1h: 20, cr: 1    },
+    'claude-mythos-5':   { in: 10, out: 50, cw5m: 12.50, cw1h: 20, cr: 1    },
     // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
     'claude-opus-5':   { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
     'claude-opus-4-8': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
@@ -11,6 +17,10 @@ export const MODEL_PRICING = {
     'claude-opus-4-5': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
     'claude-opus-4-1': { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
     'claude-opus-4':   { in: 15,   out: 75,  cw5m: 18.75, cw1h: 30,   cr: 1.50 },
+    // Sonnet 5 は 4.6/4.5 より安い（$2/$10）。'claude-sonnet-4' より前に置くこと。
+    // 発表時は 2026-08-31 までの導入価格とされていたが、その後この額が正価になり、
+    // 予定されていた $3/$15 への値上げは行われないと明記された（＝期間で分ける必要なし）。
+    'claude-sonnet-5': { in: 2,    out: 10,  cw5m: 2.50,  cw1h: 4,    cr: 0.20 },
     'claude-sonnet-4': { in: 3,    out: 15,  cw5m: 3.75,  cw1h: 6,    cr: 0.30 },
     'claude-haiku-4':  { in: 1,    out: 5,   cw5m: 1.25,  cw1h: 2,    cr: 0.10 },
     // Claude 3系 (旧モデル)
@@ -35,6 +45,32 @@ export const MODEL_PRICING = {
     'grok-4-6': { in: 2,    out: 6,    cr: 0.50, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 1    } },
     'grok-4-5': { in: 2,    out: 6,    cr: 0.30, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 0.60 } },
     'grok-4-3': { in: 1.25, out: 2.50, cr: 0.20, longCtx: { threshold: 200_000, in: 2.50, out: 5,    cr: 0.40 } },
+
+    // Groq — https://console.groq.com/docs/models
+    // 'openai/gpt-oss-120b' はベンダー接頭辞が外れて 'gpt-oss-120b' になる。
+    // キャッシュ割引の記載が無いので cr は入力と同額にしてある。
+    // Compound（groq/compound・compound-mini）は内部で複数モデルを使う仕組みで
+    // 単体の単価表記が無く、Llama 3.3 70B / 3.1 8B と MiniMax M2.7 は
+    // Enterprise（要問い合わせ）扱いのため、いずれも載せていない。
+    'gpt-oss-120b': { in: 0.15,  out: 0.60, cr: 0.15  },
+    'gpt-oss-20b':  { in: 0.075, out: 0.30, cr: 0.075 },
+    'qwen3-6-27b':  { in: 0.60,  out: 3,    cr: 0.60  },
+
+    // Mistral — https://mistral.ai/pricing/api
+    // '-latest' が付くので前方一致で引く。open-mistral-nemo は料金表から消えたため無し。
+    'mistral-large':  { in: 0.50, out: 1.50, cr: 0.50 },
+    'mistral-medium': { in: 1.50, out: 7.50, cr: 1.50 },
+    'mistral-small':  { in: 0.15, out: 0.60, cr: 0.15 },
+    'codestral':      { in: 0.30, out: 0.90, cr: 0.30 },
+    'ministral-3-14b': { in: 0.20, out: 0.20, cr: 0.20 },
+    'ministral-3-8b':  { in: 0.15, out: 0.15, cr: 0.15 },
+    'ministral-3-3b':  { in: 0.10, out: 0.10, cr: 0.10 },
+
+    // Z.ai GLM — https://docs.z.ai/guides/overview/pricing
+    // 4.5 Flash は入出力とも無料。'glm-4-5-air' は 'glm-4-5' で始まるので順序に注意。
+    'glm-4-6':       { in: 0.60, out: 2.20, cr: 0.11 },
+    'glm-4-5-air':   { in: 0.20, out: 1.10, cr: 0.03 },
+    'glm-4-5-flash': { in: 0,    out: 0,    cr: 0    },
 
     // OpenAI — https://developers.openai.com/api/docs/pricing
     // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。

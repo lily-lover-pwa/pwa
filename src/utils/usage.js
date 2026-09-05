@@ -44,13 +44,15 @@ export function calcMessageCost(msg) {
     const rate = (pricing.longCtx && prompt >= pricing.longCtx.threshold)
         ? { ...pricing, ...pricing.longCtx }
         : pricing;
-    // キャッシュ書き込みに別料金が無いモデルは通常入力と同額で計算する
+    // キャッシュ書き込み・読み込みに別料金が無いモデルは通常入力と同額で計算する。
+    // cr を undefined のままにすると 0 * undefined = NaN になり、合計金額ごと壊れる。
     const cwRate5m = rate.cw5m ?? rate.in;
     const cwRate1h = rate.cw1h ?? rate.in;
+    const crRate = rate.cr ?? rate.in;
     // DeepSeek はピーク時間帯に単価が倍になる
     const mul = (pricing.peakMul && isDeepSeekPeak(msg.timestamp)) ? pricing.peakMul : 1;
 
-    return mul * (regular * rate.in + cw5m * cwRate5m + cw1h * cwRate1h + cr * rate.cr + out * rate.out) / 1_000_000;
+    return mul * (regular * rate.in + cw5m * cwRate5m + cw1h * cwRate1h + cr * crRate + out * rate.out) / 1_000_000;
 }
 
 /**

@@ -2032,6 +2032,12 @@ ${relationship_context}`;
   ];
   var DEFAULT_SAKANA_MODEL = "fugu";
   var VERSION_HISTORY = {
+    "1.54": [
+      "Claude Sonnet 5 の単価を修正しました。専用の行が無く「claude-sonnet」で始まる名前として $3/$15 で計算していましたが、実際は $2/$10 です。ⓘ の推定コストが実際の1.5倍に出ていたので、過去のぶんも含めて正しい金額になります。",
+      "これまで金額が出なかった Groq・Mistral・Z.ai の料金に対応しました。GPT-OSS 120B/20B、Qwen3.6 27B、Mistral Large 3 / Medium 3.5 / Small 4 / Codestral、GLM-4.6 / 4.5-Air / 4.5-Flash（無料）が ⓘ に表示されます。",
+      "Claude Fable / Mythos（5.1 と 5）の単価も追加しました。5.1 はキャッシュヒットが基本入力の0.025倍と他モデルより安く、そこも区別して計算します。",
+      "※ Groq の Compound と Llama 3.3 70B / 3.1 8B、MiniMax M2.7、Mistral Nemo、Sakana の fugu は単価が公表されていないため、これまでどおり金額を表示しません（推測の数字は出さない方針です）。"
+    ],
     "1.53": [
       "Gemini のセンシティブフィルター設定を1箇所にまとめました。これまで同じ内容が6箇所（チャット送信・思考プロセスの翻訳・要約/メモリ学習・タイトル生成・校正）にコピーされていて、片方だけ直すと食い違う状態でした。内部の整理なので、フィルターの効き方はこれまでと変わりません。",
       "設定内容もこれまでどおり、調整できる4カテゴリ（ハラスメント・ヘイト・性的表現・危険な行為）すべてを BLOCK_NONE にしています。つまり以前から実質フィルターオフのままです。",
@@ -12777,6 +12783,12 @@ ${msg}`);
 
   // src/utils/pricing.js
   var MODEL_PRICING = {
+    // Claude — https://platform.claude.com/docs/en/about-claude/pricing
+    // Fable/Mythos 5.1 はキャッシュヒットが基本入力の0.025倍（他モデルは0.1倍）。
+    "claude-fable-5-1": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 0.25 },
+    "claude-mythos-5-1": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 0.25 },
+    "claude-fable-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
+    "claude-mythos-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
     // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
     "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
     "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
@@ -12785,6 +12797,10 @@ ${msg}`);
     "claude-opus-4-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
     "claude-opus-4-1": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
     "claude-opus-4": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    // Sonnet 5 は 4.6/4.5 より安い（$2/$10）。'claude-sonnet-4' より前に置くこと。
+    // 発表時は 2026-08-31 までの導入価格とされていたが、その後この額が正価になり、
+    // 予定されていた $3/$15 への値上げは行われないと明記された（＝期間で分ける必要なし）。
+    "claude-sonnet-5": { in: 2, out: 10, cw5m: 2.5, cw1h: 4, cr: 0.2 },
     "claude-sonnet-4": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
     "claude-haiku-4": { in: 1, out: 5, cw5m: 1.25, cw1h: 2, cr: 0.1 },
     // Claude 3系 (旧モデル)
@@ -12807,6 +12823,29 @@ ${msg}`);
     "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
     "grok-4-5": { in: 2, out: 6, cr: 0.3, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 0.6 } },
     "grok-4-3": { in: 1.25, out: 2.5, cr: 0.2, longCtx: { threshold: 2e5, in: 2.5, out: 5, cr: 0.4 } },
+    // Groq — https://console.groq.com/docs/models
+    // 'openai/gpt-oss-120b' はベンダー接頭辞が外れて 'gpt-oss-120b' になる。
+    // キャッシュ割引の記載が無いので cr は入力と同額にしてある。
+    // Compound（groq/compound・compound-mini）は内部で複数モデルを使う仕組みで
+    // 単体の単価表記が無く、Llama 3.3 70B / 3.1 8B と MiniMax M2.7 は
+    // Enterprise（要問い合わせ）扱いのため、いずれも載せていない。
+    "gpt-oss-120b": { in: 0.15, out: 0.6, cr: 0.15 },
+    "gpt-oss-20b": { in: 0.075, out: 0.3, cr: 0.075 },
+    "qwen3-6-27b": { in: 0.6, out: 3, cr: 0.6 },
+    // Mistral — https://mistral.ai/pricing/api
+    // '-latest' が付くので前方一致で引く。open-mistral-nemo は料金表から消えたため無し。
+    "mistral-large": { in: 0.5, out: 1.5, cr: 0.5 },
+    "mistral-medium": { in: 1.5, out: 7.5, cr: 1.5 },
+    "mistral-small": { in: 0.15, out: 0.6, cr: 0.15 },
+    "codestral": { in: 0.3, out: 0.9, cr: 0.3 },
+    "ministral-3-14b": { in: 0.2, out: 0.2, cr: 0.2 },
+    "ministral-3-8b": { in: 0.15, out: 0.15, cr: 0.15 },
+    "ministral-3-3b": { in: 0.1, out: 0.1, cr: 0.1 },
+    // Z.ai GLM — https://docs.z.ai/guides/overview/pricing
+    // 4.5 Flash は入出力とも無料。'glm-4-5-air' は 'glm-4-5' で始まるので順序に注意。
+    "glm-4-6": { in: 0.6, out: 2.2, cr: 0.11 },
+    "glm-4-5-air": { in: 0.2, out: 1.1, cr: 0.03 },
+    "glm-4-5-flash": { in: 0, out: 0, cr: 0 },
     // OpenAI — https://developers.openai.com/api/docs/pricing
     // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
     "gpt-5-6-sol": { in: 4, out: 20, cr: 0.4 },
@@ -12942,8 +12981,9 @@ ${msg}`);
     const rate = pricing.longCtx && prompt >= pricing.longCtx.threshold ? { ...pricing, ...pricing.longCtx } : pricing;
     const cwRate5m = rate.cw5m ?? rate.in;
     const cwRate1h = rate.cw1h ?? rate.in;
+    const crRate = rate.cr ?? rate.in;
     const mul = pricing.peakMul && isDeepSeekPeak(msg.timestamp) ? pricing.peakMul : 1;
-    return mul * (regular * rate.in + cw5m * cwRate5m + cw1h * cwRate1h + cr * rate.cr + out * rate.out) / 1e6;
+    return mul * (regular * rate.in + cw5m * cwRate5m + cw1h * cwRate1h + cr * crRate + out * rate.out) / 1e6;
   }
   __name(calcMessageCost, "calcMessageCost");
   function summarizeUsage(chats, period = {}) {
