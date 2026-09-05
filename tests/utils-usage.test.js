@@ -66,8 +66,34 @@ describe('calcMessageCost', () => {
     });
 
     it('料金表に無いモデルは null', () => {
-        expect(calcMessageCost(msg({ modelName: 'mistral-large-latest' }))).toBeNull();
+        expect(calcMessageCost(msg({ modelName: 'fugu-ultra' }))).toBeNull();
         expect(calcMessageCost(msg({ modelName: '' }))).toBeNull();
+    });
+
+    // 回帰: cr が未定義だと 0 * undefined = NaN になり、合計金額ごと壊れる。
+    // キャッシュ料金の概念が無い Groq / Mistral を足したときに踏みやすい
+    it('キャッシュ単価を持たないモデルでも NaN にならない', () => {
+        const cost = calcMessageCost(msg({
+            modelName: 'openai/gpt-oss-120b',
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 500 },
+        }));
+        expect(Number.isNaN(cost)).toBe(false);
+        expect(cost).toBeCloseTo((1000 * 0.15 + 500 * 0.60) / 1e6, 12);
+    });
+
+    it('Mistral / Z.ai も金額が出る', () => {
+        const mistral = calcMessageCost(msg({
+            modelName: 'mistral-large-latest',
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
+        }));
+        expect(mistral).toBeCloseTo((1000 * 0.50 + 1000 * 1.50) / 1e6, 12);
+
+        // GLM-4.5 Flash は無料なので 0 円（null ではない）
+        const free = calcMessageCost(msg({
+            modelName: 'glm-4.5-flash',
+            usageMetadata: { promptTokenCount: 9999, candidatesTokenCount: 9999 },
+        }));
+        expect(free).toBe(0);
     });
 
     // Grok 4.6 はプロンプトが200k以上だと単価が2倍になる
@@ -140,12 +166,12 @@ describe('calcMessageCost', () => {
 describe('summarizeUsage', () => {
     const chats = [
         { id: 1, messages: [msg(), msg({ modelName: 'claude-opus-5' })] },
-        { id: 2, messages: [msg({ modelName: 'mistral-large-latest' })] },
+        { id: 2, messages: [msg({ modelName: 'fugu-ultra' })] },
     ];
 
     it('モデルごとにまとめる', () => {
         const r = summarizeUsage(chats);
-        expect(r.byModel.map(m => m.model).sort()).toEqual(['claude-opus-5', 'deepseek-v4-pro', 'mistral-large-latest']);
+        expect(r.byModel.map(m => m.model).sort()).toEqual(['claude-opus-5', 'deepseek-v4-pro', 'fugu-ultra']);
         expect(r.totalMessages).toBe(3);
         expect(r.totalInput).toBe(3000);
         expect(r.totalOutput).toBe(3000);
@@ -161,7 +187,7 @@ describe('summarizeUsage', () => {
     // 料金表に無いモデルもトークンは数えるが、金額には混ぜない
     it('料金不明のモデルはトークンだけ数えてフラグを立てる', () => {
         const r = summarizeUsage(chats);
-        const unpriced = r.byModel.find(m => m.model === 'mistral-large-latest');
+        const unpriced = r.byModel.find(m => m.model === 'fugu-ultra');
         expect(unpriced.priced).toBe(false);
         expect(unpriced.cost).toBe(0);
         expect(unpriced.input).toBe(1000);
@@ -177,7 +203,7 @@ describe('summarizeUsage', () => {
     it('金額の大きい順に並び、料金不明は末尾', () => {
         const r = summarizeUsage(chats);
         expect(r.byModel[0].model).toBe('claude-opus-5'); // $0.030 > $0.00264
-        expect(r.byModel[r.byModel.length - 1].model).toBe('mistral-large-latest');
+        expect(r.byModel[r.byModel.length - 1].model).toBe('fugu-ultra');
     });
 
     it('ピーク時間帯にかかった分を別途集計する', () => {

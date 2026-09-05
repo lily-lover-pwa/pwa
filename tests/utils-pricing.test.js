@@ -22,7 +22,8 @@ describe('getPricing', () => {
     });
 
     it('知らないモデルは null', () => {
-        expect(getPricing('mistral-large-latest', AFTER)).toBeNull();
+        // 料金表に載せていないモデル（Sakana の fugu / Groq の Compound など）
+        expect(getPricing('fugu-ultra', AFTER)).toBeNull();
         expect(getPricing('', AFTER)).toBeNull();
         expect(getPricing(undefined, AFTER)).toBeNull();
     });
@@ -328,5 +329,70 @@ describe('getPricing — GPT-5.6 Sol の値下げ（2026-08-21）', () => {
     it('値下げの対象は Sol だけで、他のGPTは時刻で変わらない', () => {
         expect(getPricing('gpt-5.5', BEFORE_CUT)).toEqual(getPricing('gpt-5.5', AFTER_CUT));
         expect(getPricing('gpt-5', BEFORE_CUT)).toEqual(getPricing('gpt-5', AFTER_CUT));
+    });
+});
+
+describe('getPricing — Claude Sonnet 5 / Fable / Mythos', () => {
+    // 回帰: 専用の行が無く 'claude-sonnet' の前方一致で $3/$15 が当たっていたため、
+    // Sonnet 5 の推定コストが実際の1.5倍に出ていた
+    it('Sonnet 5 は 4.6/4.5 より安い（$2/$10）', () => {
+        expect(getPricing('claude-sonnet-5', AFTER)).toMatchObject({ in: 2, out: 10, cw5m: 2.50, cw1h: 4, cr: 0.20 });
+        expect(getPricing('claude-sonnet-4-6', AFTER)).toMatchObject({ in: 3, out: 15 });
+        expect(getPricing('claude-sonnet-4-5-20250929', AFTER)).toMatchObject({ in: 3, out: 15 });
+    });
+
+    // 導入価格が正価になり値上げは行われないと明記されたので、期間で分けない
+    it('Sonnet 5 は時期によらず同じ単価', () => {
+        expect(getPricing('claude-sonnet-5', BEFORE).in).toBe(2);
+        expect(getPricing('claude-sonnet-5', Date.UTC(2027, 0, 1)).in).toBe(2);
+    });
+
+    it('Fable / Mythos を引ける（5.1 はキャッシュヒットが 0.025 倍）', () => {
+        expect(getPricing('claude-fable-5-1', AFTER)).toMatchObject({ in: 10, out: 50, cr: 0.25 });
+        expect(getPricing('claude-mythos-5-1', AFTER)).toMatchObject({ in: 10, out: 50, cr: 0.25 });
+        expect(getPricing('claude-fable-5', AFTER)).toMatchObject({ in: 10, out: 50, cr: 1 });
+        expect(getPricing('claude-mythos-5', AFTER)).toMatchObject({ in: 10, out: 50, cr: 1 });
+    });
+
+    // '5.1' が 'claude-fable-5' に先に当たると、キャッシュヒットが4倍で計算される
+    it('5.1 が 5 より先に一致する', () => {
+        expect(getPricing('claude-fable-5.1', AFTER).cr).toBe(0.25);
+        expect(getPricing('claude-mythos-5.1', AFTER).cr).toBe(0.25);
+    });
+});
+
+describe('getPricing — Groq / Mistral / Z.ai', () => {
+    it('Groq の GPT-OSS を引ける（ベンダー接頭辞つきでも）', () => {
+        expect(getPricing('openai/gpt-oss-120b', AFTER)).toMatchObject({ in: 0.15, out: 0.60 });
+        expect(getPricing('gpt-oss-120b', AFTER)).toMatchObject({ in: 0.15, out: 0.60 });
+        expect(getPricing('openai/gpt-oss-20b', AFTER)).toMatchObject({ in: 0.075, out: 0.30 });
+        expect(getPricing('qwen/qwen3.6-27b', AFTER)).toMatchObject({ in: 0.60, out: 3 });
+    });
+
+    // 接頭辞を外した名前が OpenAI の gpt-5 系と混ざらないこと
+    it('GPT-OSS が OpenAI の GPT-5 系と取り違えられない', () => {
+        expect(getPricing('openai/gpt-oss-120b', AFTER).out).not.toBe(20);
+        // Sol は値下げ後の単価で比べる（AFTER は値下げより前の時刻のため）
+        expect(getPricing('gpt-5.6-sol', GPT_56_SOL_PRICE_CUT_AT)).toMatchObject({ in: 4, out: 20 });
+    });
+
+    it('Mistral を -latest 付きで引ける', () => {
+        expect(getPricing('mistral-large-latest', AFTER)).toMatchObject({ in: 0.50, out: 1.50 });
+        expect(getPricing('mistral-medium-latest', AFTER)).toMatchObject({ in: 1.50, out: 7.50 });
+        expect(getPricing('mistral-small-latest', AFTER)).toMatchObject({ in: 0.15, out: 0.60 });
+        expect(getPricing('codestral-latest', AFTER)).toMatchObject({ in: 0.30, out: 0.90 });
+    });
+
+    it('Z.ai の GLM を引ける（4.5 Flash は無料）', () => {
+        expect(getPricing('glm-4.6', AFTER)).toMatchObject({ in: 0.60, out: 2.20, cr: 0.11 });
+        expect(getPricing('glm-4.5-Air', AFTER)).toMatchObject({ in: 0.20, out: 1.10, cr: 0.03 });
+        expect(getPricing('glm-4.5-flash', AFTER)).toMatchObject({ in: 0, out: 0, cr: 0 });
+    });
+
+    // 単価が公表されていないものは載せない（推測で金額を出さない）
+    it('単価が非公表のモデルは null のまま', () => {
+        expect(getPricing('groq/compound', AFTER)).toBeNull();
+        expect(getPricing('minimaxai/minimax-m2.7', AFTER)).toBeNull();
+        expect(getPricing('open-mistral-nemo', AFTER)).toBeNull();
     });
 });
