@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.55" defer></script>
+    <script src="app.js?v=1.25.56" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -288,6 +288,7 @@
                             <option value="zai">Z.ai</option>
                             <option value="bedrock">Amazon Bedrock</option>
                             <option value="sakana">Sakana (fugu)</option>
+                            <option value="bai">B.AI</option>
                         </select>
                         <div id="api-usage-container" class="api-usage-container hidden" style="margin-top:10px;">
                             <p id="api-usage-text" class="api-usage-text"></p>
@@ -424,6 +425,15 @@
                             </p>
                             <label for="sakana-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
                             <textarea id="sakana-custom-models" placeholder="例: fugu, fugu-ultra"></textarea>
+                        </div>
+                        <div id="bai-api-key-container" class="hidden">
+                            <label for="bai-api-key">B.AI APIキー:</label>
+                            <input type="password" autocomplete="new-password" id="bai-api-key" placeholder="..." aria-label="B.AI APIキー">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                                ※ 使えるモデルIDはAPIキーごとに違うため、決まった一覧がありません。キーを入力したあと下の「すべてのプロバイダーのモデルを取得」を押すと、使えるモデルが一覧に出ます。
+                            </p>
+                            <label for="bai-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
+                            <textarea id="bai-custom-models" placeholder="モデルIDをカンマ区切りで入力"></textarea>
                         </div>
 
                         <div style="border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 15px;">

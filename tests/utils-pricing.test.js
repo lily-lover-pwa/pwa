@@ -389,6 +389,33 @@ describe('getPricing — Groq / Mistral / Z.ai', () => {
         expect(getPricing('glm-4.5-flash', AFTER)).toMatchObject({ in: 0, out: 0, cr: 0 });
     });
 
+    it('GLM 5系を引ける', () => {
+        expect(getPricing('glm-5.3-flash', AFTER)).toMatchObject({ in: 0.075, out: 0.25, cr: 0.015 });
+        expect(getPricing('glm-5.3', AFTER)).toMatchObject({ in: 1.40, out: 4.40, cr: 0.26 });
+        expect(getPricing('glm-5.2', AFTER)).toMatchObject({ in: 1.40, out: 4.40 });
+        expect(getPricing('glm-5.1', AFTER)).toMatchObject({ in: 1.40, out: 4.40 });
+        expect(getPricing('glm-5', AFTER)).toMatchObject({ in: 1, out: 3.20, cr: 0.20 });
+    });
+
+    // 前方一致なので、Flash が上位モデルの単価で計算されないこと
+    it('Flash 系が上位モデルと取り違えられない', () => {
+        expect(getPricing('glm-5.3-flash', AFTER).in).not.toBe(1.40);
+        expect(getPricing('glm-4.7-flash', AFTER)).toMatchObject({ in: 0, out: 0 });
+        expect(getPricing('glm-4.7-flashx', AFTER)).toMatchObject({ in: 0.07, out: 0.40 });
+        expect(getPricing('glm-4.7', AFTER)).toMatchObject({ in: 0.60, out: 2.20 });
+        // 4.6V（ビジョン）が 4.6 の単価にならないこと
+        expect(getPricing('glm-4.6v', AFTER)).toMatchObject({ in: 0.30, out: 0.90 });
+        expect(getPricing('glm-4.6v-flash', AFTER)).toMatchObject({ in: 0, out: 0 });
+        expect(getPricing('glm-4.6', AFTER)).toMatchObject({ in: 0.60, out: 2.20 });
+    });
+
+    it('Qwen3.8 Flash を引ける（OpenRouter 経由でも）', () => {
+        expect(getPricing('qwen3.8-flash', AFTER)).toMatchObject({ in: 0.15, out: 0.47, cr: 0.016 });
+        expect(getPricing('qwen/qwen3.8-flash', AFTER)).toMatchObject({ in: 0.15, out: 0.47 });
+        // 既存の Qwen3.6 27B と混ざらないこと
+        expect(getPricing('qwen/qwen3.6-27b', AFTER)).toMatchObject({ in: 0.60, out: 3 });
+    });
+
     // 単価が公表されていないものは載せない（推測で金額を出さない）
     it('単価が非公表のモデルは null のまま', () => {
         expect(getPricing('groq/compound', AFTER)).toBeNull();

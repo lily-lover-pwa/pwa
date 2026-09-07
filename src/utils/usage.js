@@ -26,8 +26,23 @@ export function getUsageRange(range, now) {
     }
 }
 
-/** 1メッセージ分の料金を計算する。単価が無ければ null（＝金額不明）。 */
+// 料金が公表されておらず、モデル名から単価を推測してはいけないプロバイダー。
+// B.AI は上流と同じモデル名（glm-5.3-flash など）を扱う統合APIだが、
+// 独自の料金体系で、無料で提供されている場合もある。上流(Z.ai/Qwen)の単価を
+// そのまま当てると実際と違う金額を出してしまうため、金額不明として扱う。
+//
+// OpenRouter は同じ統合APIでも提供元の価格をほぼそのまま通すため、
+// これまでどおり上流の単価で概算する（ここには入れない）。
+export const UNPRICED_PROVIDERS = ['bai'];
+
+/**
+ * 1メッセージ分の料金を計算する。単価が分からなければ null（＝金額不明）。
+ *
+ * provider を持たない古いメッセージは、これまでどおりモデル名だけで判定する
+ * （後から金額が消えると過去の集計が変わってしまうため）。
+ */
 export function calcMessageCost(msg) {
+    if (msg?.provider && UNPRICED_PROVIDERS.includes(msg.provider)) return null;
     const pricing = getPricing(msg?.modelName, msg?.timestamp);
     if (!pricing) return null;
     const u = msg.usageMetadata || {};

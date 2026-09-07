@@ -1,6 +1,6 @@
 // appLogic 機能モジュール: lifecycle（Phase 3 で app-logic.js から分割）。挙動は不変。
 import { registerServiceWorker, setupBroadcastChannel, updateMessageMaxWidthVar } from '../app.js';
-import { ANTHROPIC_MODELS, APP_VERSION, BEDROCK_MODELS, DEEPSEEK_MODELS, DEFAULT_ANTHROPIC_MODEL, DEFAULT_BEDROCK_MODEL, DEFAULT_DEEPSEEK_MODEL, DEFAULT_GROQ_MODEL, DEFAULT_MISTRAL_MODEL, DEFAULT_MODEL, DEFAULT_OPENAI_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_XAI_MODEL, DEFAULT_ZAI_MODEL, GEMINI_MODELS, GROQ_MODELS, HISTORY_SEARCH_DEBOUNCE_MS, IMAGE_STORE, MISTRAL_MODELS, OPENAI_MODELS, SAKANA_MODELS, SETTINGS_STORE, SWIPE_THRESHOLD, VERSION_ACK_STORAGE_KEY, VERSION_HISTORY, VERSION_LEGACY_STORAGE_KEY, VERSION_NOTICE_SESSION_KEY, XAI_MODELS, ZAI_MODELS, ZOOM_THRESHOLD } from '../constants.js';
+import { ANTHROPIC_MODELS, APP_VERSION, BAI_MODELS, BEDROCK_MODELS, DEEPSEEK_MODELS, DEFAULT_ANTHROPIC_MODEL, DEFAULT_BAI_MODEL, DEFAULT_BEDROCK_MODEL, DEFAULT_DEEPSEEK_MODEL, DEFAULT_GROQ_MODEL, DEFAULT_MISTRAL_MODEL, DEFAULT_MODEL, DEFAULT_OPENAI_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_XAI_MODEL, DEFAULT_ZAI_MODEL, GEMINI_MODELS, GROQ_MODELS, HISTORY_SEARCH_DEBOUNCE_MS, IMAGE_STORE, MISTRAL_MODELS, OPENAI_MODELS, SAKANA_MODELS, SETTINGS_STORE, SWIPE_THRESHOLD, VERSION_ACK_STORAGE_KEY, VERSION_HISTORY, VERSION_LEGACY_STORAGE_KEY, VERSION_NOTICE_SESSION_KEY, XAI_MODELS, ZAI_MODELS, ZOOM_THRESHOLD } from '../constants.js';
 import { dbUtils } from '../db.js';
 import { DebugLogger } from '../debug-logger.js';
 import { elements } from '../dom-elements.js';
@@ -257,6 +257,7 @@ export const lifecycleMethods = {
         const isXAI = provider === 'xai';
         const isMistral = provider === 'mistral';
         const isSakana = provider === 'sakana';
+        const isBai = provider === 'bai';
 
         // APIキー入力欄の表示/非表示
         const containers = [
@@ -271,6 +272,7 @@ export const lifecycleMethods = {
             [elements.xaiApiKeyContainer, isXAI],
             [elements.mistralApiKeyContainer, isMistral],
             [elements.sakanaApiKeyContainer, isSakana],
+            [elements.baiApiKeyContainer, isBai],
         ];
         containers.forEach(([el, show]) => {
             if (el) el.classList.toggle('hidden', !show);
@@ -388,6 +390,9 @@ export const lifecycleMethods = {
             models = XAI_MODELS;
         } else if (provider === 'mistral') {
             models = MISTRAL_MODELS;
+        } else if (provider === 'bai') {
+            // 標準リストは空。API取得モデル／追加モデルで埋まる
+            models = BAI_MODELS;
         } else if (provider === 'sakana') {
             models = SAKANA_MODELS;
         } else {
@@ -475,6 +480,8 @@ export const lifecycleMethods = {
             defaultModel = DEFAULT_XAI_MODEL;
         } else if (provider === 'mistral') {
             defaultModel = DEFAULT_MISTRAL_MODEL;
+        } else if (provider === 'bai') {
+            defaultModel = DEFAULT_BAI_MODEL;
         } else if (provider === 'sakana') {
             defaultModel = DEFAULT_SAKANA_MODEL;
         } else {
@@ -1118,6 +1125,7 @@ export const lifecycleMethods = {
             xaiApiKey: { element: elements.xaiApiKeyInput, event: 'input' },
             mistralApiKey: { element: elements.mistralApiKeyInput, event: 'input' },
             sakanaApiKey: { element: elements.sakanaApiKeyInput, event: 'input' },
+            baiApiKey: { element: elements.baiApiKeyInput, event: 'input' },
             modelName: {
                 element: elements.modelNameSelect,
                 event: 'change',

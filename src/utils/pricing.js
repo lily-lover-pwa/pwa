@@ -67,10 +67,27 @@ export const MODEL_PRICING = {
     'ministral-3-3b':  { in: 0.10, out: 0.10, cr: 0.10 },
 
     // Z.ai GLM — https://docs.z.ai/guides/overview/pricing
-    // 4.5 Flash は入出力とも無料。'glm-4-5-air' は 'glm-4-5' で始まるので順序に注意。
+    // Flash 系（4.7 / 4.5 / 4.6V）は入出力とも無料。
+    // 前方一致なので、長いキーを先に置くこと（'glm-5-3-flash' は 'glm-5-3' より前、
+    // 'glm-4-7-flashx' は 'glm-4-7-flash' より前、'glm-5-1' 等は 'glm-5' より前）。
+    'glm-5-3-flash':  { in: 0.075, out: 0.25, cr: 0.015 },  // 現在50%割引中の価格
+    'glm-5-3':        { in: 1.40,  out: 4.40, cr: 0.26  },
+    'glm-5-2':        { in: 1.40,  out: 4.40, cr: 0.26  },
+    'glm-5-1':        { in: 1.40,  out: 4.40, cr: 0.26  },
+    'glm-5':          { in: 1,     out: 3.20, cr: 0.20  },
+    'glm-4-7-flashx': { in: 0.07,  out: 0.40, cr: 0.01  },
+    'glm-4-7-flash':  { in: 0,     out: 0,    cr: 0     },
+    'glm-4-7':        { in: 0.60,  out: 2.20, cr: 0.11  },
+    'glm-4-6v-flashx': { in: 0.04, out: 0.40, cr: 0.004 },
+    'glm-4-6v-flash':  { in: 0,    out: 0,    cr: 0     },
+    'glm-4-6v':        { in: 0.30, out: 0.90, cr: 0.05  },
     'glm-4-6':       { in: 0.60, out: 2.20, cr: 0.11 },
     'glm-4-5-air':   { in: 0.20, out: 1.10, cr: 0.03 },
     'glm-4-5-flash': { in: 0,    out: 0,    cr: 0    },
+
+    // Qwen — https://www.qwencloud.com/models/qwen3.8-flash
+    // OpenRouter 経由（'qwen/qwen3.8-flash'）でもベンダー接頭辞が外れて一致する。
+    'qwen3-8-flash': { in: 0.15, out: 0.47, cr: 0.016 },
 
     // OpenAI — https://developers.openai.com/api/docs/pricing
     // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。

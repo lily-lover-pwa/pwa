@@ -28,6 +28,7 @@ export const DEEPSEEK_API_BASE_URL = 'https://api.deepseek.com/chat/completions'
 export const XAI_API_BASE_URL = 'https://api.x.ai/v1/chat/completions';
 export const MISTRAL_API_BASE_URL = 'https://api.mistral.ai/v1/chat/completions';
 export const SAKANA_API_BASE_URL = 'https://api.sakana.ai/v1/chat/completions';
+export const BAI_API_BASE_URL = 'https://api.b.ai/v1/chat/completions';
 export const DUPLICATE_SUFFIX = ' (コピー)';
 export const IMPORT_PREFIX = '(取込) ';
 export const LIGHT_THEME_COLOR = '#908675';
@@ -93,10 +94,22 @@ export const RETIRED_MODEL_MAP = {
     'grok-2-1212': 'grok-4.6',
 };
 
+// 既存の 'glm-4.5-Air'（大文字A）は、保存済み設定を持つ人のモデルが
+// 既定値へ勝手に戻ってしまうため、表記を変えずそのまま残している。
 export const ZAI_MODELS = [
+    { value: 'glm-5.3-flash', label: 'GLM-5.3 Flash (最新・安価)' },
+    { value: 'glm-5.3', label: 'GLM-5.3' },
+    { value: 'glm-5.2', label: 'GLM-5.2' },
+    { value: 'glm-5.1', label: 'GLM-5.1' },
+    { value: 'glm-5', label: 'GLM-5' },
+    { value: 'glm-4.7', label: 'GLM-4.7' },
+    { value: 'glm-4.7-flash', label: 'GLM-4.7 Flash (無料)' },
+    { value: 'glm-4.7-flashx', label: 'GLM-4.7 FlashX (安価)' },
     { value: 'glm-4.6', label: 'GLM-4.6' },
     { value: 'glm-4.5-Air', label: 'GLM-4.5 Air' },
-    { value: 'glm-4.5-flash', label: 'GLM-4.5 Flash' },
+    { value: 'glm-4.5-flash', label: 'GLM-4.5 Flash (無料)' },
+    { value: 'glm-4.6v', label: 'GLM-4.6V (画像入力)', group: 'ビジョン' },
+    { value: 'glm-4.6v-flash', label: 'GLM-4.6V Flash (画像入力・無料)', group: 'ビジョン' },
 ];
 
 // Bedrock は基本モデルIDのままだと on-demand で呼べず、推論プロファイルの接頭辞
@@ -212,7 +225,41 @@ export const SAKANA_MODELS = [
 ];
 export const DEFAULT_SAKANA_MODEL = 'fugu';
 
+// B.AI（OpenAI Chat Completions 互換の統合API）。
+// 利用できるモデルIDはAPIキーの権限ごとに違い、公開された固定の一覧が無い
+// （公式ドキュメントの例はすべて 'your-model-id' というプレースホルダ）。
+// ここに載せているのは実アカウントで存在を確認できたものだけ。
+// 他のモデルは設定の「モデル一括取得」(GET /v1/models) か「追加モデル」で埋める。
+// IDは上流の素の表記そのまま（'zai/' のようなベンダー接頭辞は付かない）。
+export const BAI_MODELS = [
+    { value: 'glm-5.3-flash', label: 'GLM-5.3 Flash' },
+    { value: 'qwen3.8-flash', label: 'Qwen3.8 Flash' },
+];
+export const DEFAULT_BAI_MODEL = 'glm-5.3-flash';
+
+
 export const VERSION_HISTORY = {
+    '1.58': [
+        'B.AI 経由のメッセージは、ⓘ の推定コストに金額を出さないようにしました。B.AI は上流と同じモデル名（glm-5.3-flash など）を扱いますが独自の料金体系で、無料で使える場合もあります。提供元（Z.ai / Qwen）の単価をそのまま当てると実際と違う金額になってしまうためです。トークン数はこれまでどおり数えます。',
+        'この判定のため、これから送るメッセージにはどのプロバイダー経由かを記録します。それ以前のメッセージは記録が無いので、これまでどおりモデル名だけで金額を出します（過去の集計が後から変わらないようにするためです）。',
+        '※ OpenRouter は提供元の価格をほぼそのまま通すため、これまでどおり金額を表示します。',
+    ],
+    '1.57': [
+        'B.AI で GLM-5.3 Flash と Qwen3.8 Flash を選べるようにしました。B.AI は使えるモデルがAPIキーごとに違うため、実際のアカウントで存在を確認できたこの2つだけを一覧に載せています。他のモデルは設定の「すべてのプロバイダーのモデルを取得」で一覧に追加できます。',
+        '※ ⓘ の推定コストは、同じ名前のモデルの提供元（Z.ai / Qwen）の単価で計算します。B.AI 側の料金が公表されていないためで、B.AI での実際の請求額とは異なる場合があります（B.AI で無料で使える場合は、金額が出ていても実際はかかりません）。',
+    ],
+    '1.56': [
+        'Z.ai のモデル一覧を最新に更新しました。これまで GLM-4.6 までしか選べませんでしたが、GLM-5.3 Flash・5.3・5.2・5.1・5、GLM-4.7 系、画像入力のできる GLM-4.6V を追加しています。',
+        'GLM-4.7 Flash・GLM-4.5 Flash・GLM-4.6V Flash は無料です。GLM-5.3 Flash も 100万トークンあたり入力$0.075・出力$0.25 と安価です（現在50%割引中の価格）。',
+        '追加したモデルの料金にも対応したので、ⓘ の推定コストが表示されます。Qwen3.8 Flash（OpenRouter で qwen/qwen3.8-flash として使えます）の料金も追加しました。',
+        '※ これまで選んでいたモデルはそのまま残しているので、設定が勝手に変わることはありません。',
+    ],
+    '1.55': [
+        'B.AI に対応しました。設定の「APIプロバイダー」で B.AI を選び、APIキーを入力すると使えます。OpenAI互換のAPIなので、思考プロセスの表示・要約・メモリ学習・タイトル自動生成・校正など、これまでの機能はそのまま動きます。',
+        'B.AI は使えるモデルIDがAPIキーごとに違い、決まった一覧がありません。APIキーを入れたあと設定の「すべてのプロバイダーのモデルを取得」を押すと、あなたのキーで使えるモデルが一覧に出ます。手入力したい場合は「追加モデル」にモデルIDを書いてください。',
+        'モデルを選ばずに送信しようとした場合は、何をすればよいかを説明するメッセージを出すようにしています。',
+        '※ B.AI は料金が公開されていないため、ⓘ の推定コストは表示されません（OpenRouter と同じ扱いです）。',
+    ],
     '1.54': [
         'Claude Sonnet 5 の単価を修正しました。専用の行が無く「claude-sonnet」で始まる名前として $3/$15 で計算していましたが、実際は $2/$10 です。ⓘ の推定コストが実際の1.5倍に出ていたので、過去のぶんも含めて正しい金額になります。',
         'これまで金額が出なかった Groq・Mistral・Z.ai の料金に対応しました。GPT-OSS 120B/20B、Qwen3.6 27B、Mistral Large 3 / Medium 3.5 / Small 4 / Codestral、GLM-4.6 / 4.5-Air / 4.5-Flash（無料）が ⓘ に表示されます。',
