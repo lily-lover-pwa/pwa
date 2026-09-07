@@ -81,6 +81,45 @@ describe('calcMessageCost', () => {
         expect(cost).toBeCloseTo((1000 * 0.15 + 500 * 0.60) / 1e6, 12);
     });
 
+    // B.AI は上流と同じモデル名を扱う統合APIだが独自料金（無料の場合もある）。
+    // 上流(Z.ai/Qwen)の単価を当てると実際と違う金額を出してしまう
+    it('B.AI 経由のメッセージは金額を出さない', () => {
+        const viaBai = msg({
+            modelName: 'glm-5.3-flash',
+            provider: 'bai',
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
+        });
+        expect(calcMessageCost(viaBai)).toBeNull();
+
+        // 同じモデルでも Z.ai 直なら金額が出る
+        const viaZai = msg({
+            modelName: 'glm-5.3-flash',
+            provider: 'zai',
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
+        });
+        expect(calcMessageCost(viaZai)).toBeCloseTo((1000 * 0.075 + 1000 * 0.25) / 1e6, 12);
+    });
+
+    // provider を記録する前のメッセージ。後から金額が消えると過去の集計が変わる
+    it('provider を持たない古いメッセージはこれまでどおり金額が出る', () => {
+        const old = msg({
+            modelName: 'glm-5.3-flash',
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
+        });
+        expect(old.provider).toBeUndefined();
+        expect(calcMessageCost(old)).toBeCloseTo((1000 * 0.075 + 1000 * 0.25) / 1e6, 12);
+    });
+
+    // OpenRouter は提供元の価格をほぼそのまま通すので、従来どおり概算する
+    it('OpenRouter 経由は従来どおり金額を出す', () => {
+        const viaOr = msg({
+            modelName: 'qwen/qwen3.8-flash',
+            provider: 'openrouter',
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
+        });
+        expect(calcMessageCost(viaOr)).toBeCloseTo((1000 * 0.15 + 1000 * 0.47) / 1e6, 12);
+    });
+
     it('Mistral / Z.ai も金額が出る', () => {
         const mistral = calcMessageCost(msg({
             modelName: 'mistral-large-latest',
@@ -185,6 +224,22 @@ describe('summarizeUsage', () => {
     });
 
     // 料金表に無いモデルもトークンは数えるが、金額には混ぜない
+    // 同じモデル名を B.AI 経由と Z.ai 直の両方で使った場合。行はモデル名で
+    // まとまるので、金額は Z.ai 直のぶんだけが乗り、料金不明フラグも立つ
+    it('同じモデルでもプロバイダーによって金額に入るものと入らないものがある', () => {
+        const mk = (provider) => ({
+            role: 'model', modelName: 'glm-5.3-flash', provider, timestamp: Date.now(),
+            usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
+        });
+        const r = summarizeUsage([{ id: 1, messages: [mk('bai'), mk('zai')] }]);
+        const entry = r.byModel.find((m) => m.model === 'glm-5.3-flash');
+        expect(entry.messages).toBe(2);
+        expect(entry.input).toBe(2000);
+        expect(r.hasUnpriced).toBe(true);
+        // 金額は Z.ai 直の1件ぶんだけ
+        expect(r.totalCost).toBeCloseTo((1000 * 0.075 + 1000 * 0.25) / 1e6, 12);
+    });
+
     it('料金不明のモデルはトークンだけ数えてフラグを立てる', () => {
         const r = summarizeUsage(chats);
         const unpriced = r.byModel.find(m => m.model === 'fugu-ultra');

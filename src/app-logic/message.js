@@ -511,6 +511,9 @@ export const messageMethods = {
             
             const finalAggregatedMessage = this._aggregateMessages(newMessages);
             finalAggregatedMessage.modelName = state.settings.modelName;
+            // どのプロバイダー経由で送ったかを残す。同じモデル名でもゲートウェイ
+            // 経由だと単価が違うため、推定コストの計算で必要になる
+            finalAggregatedMessage.provider = state.settings.apiProvider || 'gemini';
             state.currentMessages[modelMessageIndex] = finalAggregatedMessage;
 
             uiUtils.renderChatMessages();
@@ -1180,6 +1183,7 @@ export const messageMethods = {
                 const newMessages = await this._internalHandleSend(historyForApi, generationConfig, systemInstruction);
                 const newAggregatedMessage = this._aggregateMessages(newMessages);
                 newAggregatedMessage.modelName = state.settings.modelName;
+                newAggregatedMessage.provider = state.settings.apiProvider || 'gemini';
                 const finalOriginalResponses = state.pendingCascadeResponses || [];
                 state.pendingCascadeResponses = null;
 

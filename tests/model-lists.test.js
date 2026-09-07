@@ -24,6 +24,7 @@ import {
     XAI_MODELS,
     ZAI_MODELS,
 } from '../src/constants.js';
+import { getPricing } from '../src/utils/pricing.js';
 
 // 各社が提供を終了したモデル。一覧に残っているとユーザーが選べてしまい、
 // 送信して初めてエラーになる（＝原因が分かりにくい）ので、選択肢から外れていること。
@@ -121,6 +122,18 @@ describe('各プロバイダーの既定モデルが一覧に存在する', () =
             expect(RETIRED_MODELS).not.toContain(def);
         });
     }
+});
+
+// 一覧に足したのに料金表に足し忘れると、そのモデルだけ ⓘ が出なくなる
+describe('Z.ai は一覧の全モデルに料金がある', () => {
+    it('ZAI_MODELS すべてが getPricing で引ける', () => {
+        const missing = ZAI_MODELS.filter((m) => !getPricing(m.value, Date.now())).map((m) => m.value);
+        expect(missing).toEqual([]);
+    });
+
+    it('要望のあった GLM-5.3 Flash が選択肢にある', () => {
+        expect(ZAI_MODELS.map((m) => m.value)).toContain('glm-5.3-flash');
+    });
 });
 
 describe('RETIRED_MODEL_MAP の後継が有効', () => {

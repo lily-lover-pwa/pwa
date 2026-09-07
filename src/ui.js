@@ -1153,6 +1153,9 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         if (elements.sakanaApiKeyInput) {
             elements.sakanaApiKeyInput.value = state.settings.sakanaApiKey || '';
         }
+        if (elements.baiApiKeyInput) {
+            elements.baiApiKeyInput.value = state.settings.baiApiKey || '';
+        }
         if (elements.mistralApiKeyInput) {
             elements.mistralApiKeyInput.value = state.settings.mistralApiKey || '';
         }

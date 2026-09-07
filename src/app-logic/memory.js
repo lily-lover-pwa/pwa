@@ -8,6 +8,7 @@ import {
     OPENROUTER_API_BASE_URL,
     ZAI_API_BASE_URL,
     SAKANA_API_BASE_URL,
+    BAI_API_BASE_URL,
     DEFAULT_ANTHROPIC_MODEL,
 } from '../constants.js';
 import { dbUtils } from '../db.js';
@@ -30,6 +31,7 @@ function getOpenAICompatConfig(provider) {
         openrouter: state.settings.openrouterApiKey,
         zai: state.settings.zaiApiKey || state.settings.apiKey,
         sakana: state.settings.sakanaApiKey,
+        bai: state.settings.baiApiKey,
     };
     const urls = {
         openai: 'https://api.openai.com/v1/chat/completions',
@@ -40,6 +42,7 @@ function getOpenAICompatConfig(provider) {
         openrouter: OPENROUTER_API_BASE_URL,
         zai: ZAI_API_BASE_URL,
         sakana: SAKANA_API_BASE_URL,
+        bai: BAI_API_BASE_URL,
     };
     return { apiKey: keys[provider], baseUrl: urls[provider] };
 }
@@ -80,7 +83,7 @@ async function runAuxiliaryCompletion({ provider, model, systemPrompt, userConte
         };
         parse = (d) => d.candidates?.[0]?.content?.parts?.[0]?.text;
     } else {
-        // OpenAI互換（openai / groq / deepseek / xai / mistral / openrouter / zai / sakana）
+        // OpenAI互換（openai / groq / deepseek / xai / mistral / openrouter / zai / sakana / bai）
         const { apiKey, baseUrl } = getOpenAICompatConfig(provider);
         if (!apiKey || !baseUrl) throw new Error('APIキーが設定されていません。');
         endpoint = baseUrl;

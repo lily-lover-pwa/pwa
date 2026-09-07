@@ -1,5 +1,5 @@
 // appLogic 機能モジュール: chat（Phase 3 で app-logic.js から分割）。挙動は不変。
-import { CHATS_STORE, DEEPSEEK_API_BASE_URL, DEFAULT_DEEPSEEK_MODEL, DUPLICATE_SUFFIX, GEMINI_API_BASE_URL, GROQ_API_BASE_URL, IMPORT_PREFIX, MISTRAL_API_BASE_URL, OPENROUTER_API_BASE_URL, SAKANA_API_BASE_URL, XAI_API_BASE_URL, ZAI_API_BASE_URL } from '../constants.js';
+import { BAI_API_BASE_URL, CHATS_STORE, DEEPSEEK_API_BASE_URL, DEFAULT_DEEPSEEK_MODEL, DUPLICATE_SUFFIX, GEMINI_API_BASE_URL, GROQ_API_BASE_URL, IMPORT_PREFIX, MISTRAL_API_BASE_URL, OPENROUTER_API_BASE_URL, SAKANA_API_BASE_URL, XAI_API_BASE_URL, ZAI_API_BASE_URL } from '../constants.js';
 import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
@@ -801,7 +801,8 @@ export const chatMethods = {
                     mistral: state.settings.mistralApiKey,
                     openrouter: state.settings.openrouterApiKey,
                     zai: state.settings.zaiApiKey || state.settings.apiKey,
-                    sakana: state.settings.sakanaApiKey
+                    sakana: state.settings.sakanaApiKey,
+                    bai: state.settings.baiApiKey
                 };
                 const baseUrlMap = {
                     openai: 'https://api.openai.com/v1/chat/completions',
@@ -811,7 +812,8 @@ export const chatMethods = {
                     mistral: MISTRAL_API_BASE_URL,
                     openrouter: OPENROUTER_API_BASE_URL,
                     zai: ZAI_API_BASE_URL,
-                    sakana: SAKANA_API_BASE_URL
+                    sakana: SAKANA_API_BASE_URL,
+                    bai: BAI_API_BASE_URL
                 };
                 const apiKey = apiKeyMap[provider];
                 const baseUrl = baseUrlMap[provider];

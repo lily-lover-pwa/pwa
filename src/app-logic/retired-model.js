@@ -18,6 +18,7 @@ import {
     DEFAULT_MISTRAL_MODEL,
     DEFAULT_ZAI_MODEL,
     DEFAULT_SAKANA_MODEL,
+    DEFAULT_BAI_MODEL,
     DEFAULT_OPENROUTER_MODEL,
 } from '../constants.js';
 import { dbUtils } from '../db.js';
@@ -35,6 +36,7 @@ const PROVIDER_DEFAULT_MODEL = {
     mistral: DEFAULT_MISTRAL_MODEL,
     zai: DEFAULT_ZAI_MODEL,
     sakana: DEFAULT_SAKANA_MODEL,
+    bai: DEFAULT_BAI_MODEL,
     openrouter: DEFAULT_OPENROUTER_MODEL,
 };
 

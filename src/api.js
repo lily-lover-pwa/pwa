@@ -1,5 +1,5 @@
 // apiUtils（Phase 1 で app.js から抽出）。挙動は不変。
-import { DEEPSEEK_API_BASE_URL, DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION, DEFAULT_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_ZAI_MODEL, GEMINI_API_BASE_URL, GROQ_API_BASE_URL, INITIAL_RETRY_DELAY, MISTRAL_API_BASE_URL, OPENROUTER_API_BASE_URL, SAKANA_API_BASE_URL, XAI_API_BASE_URL, ZAI_API_BASE_URL, getAnthropicEffortLevels } from './constants.js';
+import { BAI_API_BASE_URL, DEEPSEEK_API_BASE_URL, DEFAULT_BAI_MODEL, DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION, DEFAULT_MODEL, DEFAULT_OPENROUTER_MODEL, DEFAULT_SAKANA_MODEL, DEFAULT_ZAI_MODEL, GEMINI_API_BASE_URL, GROQ_API_BASE_URL, INITIAL_RETRY_DELAY, MISTRAL_API_BASE_URL, OPENROUTER_API_BASE_URL, SAKANA_API_BASE_URL, XAI_API_BASE_URL, ZAI_API_BASE_URL, getAnthropicEffortLevels } from './constants.js';
 import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
@@ -803,6 +803,11 @@ export const apiUtils = {
         }
 
         const model = state.settings.modelName || cfg.defaultModel;
+        // B.AI のようにモデルIDが利用者ごとに違い、既定値を決め打ちできない
+        // プロバイダーでは、空のまま送らずに何をすればよいかを伝える
+        if (!model && cfg.missingModelMessage) {
+            throw new Error(cfg.missingModelMessage);
+        }
 
         // Gemini形式のメッセージをOpenAI形式に変換
         const openAIMessages = this.convertGeminiToOpenAIFormat(messagesForApi);
@@ -1656,6 +1661,21 @@ export const apiUtils = {
                     missingKeyMessage: 'Sakana APIキーが設定されていません。',
                     extraHeaders: () => ({}),
                     verboseError: false
+                }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
+            case 'bai':
+                // B.AI: OpenAI Chat Completions 互換の統合API。
+                // 推論は completion_tokens_details.reasoning_tokens で数えられ、
+                // 本文は他のOpenAI互換と同じ形で返るため共通アダプタに乗せている。
+                return await this._callOpenAICompatibleWithTools({
+                    label: 'B.AI',
+                    baseUrl: BAI_API_BASE_URL,
+                    defaultModel: DEFAULT_BAI_MODEL,
+                    getApiKey: () => state.settings.baiApiKey,
+                    missingKeyMessage: 'B.AI APIキーが設定されていません。',
+                    missingModelMessage: 'B.AI のモデルIDが選択されていません。設定でAPIキーを入力し、「すべてのプロバイダーのモデルを取得」を押すと利用できるモデルが一覧に出ます。',
+                    extraHeaders: () => ({}),
+                    supportsReasoning: true,
+                    verboseError: true
                 }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
             default:
                 return await this.callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, signal);

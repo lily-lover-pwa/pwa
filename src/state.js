@@ -35,6 +35,7 @@ export const state = {
         xaiApiKey: '',
         mistralApiKey: '',
         sakanaApiKey: '',
+        baiApiKey: '',
         modelName: DEFAULT_MODEL,
         systemPrompt: '',
         temperature: null,
