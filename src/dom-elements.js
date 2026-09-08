@@ -55,6 +55,7 @@ try {
         deepseekApiKeyContainer: document.getElementById('deepseek-api-key-container'),
         sakanaApiKeyInput: document.getElementById('sakana-api-key'),
         sakanaApiKeyContainer: document.getElementById('sakana-api-key-container'),
+        versionHistoryList: document.getElementById('version-history-list'),
         baiApiKeyInput: document.getElementById('bai-api-key'),
         baiApiKeyContainer: document.getElementById('bai-api-key-container'),
         xaiApiKeyInput: document.getElementById('xai-api-key'),

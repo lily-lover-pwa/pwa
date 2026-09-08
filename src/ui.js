@@ -1,11 +1,12 @@
 // uiUtils（Phase 1 で app.js から抽出）。挙動は不変。
-import { CHAT_TITLE_LENGTH, DARK_THEME_COLOR, DEFAULT_BEDROCK_REGION, DEFAULT_FONT_FAMILY, DEFAULT_MODEL, IMPORT_PREFIX, LIGHT_THEME_COLOR, MAX_HISTORY_EXCERPTS, MAX_TOTAL_ATTACHMENT_SIZE, TEXTAREA_MAX_HEIGHT, getAnthropicEffortLevels } from './constants.js';
+import { CHAT_TITLE_LENGTH, DARK_THEME_COLOR, VERSION_HISTORY, DEFAULT_BEDROCK_REGION, DEFAULT_FONT_FAMILY, DEFAULT_MODEL, IMPORT_PREFIX, LIGHT_THEME_COLOR, MAX_HISTORY_EXCERPTS, MAX_TOTAL_ATTACHMENT_SIZE, TEXTAREA_MAX_HEIGHT, getAnthropicEffortLevels } from './constants.js';
 import { appLogic } from './app-logic.js';
 import { base64ToBlob, formatFileSize } from './utils/format.js';
 import { dbUtils } from './db.js';
 import { elements } from './dom-elements.js';
 import { searchChats } from './utils/search.js';
 import { isImageGenerationModel } from './utils/model-select.js';
+import { listAllVersions } from './utils/version-history.js';
 import { htmlUtils } from './utils/html.js';
 import { state } from './state.js';
 
@@ -1156,6 +1157,7 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         if (elements.baiApiKeyInput) {
             elements.baiApiKeyInput.value = state.settings.baiApiKey || '';
         }
+        this.renderVersionHistory();
         if (elements.mistralApiKeyInput) {
             elements.mistralApiKeyInput.value = state.settings.mistralApiKey || '';
         }
@@ -1670,6 +1672,30 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         } else {
             // サイズが問題なければ常に有効化
             elements.confirmAttachBtn.disabled = false;
+        }
+    },
+
+    // 設定画面の「更新履歴」を VERSION_HISTORY から組み立てる。
+    // 以前は index.html に直接書かれていて、更新のたびに書き足す必要があり
+    // 実際 v1.20 で止まっていた。データ側だけ更新すれば済むようにする。
+    renderVersionHistory() {
+        const container = elements.versionHistoryList;
+        if (!container) return;
+        container.textContent = '';
+        for (const { version, items } of listAllVersions(VERSION_HISTORY)) {
+            const heading = document.createElement('p');
+            heading.style.cssText = 'font-weight: bold; margin: 8px 0 2px;';
+            heading.textContent = `v${version}`;
+            container.appendChild(heading);
+
+            const list = document.createElement('ul');
+            list.style.cssText = 'margin: 0 0 8px; padding-left: 18px;';
+            for (const item of items) {
+                const li = document.createElement('li');
+                li.textContent = item;
+                list.appendChild(li);
+            }
+            container.appendChild(list);
         }
     },
 

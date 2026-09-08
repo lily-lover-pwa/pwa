@@ -1617,6 +1617,7 @@ ${relationship_context}`;
       deepseekApiKeyContainer: document.getElementById("deepseek-api-key-container"),
       sakanaApiKeyInput: document.getElementById("sakana-api-key"),
       sakanaApiKeyContainer: document.getElementById("sakana-api-key-container"),
+      versionHistoryList: document.getElementById("version-history-list"),
       baiApiKeyInput: document.getElementById("bai-api-key"),
       baiApiKeyContainer: document.getElementById("bai-api-key-container"),
       xaiApiKeyInput: document.getElementById("xai-api-key"),
@@ -2051,13 +2052,10 @@ ${relationship_context}`;
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
     "1.58": [
-      "B.AI 経由のメッセージは、ⓘ の推定コストに金額を出さないようにしました。B.AI は上流と同じモデル名（glm-5.3-flash など）を扱いますが独自の料金体系で、無料で使える場合もあります。提供元（Z.ai / Qwen）の単価をそのまま当てると実際と違う金額になってしまうためです。トークン数はこれまでどおり数えます。",
-      "この判定のため、これから送るメッセージにはどのプロバイダー経由かを記録します。それ以前のメッセージは記録が無いので、これまでどおりモデル名だけで金額を出します（過去の集計が後から変わらないようにするためです）。",
+      "B.AI に対応しました。設定の「APIプロバイダー」で B.AI を選び、APIキーを入力すると使えます。OpenAI互換のAPIなので、思考プロセスの表示・要約・メモリ学習・タイトル自動生成・校正など、これまでの機能はそのまま動きます。",
+      "モデルは GLM-5.3 Flash と Qwen3.8 Flash を選べます。B.AI は使えるモデルがAPIキーごとに違うため、この2つ以外は設定の「すべてのプロバイダーのモデルを取得」を押すと一覧に追加されます。手入力したい場合は「追加モデル」にモデルIDを書いてください。",
+      "B.AI 経由のメッセージは、ⓘ の推定コストに金額を出しません。B.AI は上流と同じモデル名を扱いますが独自の料金体系で、無料で使える場合もあるためです。トークン数はこれまでどおり数えます。",
       "※ OpenRouter は提供元の価格をほぼそのまま通すため、これまでどおり金額を表示します。"
-    ],
-    "1.57": [
-      "B.AI で GLM-5.3 Flash と Qwen3.8 Flash を選べるようにしました。B.AI は使えるモデルがAPIキーごとに違うため、実際のアカウントで存在を確認できたこの2つだけを一覧に載せています。他のモデルは設定の「すべてのプロバイダーのモデルを取得」で一覧に追加できます。",
-      "※ ⓘ の推定コストは、同じ名前のモデルの提供元（Z.ai / Qwen）の単価で計算します。B.AI 側の料金が公表されていないためで、B.AI での実際の請求額とは異なる場合があります（B.AI で無料で使える場合は、金額が出ていても実際はかかりません）。"
     ],
     "1.56": [
       "Z.ai のモデル一覧を最新に更新しました。これまで GLM-4.6 までしか選べませんでしたが、GLM-5.3 Flash・5.3・5.2・5.1・5、GLM-4.7 系、画像入力のできる GLM-4.6V を追加しています。",
@@ -2065,22 +2063,11 @@ ${relationship_context}`;
       "追加したモデルの料金にも対応したので、ⓘ の推定コストが表示されます。Qwen3.8 Flash（OpenRouter で qwen/qwen3.8-flash として使えます）の料金も追加しました。",
       "※ これまで選んでいたモデルはそのまま残しているので、設定が勝手に変わることはありません。"
     ],
-    "1.55": [
-      "B.AI に対応しました。設定の「APIプロバイダー」で B.AI を選び、APIキーを入力すると使えます。OpenAI互換のAPIなので、思考プロセスの表示・要約・メモリ学習・タイトル自動生成・校正など、これまでの機能はそのまま動きます。",
-      "B.AI は使えるモデルIDがAPIキーごとに違い、決まった一覧がありません。APIキーを入れたあと設定の「すべてのプロバイダーのモデルを取得」を押すと、あなたのキーで使えるモデルが一覧に出ます。手入力したい場合は「追加モデル」にモデルIDを書いてください。",
-      "モデルを選ばずに送信しようとした場合は、何をすればよいかを説明するメッセージを出すようにしています。",
-      "※ B.AI は料金が公開されていないため、ⓘ の推定コストは表示されません（OpenRouter と同じ扱いです）。"
-    ],
     "1.54": [
       "Claude Sonnet 5 の単価を修正しました。専用の行が無く「claude-sonnet」で始まる名前として $3/$15 で計算していましたが、実際は $2/$10 です。ⓘ の推定コストが実際の1.5倍に出ていたので、過去のぶんも含めて正しい金額になります。",
       "これまで金額が出なかった Groq・Mistral・Z.ai の料金に対応しました。GPT-OSS 120B/20B、Qwen3.6 27B、Mistral Large 3 / Medium 3.5 / Small 4 / Codestral、GLM-4.6 / 4.5-Air / 4.5-Flash（無料）が ⓘ に表示されます。",
       "Claude Fable / Mythos（5.1 と 5）の単価も追加しました。5.1 はキャッシュヒットが基本入力の0.025倍と他モデルより安く、そこも区別して計算します。",
       "※ Groq の Compound と Llama 3.3 70B / 3.1 8B、MiniMax M2.7、Mistral Nemo、Sakana の fugu は単価が公表されていないため、これまでどおり金額を表示しません（推測の数字は出さない方針です）。"
-    ],
-    "1.53": [
-      "Gemini のセンシティブフィルター設定を1箇所にまとめました。これまで同じ内容が6箇所（チャット送信・思考プロセスの翻訳・要約/メモリ学習・タイトル生成・校正）にコピーされていて、片方だけ直すと食い違う状態でした。内部の整理なので、フィルターの効き方はこれまでと変わりません。",
-      "設定内容もこれまでどおり、調整できる4カテゴリ（ハラスメント・ヘイト・性的表現・危険な行為）すべてを BLOCK_NONE にしています。つまり以前から実質フィルターオフのままです。",
-      "※ 児童安全に関わる内容など、中核的な危害への保護は設定に関係なく常にブロックされます（API側で固定されており、変更できません）。"
     ],
     "1.52": [
       "提供が終了したモデルをモデル一覧から取り除き、各社の現行モデルに入れ替えました。Gemini は 2.0 Flash / 2.0 Flash-Lite と旧プレビュー版を外し、3.6 / 3.5 Flash・3.5 Flash-Lite・3.1 Flash-Lite・3 Flash（プレビュー）を追加しています。",
@@ -2804,6 +2791,41 @@ Reason: [NGの場合の理由]`,
     return { model: defaultModel, isFallback: true };
   }
   __name(resolveSelectedModel, "resolveSelectedModel");
+
+  // src/utils/version-history.js
+  function compareVersionKeys(a, b) {
+    const pa = String(a ?? "").split(".");
+    const pb = String(b ?? "").split(".");
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+      const x = Number(pa[i] ?? 0);
+      const y = Number(pb[i] ?? 0);
+      if (Number.isNaN(x) || Number.isNaN(y)) return 0;
+      if (x !== y) return x - y;
+    }
+    return 0;
+  }
+  __name(compareVersionKeys, "compareVersionKeys");
+  function sortVersionKeysDesc(keys) {
+    return [...keys || []].sort((a, b) => compareVersionKeys(b, a));
+  }
+  __name(sortVersionKeysDesc, "sortVersionKeysDesc");
+  function getUnseenVersions(history2, acknowledged, limit = 3) {
+    const keys = sortVersionKeysDesc(Object.keys(history2 || {}));
+    const latest = keys.length > 0 ? keys[0] : null;
+    const unseen = acknowledged ? keys.filter((k) => compareVersionKeys(k, acknowledged) > 0) : keys;
+    const shown = unseen.slice(0, Math.max(0, limit));
+    return {
+      latest,
+      entries: shown.map((version) => ({ version, items: history2[version] || [] })),
+      hiddenCount: Math.max(0, unseen.length - shown.length)
+    };
+  }
+  __name(getUnseenVersions, "getUnseenVersions");
+  function listAllVersions(history2) {
+    return sortVersionKeysDesc(Object.keys(history2 || {})).map((version) => ({ version, items: history2[version] || [] }));
+  }
+  __name(listAllVersions, "listAllVersions");
 
   // src/utils/html.js
   var htmlUtils = {
@@ -3866,6 +3888,7 @@ Reason: [NGの場合の理由]`,
       if (elements.baiApiKeyInput) {
         elements.baiApiKeyInput.value = state.settings.baiApiKey || "";
       }
+      this.renderVersionHistory();
       if (elements.mistralApiKeyInput) {
         elements.mistralApiKeyInput.value = state.settings.mistralApiKey || "";
       }
@@ -4299,6 +4322,28 @@ Reason: [NGの場合の理由]`,
         elements.confirmAttachBtn.disabled = true;
       } else {
         elements.confirmAttachBtn.disabled = false;
+      }
+    },
+    // 設定画面の「更新履歴」を VERSION_HISTORY から組み立てる。
+    // 以前は index.html に直接書かれていて、更新のたびに書き足す必要があり
+    // 実際 v1.20 で止まっていた。データ側だけ更新すれば済むようにする。
+    renderVersionHistory() {
+      const container = elements.versionHistoryList;
+      if (!container) return;
+      container.textContent = "";
+      for (const { version, items } of listAllVersions(VERSION_HISTORY)) {
+        const heading = document.createElement("p");
+        heading.style.cssText = "font-weight: bold; margin: 8px 0 2px;";
+        heading.textContent = `v${version}`;
+        container.appendChild(heading);
+        const list = document.createElement("ul");
+        list.style.cssText = "margin: 0 0 8px; padding-left: 18px;";
+        for (const item of items) {
+          const li = document.createElement("li");
+          li.textContent = item;
+          list.appendChild(li);
+        }
+        container.appendChild(list);
       }
     },
     // モデル選択に応じた警告メッセージの表示/非表示を切り替え
@@ -5255,24 +5300,31 @@ Reason: [NGの場合の理由]`,
         if (!versionNoticeData) {
           const acknowledgedVersion = localStorage.getItem(VERSION_ACK_STORAGE_KEY);
           const legacyVersion = localStorage.getItem(VERSION_LEGACY_STORAGE_KEY);
-          const currentVersion = APP_VERSION;
-          console.log(`[VersionNotice] バージョンチェック開始。ack=${acknowledgedVersion ?? "none"}, legacy=${legacyVersion ?? "none"}, current=${currentVersion}`);
-          const shouldShowNotice = !acknowledgedVersion || acknowledgedVersion !== currentVersion || legacyVersion && legacyVersion !== currentVersion;
-          if (shouldShowNotice) {
-            const newFeatures = VERSION_HISTORY[currentVersion];
-            let message = `アプリがバージョン ${currentVersion} にアップデートされました。`;
-            if (newFeatures && newFeatures.length > 0) {
-              message += "\n\n主な更新内容:\n- " + newFeatures.join("\n- ");
+          const seenVersion = acknowledgedVersion || legacyVersion || null;
+          const { latest, entries, hiddenCount } = getUnseenVersions(VERSION_HISTORY, seenVersion, 3);
+          console.log(`[VersionNotice] バージョンチェック開始。seen=${seenVersion ?? "none"}, latest=${latest ?? "none"}, 未読=${entries.length + hiddenCount}件`);
+          if (latest && entries.length > 0) {
+            let message = "アプリを更新しました。主な更新内容:";
+            for (const entry of entries) {
+              message += `
+
+【${entry.version}】
+- ` + entry.items.join("\n- ");
+            }
+            if (hiddenCount > 0) {
+              message += `
+
+ほか ${hiddenCount} 件の更新があります。設定の「更新履歴」ですべて確認できます。`;
             }
             versionNoticeData = {
-              version: currentVersion,
+              version: latest,
               message,
               shouldPersist: true
             };
             sessionStorage.setItem(VERSION_NOTICE_SESSION_KEY, JSON.stringify(versionNoticeData));
-            console.log(`[VersionNotice] 新しいバージョン通知を作成しました。(ack=${acknowledgedVersion ?? "none"}, legacy=${legacyVersion ?? "none"})`);
+            console.log(`[VersionNotice] 新しいバージョン通知を作成しました。(表示${entries.length}件 / 残り${hiddenCount}件)`);
           } else {
-            console.log("[VersionNotice] 既に最新バージョンが確認済みのため通知をスキップします。");
+            console.log("[VersionNotice] 未読の更新が無いため通知をスキップします。");
           }
         }
       } catch (e) {
