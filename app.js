@@ -1627,6 +1627,7 @@ ${relationship_context}`;
       modelNameSelect: document.getElementById("model-name"),
       modelNameLabel: document.getElementById("model-name-label"),
       userDefinedModelsGroup: document.getElementById("user-defined-models-group"),
+      otherProviderModelsGroup: document.getElementById("other-provider-models-group"),
       systemPromptDefaultTextarea: document.getElementById("system-prompt-default"),
       temperatureInput: document.getElementById("temperature"),
       maxTokensInput: document.getElementById("max-tokens"),
@@ -2051,6 +2052,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.60": [
+      "モデル一覧の「追加モデル」を、いま選んでいるプロバイダーのぶんと「他のプロバイダー」の2つに分けました。これまでは全プロバイダー分がひとまとめだったため、たとえば Anthropic を使っているのに GPT や Gemini のモデルが同じ塊に並んでいて、今すぐ使えるモデルが探しにくくなっていました。",
+      "いま使えるものだけが「追加モデル」に出て、他社のものは下の「他のプロバイダー」にまとまります。今のプロバイダーのモデルは、末尾の「(プロバイダー名)」も外して読みやすくしました。",
+      "※「他のプロバイダー」のモデルを選ぶと、これまでどおりAPIプロバイダーが自動で切り替わります。設定画面を開かずに他社のモデルへ移れる、という便利さはそのままです。"
+    ],
     "1.59": [
       "B.AI で「Include Thoughts」をONにしていると 400 エラーになる不具合を修正しました。思考プロセスを要求する reasoning という項目を送っていましたが、これは OpenRouter 独自のもので B.AI は受け付けないためです。ONのときだけ失敗するので「たまにエラーになる」状態でした。",
       "思考プロセスの表示自体は、モデルが返してくれる場合はこれまでどおり表示されます（要求する項目を送らなくなるだけです）。"
@@ -2779,6 +2785,22 @@ Reason: [NGの場合の理由]`,
     return m.includes("image-generation") || m.includes("imagen");
   }
   __name(isImageGenerationModel, "isImageGenerationModel");
+  function partitionUserDefinedModels(currentGroup, otherGroup, provider) {
+    if (!currentGroup || !otherGroup) return;
+    const options = [...currentGroup.children, ...otherGroup.children];
+    for (const option of options) {
+      const optionProvider = option.dataset.provider || "";
+      const belongsHere = optionProvider === provider;
+      option.textContent = belongsHere || !optionProvider ? option.value : `${option.value} (${optionProvider})`;
+      (belongsHere ? currentGroup : otherGroup).appendChild(option);
+    }
+    for (const group of [currentGroup, otherGroup]) {
+      const isEmpty = group.children.length === 0;
+      group.disabled = isEmpty;
+      group.hidden = isEmpty;
+    }
+  }
+  __name(partitionUserDefinedModels, "partitionUserDefinedModels");
   function moveUserDefinedGroupToEnd(modelSelect, userDefinedGroup) {
     if (!modelSelect || !userDefinedGroup) return;
     modelSelect.appendChild(userDefinedGroup);
@@ -5153,8 +5175,13 @@ Reason: [NGの場合の理由]`,
         const orSelect = elements.modelNameSelect;
         if (orSelect) {
           Array.from(orSelect.querySelectorAll("optgroup")).forEach((group) => {
-            if (group.id !== "user-defined-models-group") group.remove();
+            if (!group.dataset.userDefinedGroup) group.remove();
           });
+          partitionUserDefinedModels(
+            elements.userDefinedModelsGroup,
+            elements.otherProviderModelsGroup,
+            provider
+          );
           Array.from(orSelect.querySelectorAll("option:not([data-user-defined])")).forEach((o) => o.remove());
           this.applyFavoriteModelsGroup(orSelect);
         }
@@ -5172,7 +5199,7 @@ Reason: [NGの場合の理由]`,
       const currentValue = modelSelect.value;
       const optgroups = Array.from(modelSelect.querySelectorAll("optgroup"));
       optgroups.forEach((group) => {
-        if (group.id !== "user-defined-models-group") {
+        if (!group.dataset.userDefinedGroup) {
           group.remove();
         }
       });
@@ -5223,6 +5250,8 @@ Reason: [NGの場合の理由]`,
         }
       });
       moveUserDefinedGroupToEnd(modelSelect, userDefinedGroup);
+      moveUserDefinedGroupToEnd(modelSelect, elements.otherProviderModelsGroup);
+      partitionUserDefinedModels(userDefinedGroup, elements.otherProviderModelsGroup, provider);
       const standardValues = models.map((m) => m.value);
       if (userDefinedGroup) {
         userDefinedGroup.disabled = false;
@@ -15189,6 +15218,7 @@ ${pageText}
   (() => {
     const initPhase7 = /* @__PURE__ */ __name(() => {
       const customGroup = document.getElementById("user-defined-models-group");
+      const otherProviderGroup = document.getElementById("other-provider-models-group");
       const mainSelect = document.getElementById("model-name");
       const fetchModelsBtn = document.getElementById("fetch-all-models-btn");
       if (fetchModelsBtn) {
@@ -15387,6 +15417,7 @@ ${pageText}
       }
       const renderCustomModels = /* @__PURE__ */ __name(() => {
         if (customGroup) customGroup.innerHTML = "";
+        if (otherProviderGroup) otherProviderGroup.innerHTML = "";
         let addedCount = 0;
         providers.forEach((prov) => {
           const text = state.settings.customModelsText[prov] || "";

@@ -804,6 +804,7 @@ window.dbUtils = dbUtils;
     // 1. Initial UI setup & Custom Models Rendering (Phase 6 + 7 Accordion and Textareas)
     const initPhase7 = () => {
         const customGroup = document.getElementById('user-defined-models-group');
+        const otherProviderGroup = document.getElementById('other-provider-models-group');
         const mainSelect = document.getElementById('model-name');
 
         // Fetch All Models Button
@@ -1018,7 +1019,9 @@ window.dbUtils = dbUtils;
         }
 
         const renderCustomModels = () => {
+            // 片方だけ消すと、他プロバイダー側に振り分け済みのものが二重に出る
             if(customGroup) customGroup.innerHTML = '';
+            if(otherProviderGroup) otherProviderGroup.innerHTML = '';
 
             // Rebuild the unified custom models list mapped to UI dropdown
             let addedCount = 0;

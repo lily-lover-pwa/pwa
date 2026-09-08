@@ -7,7 +7,7 @@ import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { appLogic } from '../app-logic.js';
-import { moveUserDefinedGroupToEnd, resolveSelectedModel } from '../utils/model-select.js';
+import { moveUserDefinedGroupToEnd, partitionUserDefinedModels, resolveSelectedModel } from '../utils/model-select.js';
 import { getUnseenVersions } from '../utils/version-history.js';
 
 export const lifecycleMethods = {
@@ -337,8 +337,10 @@ export const lifecycleMethods = {
             const orSelect = elements.modelNameSelect;
             if (orSelect) {
                 Array.from(orSelect.querySelectorAll('optgroup')).forEach(group => {
-                    if (group.id !== 'user-defined-models-group') group.remove();
+                    if (!group.dataset.userDefinedGroup) group.remove();
                 });
+                partitionUserDefinedModels(
+                    elements.userDefinedModelsGroup, elements.otherProviderModelsGroup, provider);
                 Array.from(orSelect.querySelectorAll('option:not([data-user-defined])')).forEach(o => o.remove());
                 // 上の削除で ★お気に入り グループも消えるため、残った選択肢で作り直す。
                 // これをしないと OpenRouter のときだけ★が効かない。
@@ -365,7 +367,7 @@ export const lifecycleMethods = {
         // すべてのoptgroupとoptionを削除（ユーザー指定グループを除く）
         const optgroups = Array.from(modelSelect.querySelectorAll('optgroup'));
         optgroups.forEach(group => {
-            if (group.id !== 'user-defined-models-group') {
+            if (!group.dataset.userDefinedGroup) {
                 group.remove();
             }
         });
@@ -428,6 +430,9 @@ export const lifecycleMethods = {
         // この直後に API取得モデルグループを追加するので、最終的な並びは
         // 標準モデル → 追加モデル → API取得モデル になる。
         moveUserDefinedGroupToEnd(modelSelect, userDefinedGroup);
+        moveUserDefinedGroupToEnd(modelSelect, elements.otherProviderModelsGroup);
+        // 追加モデルを「今のプロバイダー」と「他のプロバイダー」に振り分ける
+        partitionUserDefinedModels(userDefinedGroup, elements.otherProviderModelsGroup, provider);
 
         // ユーザー指定(追加モデル)グループは renderCustomModels(initPhase7)が
         // 全プロバイダー横断で単独管理する。ここで現プロバイダー分だけに作り替えると、

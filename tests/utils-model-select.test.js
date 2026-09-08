@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isImageGenerationModel, moveUserDefinedGroupToEnd, resolveSelectedModel } from '../src/utils/model-select.js';
+import { isImageGenerationModel, moveUserDefinedGroupToEnd, partitionUserDefinedModels, resolveSelectedModel } from '../src/utils/model-select.js';
 
 const ANTHROPIC = ['claude-opus-5', 'claude-opus-4-6', 'claude-sonnet-4-6'];
 
@@ -183,5 +183,98 @@ describe('isImageGenerationModel', () => {
         expect(isImageGenerationModel(null)).toBe(false);
         expect(isImageGenerationModel(undefined)).toBe(false);
         expect(isImageGenerationModel(123)).toBe(false);
+    });
+});
+
+// 追加モデルは全プロバイダー分をまとめて出す作りなので、Anthropic を使っていても
+// GPT や Gemini が混ざる。今使えるものを探しにくいので2グループに分ける。
+function buildGroups(entries) {
+    const doc = document;
+    const current = doc.createElement('optgroup');
+    current.id = 'user-defined-models-group';
+    const other = doc.createElement('optgroup');
+    other.id = 'other-provider-models-group';
+    for (const [value, provider] of entries) {
+        const opt = doc.createElement('option');
+        opt.value = value;
+        opt.textContent = `${value} (${provider})`;
+        opt.dataset.provider = provider;
+        opt.dataset.userDefined = 'true';
+        current.appendChild(opt);
+    }
+    return { current, other };
+}
+
+const ENTRIES = [
+    ['claude-fable-5', 'anthropic'],
+    ['claude-opus-4-5-20251101', 'anthropic'],
+    ['gpt-5.6-sol', 'openai'],
+    ['gemini-3.1-flash-image', 'gemini'],
+];
+
+describe('partitionUserDefinedModels', () => {
+    it('今のプロバイダーのぶんだけを「追加モデル」に残す', () => {
+        const { current, other } = buildGroups(ENTRIES);
+        partitionUserDefinedModels(current, other, 'anthropic');
+
+        expect([...current.children].map((o) => o.value))
+            .toEqual(['claude-fable-5', 'claude-opus-4-5-20251101']);
+        expect([...other.children].map((o) => o.value))
+            .toEqual(['gpt-5.6-sol', 'gemini-3.1-flash-image']);
+    });
+
+    it('今のプロバイダーのぶんはラベルから (プロバイダー名) を外す', () => {
+        const { current, other } = buildGroups(ENTRIES);
+        partitionUserDefinedModels(current, other, 'anthropic');
+
+        expect(current.children[0].textContent).toBe('claude-fable-5');
+        expect(other.children[0].textContent).toBe('gpt-5.6-sol (openai)');
+    });
+
+    // 別会社のモデルを選ぶとプロバイダーが自動で切り替わる作りなので、
+    // 振り分けたあとも provider が残っていないと切替が壊れる
+    it('dataset.provider と userDefined を保つ', () => {
+        const { current, other } = buildGroups(ENTRIES);
+        partitionUserDefinedModels(current, other, 'anthropic');
+
+        for (const opt of [...current.children, ...other.children]) {
+            expect(opt.dataset.provider).toBeTruthy();
+            expect(opt.dataset.userDefined).toBe('true');
+        }
+    });
+
+    // 切り替えのたびに取り残しや重複が出ないこと
+    it('プロバイダーを切り替えると振り分け直される', () => {
+        const { current, other } = buildGroups(ENTRIES);
+        partitionUserDefinedModels(current, other, 'anthropic');
+        partitionUserDefinedModels(current, other, 'openai');
+
+        expect([...current.children].map((o) => o.value)).toEqual(['gpt-5.6-sol']);
+        expect([...other.children].map((o) => o.value))
+            .toEqual(['claude-fable-5', 'claude-opus-4-5-20251101', 'gemini-3.1-flash-image']);
+        // 合計が増減しない
+        expect(current.children.length + other.children.length).toBe(ENTRIES.length);
+    });
+
+    it('何度呼んでも結果が変わらない', () => {
+        const { current, other } = buildGroups(ENTRIES);
+        partitionUserDefinedModels(current, other, 'gemini');
+        const once = [...current.children].map((o) => o.textContent);
+        partitionUserDefinedModels(current, other, 'gemini');
+        expect([...current.children].map((o) => o.textContent)).toEqual(once);
+        expect(current.children.length + other.children.length).toBe(ENTRIES.length);
+    });
+
+    // 空のグループは見出しだけ残って邪魔になる
+    it('空になったグループは隠す', () => {
+        const { current, other } = buildGroups([['claude-fable-5', 'anthropic']]);
+        partitionUserDefinedModels(current, other, 'anthropic');
+        expect(current.hidden).toBe(false);
+        expect(other.hidden).toBe(true);
+        expect(other.disabled).toBe(true);
+    });
+
+    it('グループが無くても落ちない', () => {
+        expect(() => partitionUserDefinedModels(null, null, 'gemini')).not.toThrow();
     });
 });

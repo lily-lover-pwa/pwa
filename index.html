@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.58" defer></script>
+    <script src="app.js?v=1.25.59" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -450,8 +450,11 @@
                                 <optgroup label="プレビュー版">
                                     <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
                                 </optgroup>
-                                <optgroup label="追加モデル" id="user-defined-models-group">
+                                <optgroup label="追加モデル" id="user-defined-models-group" data-user-defined-group="true">
                                     <!-- JSで動的挿入 -->
+                                </optgroup>
+                                <optgroup label="他のプロバイダー" id="other-provider-models-group" data-user-defined-group="true">
+                                    <!-- JSで動的挿入（選ぶとプロバイダーが自動で切り替わる） -->
                                 </optgroup>
                             </select>
                             <button type="button" id="favorite-model-btn" aria-label="お気に入りの切り替え" title="このモデルをお気に入りに（ドロップダウンの先頭に固定）" style="flex:0 0 auto; padding:0 12px; font-size:16px; line-height:1; cursor:pointer;">☆</button>
