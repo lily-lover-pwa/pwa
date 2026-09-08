@@ -65,6 +65,7 @@ try {
         modelNameSelect: document.getElementById('model-name'),
         modelNameLabel: document.getElementById('model-name-label'),
         userDefinedModelsGroup: document.getElementById('user-defined-models-group'),
+        otherProviderModelsGroup: document.getElementById('other-provider-models-group'),
         systemPromptDefaultTextarea: document.getElementById('system-prompt-default'),
         temperatureInput: document.getElementById('temperature'),
         maxTokensInput: document.getElementById('max-tokens'),

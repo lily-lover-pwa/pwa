@@ -36,6 +36,41 @@ export function isImageGenerationModel(model) {
 }
 
 /**
+ * 「追加モデル」を、いま選んでいるプロバイダーのぶんと、それ以外に振り分ける。
+ *
+ * 追加モデルは全プロバイダー分をまとめて出している（別会社のモデルを選ぶと
+ * プロバイダーが自動で切り替わる、という作りのため）。ただ全部を1つの塊で
+ * 並べると、Anthropic を使っているのに GPT や Gemini が混ざって長くなり、
+ * 今使えるモデルが探しにくい。そこで2グループに分ける。
+ *
+ * 今のプロバイダーのぶんはラベルから「(プロバイダー名)」を外す。
+ * どの会社のものか自明なうえ、後ろに付いていると読みにくいため。
+ *
+ * @param {Element} currentGroup 「追加モデル」の optgroup
+ * @param {Element} otherGroup 「他のプロバイダー」の optgroup
+ * @param {string} provider いま選んでいるプロバイダー
+ */
+export function partitionUserDefinedModels(currentGroup, otherGroup, provider) {
+    if (!currentGroup || !otherGroup) return;
+    // 両方から集めてから振り直す（片方だけ見ると、切替のたびに取り残しが出る）
+    const options = [...currentGroup.children, ...otherGroup.children];
+    for (const option of options) {
+        const optionProvider = option.dataset.provider || '';
+        const belongsHere = optionProvider === provider;
+        option.textContent = belongsHere || !optionProvider
+            ? option.value
+            : `${option.value} (${optionProvider})`;
+        (belongsHere ? currentGroup : otherGroup).appendChild(option);
+    }
+    // 空のグループは見出しだけが残って邪魔なので隠す
+    for (const group of [currentGroup, otherGroup]) {
+        const isEmpty = group.children.length === 0;
+        group.disabled = isEmpty;
+        group.hidden = isEmpty;
+    }
+}
+
+/**
  * 「追加モデル」グループを選択肢の末尾へ移動する。
  *
  * index.html では #user-defined-models-group が静的に置かれているため、
