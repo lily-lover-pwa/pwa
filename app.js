@@ -2051,6 +2051,10 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.59": [
+      "B.AI で「Include Thoughts」をONにしていると 400 エラーになる不具合を修正しました。思考プロセスを要求する reasoning という項目を送っていましたが、これは OpenRouter 独自のもので B.AI は受け付けないためです。ONのときだけ失敗するので「たまにエラーになる」状態でした。",
+      "思考プロセスの表示自体は、モデルが返してくれる場合はこれまでどおり表示されます（要求する項目を送らなくなるだけです）。"
+    ],
     "1.58": [
       "B.AI に対応しました。設定の「APIプロバイダー」で B.AI を選び、APIキーを入力すると使えます。OpenAI互換のAPIなので、思考プロセスの表示・要約・メモリ学習・タイトル自動生成・校正など、これまでの機能はそのまま動きます。",
       "モデルは GLM-5.3 Flash と Qwen3.8 Flash を選べます。B.AI は使えるモデルがAPIキーごとに違うため、この2つ以外は設定の「すべてのプロバイダーのモデルを取得」を押すと一覧に追加されます。手入力したい場合は「追加モデル」にモデルIDを書いてください。",
@@ -9893,7 +9897,12 @@ ${knowledgeText}`;
             missingKeyMessage: "B.AI APIキーが設定されていません。",
             missingModelMessage: "B.AI のモデルIDが選択されていません。設定でAPIキーを入力し、「すべてのプロバイダーのモデルを取得」を押すと利用できるモデルが一覧に出ます。",
             extraHeaders: /* @__PURE__ */ __name(() => ({}), "extraHeaders"),
-            supportsReasoning: true,
+            // supportsReasoning は付けないこと。B.AI の Chat Completions が
+            // 受け付けるのは model/messages/stream/max_tokens/temperature/top_p/
+            // stop/response_format/tools/tool_choice/web_search_options/user だけで、
+            // reasoning は無い（Responses API 専用かつ OpenRouter の独自拡張）。
+            // 送ると Include Thoughts がONのときだけ 400 になる。
+            // 思考自体はモデル側が返すので、reasoning_content 等があれば表示される。
             verboseError: true
           }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
         default:

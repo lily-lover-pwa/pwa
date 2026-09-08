@@ -1674,7 +1674,12 @@ export const apiUtils = {
                     missingKeyMessage: 'B.AI APIキーが設定されていません。',
                     missingModelMessage: 'B.AI のモデルIDが選択されていません。設定でAPIキーを入力し、「すべてのプロバイダーのモデルを取得」を押すと利用できるモデルが一覧に出ます。',
                     extraHeaders: () => ({}),
-                    supportsReasoning: true,
+                    // supportsReasoning は付けないこと。B.AI の Chat Completions が
+                    // 受け付けるのは model/messages/stream/max_tokens/temperature/top_p/
+                    // stop/response_format/tools/tool_choice/web_search_options/user だけで、
+                    // reasoning は無い（Responses API 専用かつ OpenRouter の独自拡張）。
+                    // 送ると Include Thoughts がONのときだけ 400 になる。
+                    // 思考自体はモデル側が返すので、reasoning_content 等があれば表示される。
                     verboseError: true
                 }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
             default:

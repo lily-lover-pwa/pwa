@@ -77,6 +77,26 @@ describe('B.AI プロバイダーの配線', () => {
         expect(BAI_MODELS.map((m) => m.value)).toContain(DEFAULT_BAI_MODEL);
     });
 
+    // 回帰: B.AI に supportsReasoning を付けてしまい、Include Thoughts が
+    // ONのときだけ 400 になっていた。B.AI の Chat Completions に reasoning は無く
+    // （Responses API 専用かつ OpenRouter の独自拡張）、送ると弾かれる
+    it('B.AI に reasoning パラメータを送らない', () => {
+        const api = read('src/api.js');
+        const bai = api.slice(api.indexOf("label: 'B.AI'"));
+        const configEnd = bai.indexOf('}, messagesForApi');
+        expect(configEnd).toBeGreaterThan(0);
+        expect(bai.slice(0, configEnd)).not.toContain('supportsReasoning: true');
+    });
+
+    // reasoning を送ってよいのは、それを定義している OpenRouter だけ
+    it('supportsReasoning が付くのは OpenRouter のみ', () => {
+        const api = read('src/api.js');
+        const labels = [...api.matchAll(/label: '([^']+)',[\s\S]*?verboseError/g)]
+            .filter((m) => m[0].includes('supportsReasoning: true'))
+            .map((m) => m[1]);
+        expect(labels).toEqual(['OpenRouter']);
+    });
+
     it('モデル未選択のまま送らないよう案内メッセージを持つ', () => {
         const api = read('src/api.js');
         expect(api).toContain('missingModelMessage');
