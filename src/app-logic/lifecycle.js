@@ -8,6 +8,7 @@ import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { appLogic } from '../app-logic.js';
 import { moveUserDefinedGroupToEnd, resolveSelectedModel } from '../utils/model-select.js';
+import { getUnseenVersions } from '../utils/version-history.js';
 
 export const lifecycleMethods = {
     _setupEventListenersCallCount: 0,
@@ -534,30 +535,32 @@ export const lifecycleMethods = {
             if (!versionNoticeData) {
                 const acknowledgedVersion = localStorage.getItem(VERSION_ACK_STORAGE_KEY);
                 const legacyVersion = localStorage.getItem(VERSION_LEGACY_STORAGE_KEY);
-                const currentVersion = APP_VERSION;
-                console.log(`[VersionNotice] バージョンチェック開始。ack=${acknowledgedVersion ?? 'none'}, legacy=${legacyVersion ?? 'none'}, current=${currentVersion}`);
+                // 以前は APP_VERSION をキーに VERSION_HISTORY を引いていたが、
+                // APP_VERSION は '1.25' のまま動かない一方で履歴のキーは 1.58 まで
+                // 進んでおり、新しい項目が一件も表示されていなかった。
+                // 履歴のキーそのものを「どこまで見たか」の基準にする。
+                const seenVersion = acknowledgedVersion || legacyVersion || null;
+                const { latest, entries, hiddenCount } = getUnseenVersions(VERSION_HISTORY, seenVersion, 3);
+                console.log(`[VersionNotice] バージョンチェック開始。seen=${seenVersion ?? 'none'}, latest=${latest ?? 'none'}, 未読=${entries.length + hiddenCount}件`);
 
-                const shouldShowNotice =
-                    !acknowledgedVersion ||
-                    acknowledgedVersion !== currentVersion ||
-                    (legacyVersion && legacyVersion !== currentVersion);
-
-                if (shouldShowNotice) {
-                    const newFeatures = VERSION_HISTORY[currentVersion];
-                    let message = `アプリがバージョン ${currentVersion} にアップデートされました。`;
-    
-                    if (newFeatures && newFeatures.length > 0) {
-                        message += "\n\n主な更新内容:\n- " + newFeatures.join("\n- ");
+                if (latest && entries.length > 0) {
+                    let message = 'アプリを更新しました。主な更新内容:';
+                    for (const entry of entries) {
+                        message += `\n\n【${entry.version}】\n- ` + entry.items.join('\n- ');
+                    }
+                    // 久しぶりに開いた人に何十件も出さないよう、残りは件数だけ伝える
+                    if (hiddenCount > 0) {
+                        message += `\n\nほか ${hiddenCount} 件の更新があります。設定の「更新履歴」ですべて確認できます。`;
                     }
                     versionNoticeData = {
-                        version: currentVersion,
+                        version: latest,
                         message,
                         shouldPersist: true
                     };
                     sessionStorage.setItem(VERSION_NOTICE_SESSION_KEY, JSON.stringify(versionNoticeData));
-                    console.log(`[VersionNotice] 新しいバージョン通知を作成しました。(ack=${acknowledgedVersion ?? 'none'}, legacy=${legacyVersion ?? 'none'})`);
+                    console.log(`[VersionNotice] 新しいバージョン通知を作成しました。(表示${entries.length}件 / 残り${hiddenCount}件)`);
                 } else {
-                    console.log("[VersionNotice] 既に最新バージョンが確認済みのため通知をスキップします。");
+                    console.log("[VersionNotice] 未読の更新が無いため通知をスキップします。");
                 }
             }
         } catch (e) {

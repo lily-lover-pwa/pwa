@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.56" defer></script>
+    <script src="app.js?v=1.25.57" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -922,44 +922,10 @@
                    
                 </div>
 
-                <!-- 更新履歴 -->
+                <!-- 更新履歴（VERSION_HISTORY から生成。手書きしないこと） -->
                 <details style="margin-bottom: 20px;">
                     <summary style="cursor: pointer; font-size: 14px; font-weight: bold; color: var(--text-link); padding: 6px 0;">更新履歴</summary>
-                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.8; padding: 10px 4px;">
-                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.20 (2026-05)</p>
-                        <ul style="margin: 0 0 8px; padding-left: 18px;">
-                            <li>履歴一覧のトークン表示を改善（合計トークンに加えて、入力/出力の内訳も表示）</li>
-                        </ul>
-                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.18 (2025-04)</p>
-                        <ul style="margin: 0 0 8px; padding-left: 18px;">
-                            <li>自動タイトル生成の動作を修正（タイトルのみ更新するよう最適化、消費トークン数百程度）</li>
-                            <li>モバイル表示の文字サイズを少し大きく（15px）</li>
-                            <li>Service WorkerのAPIバイパス対象を全AIプロバイダーに拡大</li>
-                        </ul>
-                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.17 (2025-04)</p>
-                        <ul style="margin: 0 0 8px; padding-left: 18px;">
-                            <li>アプリ名を「Aquarium Chat」に変更</li>
-                            <li>チャットタイトルの自動生成機能を追加（初回やり取り後に自動でタイトルを付ける）</li>
-                            <li>Dropbox同期の競合を自動マージに変更（ダイアログ廃止）</li>
-                            <li>プロジェクトフィルター起因のチャット消失バグを修正</li>
-                            <li>Dropbox同期時のデータ消失バグを修正（空データでクラウドを上書きしない）</li>
-                        </ul>
-                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.14〜v1.16</p>
-                        <ul style="margin: 0 0 8px; padding-left: 18px;">
-                            <li>マルチプロバイダー対応（OpenRouter, Anthropic, OpenAI互換API等）</li>
-                            <li>プロジェクト機能の追加（チャットをプロジェクト単位で管理）</li>
-                            <li>Dropbox双方向同期の実装</li>
-                            <li>メモリ自動保存機能</li>
-                            <li>Stable Diffusion画像生成連携</li>
-                        </ul>
-                        <p style="font-weight: bold; margin: 8px 0 2px;">v1.0〜v1.13</p>
-                        <ul style="margin: 0 0 4px; padding-left: 18px;">
-                            <li>Gemini APIを使ったチャットPWAとして公開</li>
-                            <li>マークダウン表示・コードハイライト対応</li>
-                            <li>チャット履歴のIndexedDB保存</li>
-                            <li>ダーク／ライトテーマ切替</li>
-                        </ul>
-                    </div>
+                    <div id="version-history-list" style="font-size: 12px; color: var(--text-secondary); line-height: 1.8; padding: 10px 4px;"></div>
                 </details>
 
                 <div class="danger-zone">
