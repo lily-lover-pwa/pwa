@@ -5343,7 +5343,7 @@ Reason: [NGの場合の理由]`,
           const acknowledgedVersion = localStorage.getItem(VERSION_ACK_STORAGE_KEY);
           const legacyVersion = localStorage.getItem(VERSION_LEGACY_STORAGE_KEY);
           const seenVersion = acknowledgedVersion || legacyVersion || null;
-          const { latest, entries, hiddenCount } = getUnseenVersions(VERSION_HISTORY, seenVersion, 3);
+          const { latest, entries, hiddenCount } = getUnseenVersions(VERSION_HISTORY, seenVersion, 1);
           console.log(`[VersionNotice] バージョンチェック開始。seen=${seenVersion ?? "none"}, latest=${latest ?? "none"}, 未読=${entries.length + hiddenCount}件`);
           if (latest && entries.length > 0) {
             let message = "アプリを更新しました。主な更新内容:";

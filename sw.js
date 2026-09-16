@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE_NAME = 'gemini-pwa-cache-v1.25.60'; // 更新後はここも変更
+const CACHE_NAME = 'gemini-pwa-cache-v1.25.61'; // 更新後はここも変更
 const urlsToCache = [
   './',
   './index.html',
