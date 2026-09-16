@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT, DEEPSEEK_WEEKEND_OFFPEAK_AT, GPT_56_SOL_PRICE_CUT_AT } from '../src/utils/pricing.js';
+import { getPricing, isDeepSeekPeak, normalizeModelName, DEEPSEEK_V4_PRICE_CHANGE_AT, GEMINI_FLASH_PROMO_END_AT, DEEPSEEK_WEEKEND_OFFPEAK_AT, GPT_56_SOL_PRICE_CUT_AT, DEEPSEEK_V41_FLASH_AT, GLM_53_FLASH_PROMO_END_AT } from '../src/utils/pricing.js';
 
 const BEFORE = DEEPSEEK_V4_PRICE_CHANGE_AT - 1;
 const AFTER = DEEPSEEK_V4_PRICE_CHANGE_AT;
@@ -421,5 +421,93 @@ describe('getPricing — Groq / Mistral / Z.ai', () => {
         expect(getPricing('groq/compound', AFTER)).toBeNull();
         expect(getPricing('minimaxai/minimax-m2.7', AFTER)).toBeNull();
         expect(getPricing('open-mistral-nemo', AFTER)).toBeNull();
+    });
+});
+
+describe('getPricing — 2026-09 の新モデル', () => {
+    const NOW = Date.UTC(2026, 8, 15);
+
+    it('Gemini 3.8 Flash は 3.7 / 3.6 と同じ割引単価', () => {
+        expect(getPricing('gemini-3.8-flash', NOW)).toMatchObject({ in: 0.75, out: 3.75, cr: 0.075 });
+        // 割引が終われば通常単価へ戻る
+        expect(getPricing('gemini-3.8-flash', GEMINI_FLASH_PROMO_END_AT))
+            .toMatchObject({ in: 1.50, out: 7.50, cr: 0.15 });
+    });
+
+    it('GPT-6 Astra を引ける', () => {
+        expect(getPricing('gpt-6-astra', NOW)).toMatchObject({ in: 10, out: 50, cr: 1 });
+        // 'gpt-5' 系と取り違えない
+        expect(getPricing('gpt-6-astra', NOW).out).not.toBe(20);
+    });
+
+    // 長コンテキスト段の閾値が公表されていないので、推測で入れていないことを固定する
+    it('GPT-6 Astra に longCtx を入れていない', () => {
+        expect(getPricing('gpt-6-astra', NOW).longCtx).toBeUndefined();
+    });
+
+    it('grok-build-0.1 を引ける（200k以上は倍額）', () => {
+        expect(getPricing('grok-build-0.1', NOW)).toMatchObject({ in: 1, out: 2, cr: 0.20 });
+        expect(getPricing('grok-build-0.1', NOW).longCtx)
+            .toMatchObject({ threshold: 200000, in: 2, out: 4, cr: 0.40 });
+    });
+
+    it('DeepSeek V4.1 Flash を引ける', () => {
+        expect(getPricing('deepseek-flash', NOW)).toMatchObject({ in: 0.15, out: 0.60, cr: 0.003 });
+        // 総称の 'deepseek-' に先に一致してしまうと $0.27 になる
+        expect(getPricing('deepseek-flash', NOW).in).not.toBe(0.27);
+        // ピーク倍率は他の V4 系と同じく持つ
+        expect(getPricing('deepseek-flash', NOW).peakMul).toBe(2);
+    });
+});
+
+describe('getPricing — deepseek-v4-flash の V4.1 Flash への転送（2026-09-10）', () => {
+    const BEFORE_ROUTE = DEEPSEEK_V41_FLASH_AT - 1;
+    const AFTER_ROUTE = DEEPSEEK_V41_FLASH_AT;
+
+    it('転送後は Flash の単価で計算する', () => {
+        expect(getPricing('deepseek-v4-flash', AFTER_ROUTE))
+            .toMatchObject({ in: 0.15, out: 0.60, cr: 0.003 });
+    });
+
+    it('転送前のメッセージは当時の単価のまま', () => {
+        expect(getPricing('deepseek-v4-flash', BEFORE_ROUTE))
+            .toMatchObject({ in: 0.22, out: 0.66, cr: 0.007 });
+    });
+
+    // 2026-08-16 の改定より古いものは、さらに前の単価が優先される
+    it('8月の改定より前はそちらの単価が勝つ', () => {
+        expect(getPricing('deepseek-v4-flash', DEEPSEEK_V4_PRICE_CHANGE_AT - 1))
+            .toMatchObject({ in: 0.14, out: 0.28 });
+    });
+
+    it('vision-exp の旧名も同じ扱い', () => {
+        expect(getPricing('deepseek-v4-flash-vision-exp', AFTER_ROUTE))
+            .toMatchObject({ in: 0.15, out: 0.60 });
+    });
+
+    // V4 Pro は転送されず、そのまま提供が続く
+    it('deepseek-v4-pro は影響を受けない', () => {
+        expect(getPricing('deepseek-v4-pro', AFTER_ROUTE))
+            .toMatchObject({ in: 0.66, out: 1.98, cr: 0.022 });
+    });
+});
+
+describe('getPricing — GLM-5.3 Flash の割引終了（2026-09-09 16:00 UTC）', () => {
+    it('割引中は半額', () => {
+        expect(getPricing('glm-5.3-flash', GLM_53_FLASH_PROMO_END_AT - 1))
+            .toMatchObject({ in: 0.075, out: 0.25, cr: 0.015 });
+    });
+
+    it('終了後は通常単価（ちょうど倍）', () => {
+        expect(getPricing('glm-5.3-flash', GLM_53_FLASH_PROMO_END_AT))
+            .toMatchObject({ in: 0.15, out: 0.50, cr: 0.03 });
+    });
+
+    // 割引が付くのは 5.3 Flash だけで、他の GLM は巻き込まれない
+    it('他の GLM は影響を受けない', () => {
+        expect(getPricing('glm-5.3', GLM_53_FLASH_PROMO_END_AT - 1))
+            .toMatchObject({ in: 1.40, out: 4.40 });
+        expect(getPricing('glm-4.7-flash', GLM_53_FLASH_PROMO_END_AT - 1))
+            .toMatchObject({ in: 0, out: 0 });
     });
 });
