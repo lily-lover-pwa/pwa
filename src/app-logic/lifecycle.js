@@ -545,7 +545,9 @@ export const lifecycleMethods = {
                 // 進んでおり、新しい項目が一件も表示されていなかった。
                 // 履歴のキーそのものを「どこまで見たか」の基準にする。
                 const seenVersion = acknowledgedVersion || legacyVersion || null;
-                const { latest, entries, hiddenCount } = getUnseenVersions(VERSION_HISTORY, seenVersion, 3);
+                // 3件だすとダイアログが画面いっぱいになってしまうので最新1件だけ。
+                // 残りは下の hiddenCount の案内から設定の「更新履歴」で見てもらう。
+                const { latest, entries, hiddenCount } = getUnseenVersions(VERSION_HISTORY, seenVersion, 1);
                 console.log(`[VersionNotice] バージョンチェック開始。seen=${seenVersion ?? 'none'}, latest=${latest ?? 'none'}, 未読=${entries.length + hiddenCount}件`);
 
                 if (latest && entries.length > 0) {
