@@ -97,7 +97,8 @@ describe('calcMessageCost', () => {
             provider: 'zai',
             usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
         });
-        expect(calcMessageCost(viaZai)).toBeCloseTo((1000 * 0.075 + 1000 * 0.25) / 1e6, 12);
+        // msg() の既定時刻は 2026-09-20 で、GLM-5.3 Flash の割引が終わった後の単価
+        expect(calcMessageCost(viaZai)).toBeCloseTo((1000 * 0.15 + 1000 * 0.50) / 1e6, 12);
     });
 
     // provider を記録する前のメッセージ。後から金額が消えると過去の集計が変わる
@@ -107,7 +108,7 @@ describe('calcMessageCost', () => {
             usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
         });
         expect(old.provider).toBeUndefined();
-        expect(calcMessageCost(old)).toBeCloseTo((1000 * 0.075 + 1000 * 0.25) / 1e6, 12);
+        expect(calcMessageCost(old)).toBeCloseTo((1000 * 0.15 + 1000 * 0.50) / 1e6, 12);
     });
 
     // OpenRouter は提供元の価格をほぼそのまま通すので、従来どおり概算する
@@ -228,7 +229,7 @@ describe('summarizeUsage', () => {
     // まとまるので、金額は Z.ai 直のぶんだけが乗り、料金不明フラグも立つ
     it('同じモデルでもプロバイダーによって金額に入るものと入らないものがある', () => {
         const mk = (provider) => ({
-            role: 'model', modelName: 'glm-5.3-flash', provider, timestamp: Date.now(),
+            role: 'model', modelName: 'glm-5.3-flash', provider, timestamp: AFTER_OFFPEAK,
             usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 1000 },
         });
         const r = summarizeUsage([{ id: 1, messages: [mk('bai'), mk('zai')] }]);
@@ -237,7 +238,7 @@ describe('summarizeUsage', () => {
         expect(entry.input).toBe(2000);
         expect(r.hasUnpriced).toBe(true);
         // 金額は Z.ai 直の1件ぶんだけ
-        expect(r.totalCost).toBeCloseTo((1000 * 0.075 + 1000 * 0.25) / 1e6, 12);
+        expect(r.totalCost).toBeCloseTo((1000 * 0.15 + 1000 * 0.50) / 1e6, 12);
     });
 
     it('料金不明のモデルはトークンだけ数えてフラグを立てる', () => {

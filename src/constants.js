@@ -42,6 +42,7 @@ export const VERSION_LEGACY_STORAGE_KEY = 'appVersion';
 
 // プロバイダーごとのモデルリスト
 export const GEMINI_MODELS = [
+    { value: 'gemini-3.8-flash', label: 'gemini-3.8-flash (最新・2026年内は半額)' },
     { value: 'gemini-3.7-flash', label: 'gemini-3.7-flash (2026年内は半額)' },
     { value: 'gemini-flash-latest', label: 'gemini-flash-latest (常に最新Flash)' },
     { value: 'gemini-3.6-flash', label: 'gemini-3.6-flash (2026年内は半額)' },
@@ -194,8 +195,10 @@ export const GROQ_MODELS = [
 export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
 
 export const DEEPSEEK_MODELS = [
+    { value: 'deepseek-flash', label: 'DeepSeek V4.1 Flash (最新・安価)' },
     { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
-    { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+    // 旧名。V4.1 Flash へ転送されるので 'deepseek-flash' と中身は同じになる
+    { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash (V4.1 Flash へ転送)' },
     { value: 'deepseek-chat', label: 'DeepSeek Chat (V3)' },
     { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
 ];
@@ -239,6 +242,12 @@ export const DEFAULT_BAI_MODEL = 'glm-5.3-flash';
 
 
 export const VERSION_HISTORY = {
+    '1.61': [
+        '新しく出たモデルの料金に対応しました。Gemini 3.8 Flash（3.7/3.6 と同じく2026年内は半額の入力$0.75・出力$3.75）、GPT-6 Astra（入力$10・出力$50）、DeepSeek V4.1 Flash（入力$0.15・出力$0.60）、Grok Build 0.1 を追加し、Gemini 3.8 Flash と DeepSeek V4.1 Flash はモデル一覧から選べるようにしています。',
+        'GLM-5.3 Flash の単価を修正しました。公開時の50%割引が2026年9月9日で終わり、入力$0.075→$0.15・出力$0.25→$0.50 と倍になっています。割引期間中に送ったメッセージは、これまでどおり当時の半額で計算します。',
+        'DeepSeek の「deepseek-v4-flash」は、2026年9月10日から新しい V4.1 Flash へ転送されるようになり、課金も Flash の単価になりました。ⓘ の推定コストもその日を境に切り替わります（それ以前のぶんは当時の単価のままです）。',
+        '※ GPT-6 Astra には長いプロンプト向けの割高な単価もありますが、何トークンから切り替わるかが公表されていないため、推定コストには反映していません。',
+    ],
     '1.60': [
         'モデル一覧の「追加モデル」を、いま選んでいるプロバイダーのぶんと「他のプロバイダー」の2つに分けました。これまでは全プロバイダー分がひとまとめだったため、たとえば Anthropic を使っているのに GPT や Gemini のモデルが同じ塊に並んでいて、今すぐ使えるモデルが探しにくくなっていました。',
         'いま使えるものだけが「追加モデル」に出て、他社のものは下の「他のプロバイダー」にまとまります。今のプロバイダーのモデルは、末尾の「(プロバイダー名)」も外して読みやすくしました。',

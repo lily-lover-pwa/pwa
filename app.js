@@ -1892,6 +1892,7 @@ ${relationship_context}`;
   var VERSION_ACK_STORAGE_KEY = "appVersionAcknowledged";
   var VERSION_LEGACY_STORAGE_KEY = "appVersion";
   var GEMINI_MODELS = [
+    { value: "gemini-3.8-flash", label: "gemini-3.8-flash (最新・2026年内は半額)" },
     { value: "gemini-3.7-flash", label: "gemini-3.7-flash (2026年内は半額)" },
     { value: "gemini-flash-latest", label: "gemini-flash-latest (常に最新Flash)" },
     { value: "gemini-3.6-flash", label: "gemini-3.6-flash (2026年内は半額)" },
@@ -2020,8 +2021,10 @@ ${relationship_context}`;
   ];
   var DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
   var DEEPSEEK_MODELS = [
+    { value: "deepseek-flash", label: "DeepSeek V4.1 Flash (最新・安価)" },
     { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
-    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
+    // 旧名。V4.1 Flash へ転送されるので 'deepseek-flash' と中身は同じになる
+    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash (V4.1 Flash へ転送)" },
     { value: "deepseek-chat", label: "DeepSeek Chat (V3)" },
     { value: "deepseek-reasoner", label: "DeepSeek Reasoner (R1)" }
   ];
@@ -2052,6 +2055,12 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.61": [
+      "新しく出たモデルの料金に対応しました。Gemini 3.8 Flash（3.7/3.6 と同じく2026年内は半額の入力$0.75・出力$3.75）、GPT-6 Astra（入力$10・出力$50）、DeepSeek V4.1 Flash（入力$0.15・出力$0.60）、Grok Build 0.1 を追加し、Gemini 3.8 Flash と DeepSeek V4.1 Flash はモデル一覧から選べるようにしています。",
+      "GLM-5.3 Flash の単価を修正しました。公開時の50%割引が2026年9月9日で終わり、入力$0.075→$0.15・出力$0.25→$0.50 と倍になっています。割引期間中に送ったメッセージは、これまでどおり当時の半額で計算します。",
+      "DeepSeek の「deepseek-v4-flash」は、2026年9月10日から新しい V4.1 Flash へ転送されるようになり、課金も Flash の単価になりました。ⓘ の推定コストもその日を境に切り替わります（それ以前のぶんは当時の単価のままです）。",
+      "※ GPT-6 Astra には長いプロンプト向けの割高な単価もありますが、何トークンから切り替わるかが公表されていないため、推定コストには反映していません。"
+    ],
     "1.60": [
       "モデル一覧の「追加モデル」を、いま選んでいるプロバイダーのぶんと「他のプロバイダー」の2つに分けました。これまでは全プロバイダー分がひとまとめだったため、たとえば Anthropic を使っているのに GPT や Gemini のモデルが同じ塊に並んでいて、今すぐ使えるモデルが探しにくくなっていました。",
       "いま使えるものだけが「追加モデル」に出て、他社のものは下の「他のプロバイダー」にまとまります。今のプロバイダーのモデルは、末尾の「(プロバイダー名)」も外して読みやすくしました。",
@@ -12974,7 +12983,12 @@ ${msg}`);
     "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
     "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
     "deepseek-v4-pro": { in: 0.66, out: 1.98, cw5m: 0.66, cw1h: 0.66, cr: 0.022, peakMul: 2 },
-    "deepseek-v4-flash": { in: 0.22, out: 0.66, cw5m: 0.22, cw1h: 0.22, cr: 7e-3, peakMul: 2 },
+    // V4.1 Flash（2026-09-10 公開）。旧名 'deepseek-v4-flash' と
+    // 'deepseek-v4-flash-vision-exp' もこのモデルへ転送され、Flash の単価で課金される。
+    // 転送前に送ったぶんは MODEL_PRICING_BEFORE_V41_FLASH で当時の単価を引く。
+    // 総称の 'deepseek-' より前に置くこと（後ろだとそちらに先に一致する）。
+    "deepseek-flash": { in: 0.15, out: 0.6, cw5m: 0.15, cw1h: 0.15, cr: 3e-3, peakMul: 2 },
+    "deepseek-v4-flash": { in: 0.15, out: 0.6, cw5m: 0.15, cw1h: 0.15, cr: 3e-3, peakMul: 2 },
     "deepseek-": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
     // 以下は cw5m/cw1h を持たない。キャッシュ書き込みに別料金が無く、通常入力と同額のため
     // （calcMessageCost が in にフォールバックする）。
@@ -12983,6 +12997,7 @@ ${msg}`);
     "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
     "grok-4-5": { in: 2, out: 6, cr: 0.3, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 0.6 } },
     "grok-4-3": { in: 1.25, out: 2.5, cr: 0.2, longCtx: { threshold: 2e5, in: 2.5, out: 5, cr: 0.4 } },
+    "grok-build-0-1": { in: 1, out: 2, cr: 0.2, longCtx: { threshold: 2e5, in: 2, out: 4, cr: 0.4 } },
     // Groq — https://console.groq.com/docs/models
     // 'openai/gpt-oss-120b' はベンダー接頭辞が外れて 'gpt-oss-120b' になる。
     // キャッシュ割引の記載が無いので cr は入力と同額にしてある。
@@ -13005,8 +13020,8 @@ ${msg}`);
     // Flash 系（4.7 / 4.5 / 4.6V）は入出力とも無料。
     // 前方一致なので、長いキーを先に置くこと（'glm-5-3-flash' は 'glm-5-3' より前、
     // 'glm-4-7-flashx' は 'glm-4-7-flash' より前、'glm-5-1' 等は 'glm-5' より前）。
-    "glm-5-3-flash": { in: 0.075, out: 0.25, cr: 0.015 },
-    // 現在50%割引中の価格
+    "glm-5-3-flash": { in: 0.15, out: 0.5, cr: 0.03 },
+    // 2026-09-09 に50%割引が終了
     "glm-5-3": { in: 1.4, out: 4.4, cr: 0.26 },
     "glm-5-2": { in: 1.4, out: 4.4, cr: 0.26 },
     "glm-5-1": { in: 1.4, out: 4.4, cr: 0.26 },
@@ -13025,6 +13040,9 @@ ${msg}`);
     "qwen3-8-flash": { in: 0.15, out: 0.47, cr: 0.016 },
     // OpenAI — https://developers.openai.com/api/docs/pricing
     // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
+    // GPT-6 Astra。長コンテキスト段（入力$20/出力$75）もあるが、何トークンから
+    // 切り替わるかが公表されていないため longCtx は入れていない（推測で入れない）。
+    "gpt-6-astra": { in: 10, out: 50, cr: 1 },
     "gpt-5-6-sol": { in: 4, out: 20, cr: 0.4 },
     // 2026-08-21 値下げ（少なくとも11/21まで）
     "gpt-5-6-terra": { in: 2, out: 12, cr: 0.2 },
@@ -13053,6 +13071,7 @@ ${msg}`);
     // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
     // 3.7 / 3.6 Flash は 2026-12-31 まで半額。ここには割引終了後の通常単価を置き、
     // 割引期間中は MODEL_PRICING_GEMINI_FLASH_PROMO を優先して引く。
+    "gemini-3-8-flash": { in: 1.5, out: 7.5, cr: 0.15 },
     "gemini-3-7-flash": { in: 1.5, out: 7.5, cr: 0.15 },
     "gemini-3-6-flash": { in: 1.5, out: 7.5, cr: 0.15 },
     "gemini-3-5-flash-lite": { in: 0.3, out: 2.5, cr: 0.03 },
@@ -13078,8 +13097,17 @@ ${msg}`);
   };
   var GEMINI_FLASH_PROMO_END_AT = Date.UTC(2027, 0, 1, 0, 0, 0);
   var MODEL_PRICING_GEMINI_FLASH_PROMO = {
+    "gemini-3-8-flash": { in: 0.75, out: 3.75, cr: 0.075 },
     "gemini-3-7-flash": { in: 0.75, out: 3.75, cr: 0.075 },
     "gemini-3-6-flash": { in: 0.75, out: 3.75, cr: 0.075 }
+  };
+  var DEEPSEEK_V41_FLASH_AT = Date.UTC(2026, 8, 10, 0, 0, 0);
+  var MODEL_PRICING_BEFORE_V41_FLASH = {
+    "deepseek-v4-flash": { in: 0.22, out: 0.66, cw5m: 0.22, cw1h: 0.22, cr: 7e-3, peakMul: 2 }
+  };
+  var GLM_53_FLASH_PROMO_END_AT = Date.UTC(2026, 8, 9, 16, 0, 0);
+  var MODEL_PRICING_GLM_53_FLASH_PROMO = {
+    "glm-5-3-flash": { in: 0.075, out: 0.25, cr: 0.015 }
   };
   function normalizeModelName(modelName) {
     if (typeof modelName !== "string") return "";
@@ -13097,6 +13125,16 @@ ${msg}`);
     }
     if (!timestamp || timestamp < GPT_56_SOL_PRICE_CUT_AT) {
       for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_SOL_CUT)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < DEEPSEEK_V41_FLASH_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V41_FLASH)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < GLM_53_FLASH_PROMO_END_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_GLM_53_FLASH_PROMO)) {
         if (m.startsWith(key)) return price;
       }
     }
@@ -15376,7 +15414,7 @@ ${pageText}
         // 置くと、新しく使い始めた人の一覧が最初から使えないモデルで埋まるため、
         // 標準リストに無い現行モデルだけを挙げること。
         gemini: "gemini-3.1-flash-image, gemini-3-pro-image",
-        openai: "gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna",
+        openai: "gpt-6-astra, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna",
         anthropic: "claude-fable-5, claude-opus-4-5-20251101",
         groq: "openai/gpt-oss-safeguard-20b",
         deepseek: "deepseek-chat, deepseek-reasoner",
