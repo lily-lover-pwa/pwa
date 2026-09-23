@@ -44,6 +44,8 @@ export const state = {
         topP: null,
         thinkingBudget: null,
         includeThoughts: false,
+        // 返事を書かれる端から表示する（Geminiのみ）。まずは様子見のため既定OFF。
+        enableStreaming: false,
         enableThoughtTranslation: true, // 思考プロセスの翻訳を有効にするか
         thoughtTranslationModel: 'gemini-2.5-flash-lite',
         dummyUser: '',

@@ -3,7 +3,9 @@ import { BAI_API_BASE_URL, DEEPSEEK_API_BASE_URL, DEFAULT_BAI_MODEL, DEFAULT_BED
 import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
+import { createGeminiStreamAssembler } from './utils/gemini-stream.js';
 import { extractReasoningText } from './utils/reasoning.js';
+import { parseSSEBuffer } from './utils/sse.js';
 import { isImageGenerationModel } from './utils/model-select.js';
 import { getGeminiSafetySettings } from './utils/safety.js';
 import { state } from './state.js';
@@ -498,7 +500,7 @@ export const apiUtils = {
     },
 
     // Gemini APIを呼び出す
-    async callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null) {
+    async callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null, onChunk = null) {
         console.log(`[Debug] callGeminiApi: 現在の設定値を確認します。`, {
             forceFunctionCalling: state.settings.forceFunctionCalling,
             geminiEnableFunctionCalling: state.settings.geminiEnableFunctionCalling,
@@ -524,7 +526,15 @@ export const apiUtils = {
 
         const isImageGenModel = isImageGenerationModel(model);
 
-        const endpointMethod = 'generateContent?';
+        // ストリーミングは、設定がONで、かつ呼び出し側が描画用のコールバックを
+        // 渡してきたときだけ。要約・メモリ学習・タイトル生成などは onChunk を
+        // 渡さないので、これまでどおり一括で受け取る。
+        // 画像生成モデルは inlineData を細切れで受け取る意味が無いため対象外。
+        const useStreaming = typeof onChunk === 'function'
+            && state.settings.enableStreaming
+            && !isImageGenModel;
+
+        const endpointMethod = useStreaming ? 'streamGenerateContent?alt=sse&' : 'generateContent?';
 
         const endpoint = `${GEMINI_API_BASE_URL}${model}:${endpointMethod}key=${apiKey}`;
         
@@ -624,6 +634,9 @@ export const apiUtils = {
                 error.data = errorData;
                 throw error;
             }
+            if (useStreaming) {
+                return await this._readGeminiStream(response, onChunk);
+            }
             return response;
         } catch (error) {
             if (error.name === 'AbortError') {
@@ -632,6 +645,100 @@ export const apiUtils = {
                 throw error;
             }
         }
+    },
+
+    /**
+     * streamGenerateContent の SSE を読み、非ストリーミングと同じ形に組み立てて返す。
+     *
+     * 戻り値は Response のかわりに使える最小限のオブジェクト（json() を持つ）。
+     * こうしておくと呼び出し側は `await response.json()` のままで、
+     * ストリーミングかどうかを意識しなくて済む。
+     *
+     * @param {Response} response streamGenerateContent のレスポンス
+     * @param {(text: string) => void} onChunk 受信のたびに「ここまでの本文」を渡す
+     */
+    async _readGeminiStream(response, onChunk) {
+        if (!response.body) {
+            throw new Error("ストリーミング応答にボディがありません。");
+        }
+
+        const assembler = createGeminiStreamAssembler();
+        const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+        let buffer = '';
+
+        // 中断・通信断が起きても、そこまで届いたぶんは捨てずに返す。
+        // ただし黙って返すと「短い返事が来た」ようにしか見えないので、
+        // 途中である旨を本文の末尾に書き足して区別できるようにする。
+        const buildTruncated = (note) => {
+            const built = assembler.build();
+            const parts = built.candidates[0].content.parts;
+            parts.push({ text: `\n\n（※${note}ため、ここまでの内容です）` });
+            built.candidates[0].finishReason = 'STOP';
+            return { ok: true, status: 200, json: async () => built };
+        };
+
+        try {
+            for (;;) {
+                const { value, done } = await reader.read();
+
+                if (done) {
+                    // 区切りの空行が来ないまま終わることがあるので、残りも処理する
+                    const { events } = parseSSEBuffer(buffer + '\n\n');
+                    for (const data of events) this._addGeminiChunk(assembler, data);
+                    break;
+                }
+
+                buffer += value;
+                const { events, rest } = parseSSEBuffer(buffer);
+                buffer = rest;
+
+                let updated = false;
+                for (const data of events) {
+                    if (this._addGeminiChunk(assembler, data)) updated = true;
+                }
+                if (updated) {
+                    try {
+                        onChunk(assembler.getText());
+                    } catch (e) {
+                        // 描画側で転んでも受信は続ける（本文を失うほうが損）
+                        console.warn('[Streaming] 描画コールバックでエラー:', e);
+                    }
+                }
+            }
+        } catch (error) {
+            await reader.cancel().catch(() => {});
+
+            if (assembler.hasContent()) {
+                const aborted = error.name === 'AbortError' || /aborted|キャンセル/.test(error.message || '');
+                console.warn('[Streaming] 中断されましたが、受信済みのぶんを保存します。', error);
+                return buildTruncated(aborted ? '中断された' : '通信が途切れた');
+            }
+            if (error.name === 'AbortError') {
+                throw new Error("リクエストがキャンセルされました。");
+            }
+            throw error;
+        }
+
+        return { ok: true, status: 200, json: async () => assembler.build() };
+    },
+
+    /**
+     * SSE の data 値（JSON文字列）をパースして組み立て器へ渡す。
+     * @returns {boolean} 本文が増えたか（描画の要否判定に使う）
+     */
+    _addGeminiChunk(assembler, data) {
+        if (!data || data === '[DONE]') return false;
+        let chunk;
+        try {
+            chunk = JSON.parse(data);
+        } catch (e) {
+            // 壊れた1件で全体を落とさない。Geminiは稀にキープアライブ的な行を挟む。
+            console.warn('[Streaming] チャンクのパースに失敗（無視します）:', data.slice(0, 120));
+            return false;
+        }
+        const before = assembler.getText();
+        assembler.addChunk(chunk);
+        return assembler.getText() !== before;
     },
 
 
@@ -1610,7 +1717,10 @@ export const apiUtils = {
 
     // プロバイダーに応じて適切なAPIアダプタへ振り分けるディスパッチャ。
     // ナレッジ注入もここで一括して行う（旧 app.js のモンキーパッチを統合）。
-    async callApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null) {
+    // onChunk はストリーミング描画用。渡すのはチャット本体だけで、要約・メモリ学習・
+    // タイトル生成などは渡さない（一括で受け取れば足りるため）。
+    // 今のところ受け取れるのは Gemini のみ。他プロバイダーは従来どおり一括。
+    async callApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null, onChunk = null) {
         systemInstruction = this._injectProjectKnowledge(systemInstruction);
 
         const provider = state.settings.apiProvider || 'gemini';
@@ -1683,7 +1793,7 @@ export const apiUtils = {
                     verboseError: true
                 }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
             default:
-                return await this.callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, signal);
+                return await this.callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, signal, onChunk);
         }
     }
 };

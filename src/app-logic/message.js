@@ -146,7 +146,7 @@ export const messageMethods = {
      * @param {object} systemInstruction - システムプロンプト。
      * @returns {Promise<Array>} 生成された新しいメッセージオブジェクトの配列。
     */
-     async _internalHandleSend(messagesForApi, generationConfig, systemInstruction) {
+     async _internalHandleSend(messagesForApi, generationConfig, systemInstruction, onChunk = null) {
         let loopCount = 0;
         // Z.ai API(OpenAI互換)は1回のレスポンスで1つのtool_callしか返さないため、
         // Gemini APIよりも多くのループが必要
@@ -165,7 +165,10 @@ export const messageMethods = {
                 generationConfig,
                 systemInstruction,
                 tools: window.functionDeclarations,
-                isFirstCall: (loopCount === 1)
+                isFirstCall: (loopCount === 1),
+                // ストリーミング描画は最初の1回だけ。ツール呼び出しで2周目以降が
+                // 走ると、同じ表示領域を別の呼び出しの本文で上書きしてしまうため。
+                onChunk: (loopCount === 1) ? onChunk : null
             });
 
             const modelMessage = {
@@ -507,7 +510,12 @@ export const messageMethods = {
             } : null;
 
             const historyForApi = this._prepareApiHistory(baseHistory);
-            const newMessages = await this._internalHandleSend(historyForApi, generationConfig, systemInstruction);
+            const newMessages = await this._internalHandleSend(
+                historyForApi,
+                generationConfig,
+                systemInstruction,
+                (text) => uiUtils.updateStreamingContent(modelMessageIndex, text)
+            );
             
             const finalAggregatedMessage = this._aggregateMessages(newMessages);
             finalAggregatedMessage.modelName = state.settings.modelName;
@@ -1180,7 +1188,12 @@ export const messageMethods = {
                 }
                 const systemInstruction = state.currentSystemPrompt?.trim() ? { role: "system", parts: [{ text: state.currentSystemPrompt.trim() }] } : null;
     
-                const newMessages = await this._internalHandleSend(historyForApi, generationConfig, systemInstruction);
+                const newMessages = await this._internalHandleSend(
+                historyForApi,
+                generationConfig,
+                systemInstruction,
+                (text) => uiUtils.updateStreamingContent(modelMessageIndex, text)
+            );
                 const newAggregatedMessage = this._aggregateMessages(newMessages);
                 newAggregatedMessage.modelName = state.settings.modelName;
                 newAggregatedMessage.provider = state.settings.apiProvider || 'gemini';
@@ -1405,7 +1418,7 @@ export const messageMethods = {
 
 
     async callApiWithRetry(apiParams) {
-        const { messagesForApi, generationConfig, systemInstruction, tools, isFirstCall } = apiParams;
+        const { messagesForApi, generationConfig, systemInstruction, tools, isFirstCall, onChunk = null } = apiParams;
         let lastError = null;
         const maxRetries = state.settings.enableAutoRetry ? state.settings.maxRetries : 0;
         const forceCalling = state.settings.forceFunctionCalling && isFirstCall;
@@ -1469,7 +1482,7 @@ export const messageMethods = {
                     }, timeoutMs);
                 }
 
-                const response = await apiUtils.callApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, attemptController.signal);
+                const response = await apiUtils.callApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, attemptController.signal, onChunk);
 
                 const getFinishReasonError = (candidate) => {
                     const reason = candidate?.finishReason;

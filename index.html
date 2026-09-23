@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
     <!-- CSSファイルを外部から読み込む -->
-    <link rel="stylesheet" href="style.css?v=1.25.49">
+    <link rel="stylesheet" href="style.css?v=1.25.63">
     <link rel="stylesheet" href="prism.css" />
     <script src="marked.js" defer></script>
     <!-- DOMPurify: AI出力/インポート由来HTMLのサニタイズ（XSS対策）。marked の後に読み込む -->
@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.62" defer></script>
+    <script src="app.js?v=1.25.63" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -576,6 +576,19 @@
                    </label>
                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
                        ※チェック時、モデル応答の先頭に上記ダミーModelの内容を付与。
+                   </p>
+
+                   <hr style="border: none; border-top: 1px solid var(--border-tertiary); margin: 15px 0;">
+
+                   <label class="checkbox-label">
+                       <input type="checkbox" id="streaming-output-toggle">
+                       ストリーミング出力を使用する
+                   </label>
+                   <p style="font-size: 11px; color: var(--text-secondary); margin-top: -5px; margin-bottom: 10px;">
+                       ※ 返事を書かれる端から表示する。書き終わる時刻は変わらないが待ち時間が短く感じられる。<br>
+                       ※ 現在は Gemini のみ。他のプロバイダーは従来どおり完成後にまとめて表示。<br>
+                       ※ 表示中は書式なしの素のテキスト。書き終わると通常の表示に切り替わる。<br>
+                       ※ 途中で中断・通信断が起きた場合も、そこまでの内容は保存される。
                    </p>
 
                    <label class="checkbox-label" style="margin-top: 15px;">

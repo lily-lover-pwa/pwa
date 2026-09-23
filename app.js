@@ -1635,6 +1635,7 @@ ${relationship_context}`;
       topPInput: document.getElementById("top-p"),
       thinkingBudgetInput: document.getElementById("thinking-budget"),
       includeThoughtsToggle: document.getElementById("include-thoughts-toggle"),
+      streamingOutputToggle: document.getElementById("streaming-output-toggle"),
       thoughtTranslationOptionsDiv: document.getElementById("thought-translation-options"),
       enableThoughtTranslationCheckbox: document.getElementById("enable-thought-translation"),
       thoughtTranslationModelSelect: document.getElementById("thought-translation-model"),
@@ -2060,6 +2061,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.63": [
+      "ストリーミング表示を追加しました。返事を書かれる端から表示するので、書き終わるまでの無音がなくなります。書き終わる時刻そのものは変わりませんが、長い返事ほど待ち時間が短く感じられるはずです。設定の「アドバンスド」→「ストリーミング出力を使用する」から有効にできます（現在は Gemini のみ。既定はOFFです）。",
+      "表示中は書式なしの素のテキストで、書き終わると通常の表示に切り替わります。途中で装飾を描くと、閉じていないコードブロックなどで表示が崩れるためです。",
+      "途中で中断したり通信が切れたりした場合も、そこまで届いた内容は保存されます。その場合は本文の末尾に「※…ため、ここまでの内容です」と付きます。"
+    ],
     "1.62": [
       "新しく出たモデルを追加しました。Claude Opus 5.5（入力$4・出力$20。Opus 5 より2割安く、キャッシュ読み込みは $0.20）、GPT-6 Sol（入力$2・出力$10）、GPT-6 Luna（入力$0.10・出力$0.50）、Grok 4.7（Grok 4.6 と同額の入力$2・出力$6）です。料金表とモデル一覧の両方に入れています。",
       "GPT-6 Astra もモデル一覧から選べるようにしました（料金はすでに対応済みでした）。"
@@ -2303,6 +2309,8 @@ ${relationship_context}`;
       topP: null,
       thinkingBudget: null,
       includeThoughts: false,
+      // 返事を書かれる端から表示する（Geminiのみ）。まずは様子見のため既定OFF。
+      enableStreaming: false,
       enableThoughtTranslation: true,
       // 思考プロセスの翻訳を有効にするか
       thoughtTranslationModel: "gemini-2.5-flash-lite",
@@ -3095,6 +3103,7 @@ Reason: [NGの場合の理由]`,
       contentDiv.classList.add("message-content");
       if (isStreamingPlaceholder) {
         contentDiv.id = `streaming-content-${index}`;
+        contentDiv.classList.add("streaming-content");
       }
       if (role === "user" && attachments && attachments.length > 0) {
         const details = document.createElement("details");
@@ -3584,6 +3593,30 @@ Reason: [NGの場合の理由]`,
       this.setSendingState(false);
     },
     // チャットタイトルを更新
+    /**
+     * ストリーミング中の本文を書き換える。
+     *
+     * プレースホルダーは createMessageElement が <pre> で素のテキストを描く作りに
+     * なっている（Markdown は書き終わってから renderChatMessages が描き直す）。
+     * 途中で Markdown 化すると、閉じていないコードブロックや強調で表示が崩れるため。
+     *
+     * @param {number} index メッセージのインデックス
+     * @param {string} text ここまでに届いた本文
+     */
+    updateStreamingContent(index, text) {
+      const contentDiv = document.getElementById(`streaming-content-${index}`);
+      if (!contentDiv) return;
+      let pre = contentDiv.querySelector("pre");
+      if (!pre) {
+        pre = document.createElement("pre");
+        contentDiv.appendChild(pre);
+      }
+      pre.textContent = text;
+      if (state.settings.autoScroll) {
+        const container = elements.messageContainer;
+        if (container) container.scrollTop = container.scrollHeight;
+      }
+    },
     updateChatTitle(definitiveTitle = null) {
       let titleText = "新規チャット";
       let baseTitle = "";
@@ -3944,6 +3977,7 @@ Reason: [NGの場合の理由]`,
       elements.topPInput.value = state.settings.topP === null ? "" : state.settings.topP;
       elements.thinkingBudgetInput.value = state.settings.thinkingBudget === null ? "" : state.settings.thinkingBudget;
       elements.includeThoughtsToggle.checked = state.settings.includeThoughts;
+      elements.streamingOutputToggle.checked = state.settings.enableStreaming;
       elements.enableThoughtTranslationCheckbox.checked = state.settings.enableThoughtTranslation;
       elements.thoughtTranslationModelSelect.value = state.settings.thoughtTranslationModel || "gemini-2.5-flash-lite";
       elements.thoughtTranslationOptionsDiv.classList.toggle("hidden", !state.settings.includeThoughts);
@@ -5899,6 +5933,7 @@ Reason: [NGの場合の理由]`,
         topP: { element: elements.topPInput, event: "input" },
         thinkingBudget: { element: elements.thinkingBudgetInput, event: "input" },
         includeThoughts: { element: elements.includeThoughtsToggle, event: "change" },
+        enableStreaming: { element: elements.streamingOutputToggle, event: "change" },
         enableThoughtTranslation: { element: elements.enableThoughtTranslationCheckbox, event: "change" },
         thoughtTranslationModel: { element: elements.thoughtTranslationModelSelect, event: "change" },
         dummyUser: { element: elements.dummyUserInput, event: "input" },
@@ -8558,6 +8593,53 @@ AI: ${firstModelContent}`;
     }
   };
 
+  // src/utils/gemini-stream.js
+  function createGeminiStreamAssembler() {
+    const parts = [];
+    let text = "";
+    let usageMetadata = null;
+    let finishReason = null;
+    let safetyRatings = null;
+    let groundingMetadata = null;
+    let promptFeedback = null;
+    let role = "model";
+    return {
+      addChunk(chunk) {
+        if (!chunk || typeof chunk !== "object") return;
+        if (chunk.promptFeedback) promptFeedback = chunk.promptFeedback;
+        if (chunk.usageMetadata) usageMetadata = chunk.usageMetadata;
+        const candidate = chunk.candidates?.[0];
+        if (!candidate) return;
+        if (candidate.finishReason) finishReason = candidate.finishReason;
+        if (candidate.safetyRatings) safetyRatings = candidate.safetyRatings;
+        if (candidate.groundingMetadata) groundingMetadata = candidate.groundingMetadata;
+        if (candidate.content?.role) role = candidate.content.role;
+        for (const part of candidate.content?.parts || []) {
+          parts.push(part);
+          if (part.text && part.thought !== true) text += part.text;
+        }
+      },
+      getText() {
+        return text;
+      },
+      // 途中で失敗したとき、保存する価値があるかの判定に使う
+      hasContent() {
+        return parts.length > 0;
+      },
+      build() {
+        const candidate = { content: { parts, role } };
+        if (finishReason) candidate.finishReason = finishReason;
+        if (safetyRatings) candidate.safetyRatings = safetyRatings;
+        if (groundingMetadata) candidate.groundingMetadata = groundingMetadata;
+        const response = { candidates: [candidate] };
+        if (usageMetadata) response.usageMetadata = usageMetadata;
+        if (promptFeedback) response.promptFeedback = promptFeedback;
+        return response;
+      }
+    };
+  }
+  __name(createGeminiStreamAssembler, "createGeminiStreamAssembler");
+
   // src/utils/reasoning.js
   function extractReasoningText(message) {
     if (!message || typeof message !== "object") return "";
@@ -8572,6 +8654,40 @@ AI: ${firstModelContent}`;
     return "";
   }
   __name(extractReasoningText, "extractReasoningText");
+
+  // src/utils/sse.js
+  function parseSSEBuffer(buffer) {
+    if (typeof buffer !== "string" || buffer === "") {
+      return { events: [], rest: "" };
+    }
+    const events = [];
+    let rest = buffer;
+    const separator = /\r?\n\r?\n/;
+    for (; ; ) {
+      const match = separator.exec(rest);
+      if (!match) break;
+      const rawEvent = rest.slice(0, match.index);
+      rest = rest.slice(match.index + match[0].length);
+      const data = extractData(rawEvent);
+      if (data !== null) events.push(data);
+    }
+    return { events, rest };
+  }
+  __name(parseSSEBuffer, "parseSSEBuffer");
+  function extractData(rawEvent) {
+    const dataLines = [];
+    for (const line of rawEvent.split(/\r?\n/)) {
+      if (line === "" || line.startsWith(":")) continue;
+      const colon = line.indexOf(":");
+      const field = colon === -1 ? line : line.slice(0, colon);
+      if (field !== "data") continue;
+      let value = colon === -1 ? "" : line.slice(colon + 1);
+      if (value.startsWith(" ")) value = value.slice(1);
+      dataLines.push(value);
+    }
+    return dataLines.length > 0 ? dataLines.join("\n") : null;
+  }
+  __name(extractData, "extractData");
 
   // src/api.js
   function extractSystemText(systemInstruction) {
@@ -8962,7 +9078,7 @@ AI: ${firstModelContent}`;
       return bedrockTools;
     },
     // Gemini APIを呼び出す
-    async callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null) {
+    async callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null, onChunk = null) {
       console.log(`[Debug] callGeminiApi: 現在の設定値を確認します。`, {
         forceFunctionCalling: state.settings.forceFunctionCalling,
         geminiEnableFunctionCalling: state.settings.geminiEnableFunctionCalling,
@@ -8981,7 +9097,8 @@ AI: ${firstModelContent}`;
         await appLogic._updateApiUsageCount(state.activeProfileId);
       }
       const isImageGenModel = isImageGenerationModel(model);
-      const endpointMethod = "generateContent?";
+      const useStreaming = typeof onChunk === "function" && state.settings.enableStreaming && !isImageGenModel;
+      const endpointMethod = useStreaming ? "streamGenerateContent?alt=sse&" : "generateContent?";
       const endpoint = `${GEMINI_API_BASE_URL}${model}:${endpointMethod}key=${apiKey}`;
       const finalGenerationConfig = { ...generationConfig };
       if (isImageGenModel) {
@@ -9065,6 +9182,9 @@ AI: ${firstModelContent}`;
           error.data = errorData;
           throw error;
         }
+        if (useStreaming) {
+          return await this._readGeminiStream(response, onChunk);
+        }
         return response;
       } catch (error) {
         if (error.name === "AbortError") {
@@ -9073,6 +9193,87 @@ AI: ${firstModelContent}`;
           throw error;
         }
       }
+    },
+    /**
+     * streamGenerateContent の SSE を読み、非ストリーミングと同じ形に組み立てて返す。
+     *
+     * 戻り値は Response のかわりに使える最小限のオブジェクト（json() を持つ）。
+     * こうしておくと呼び出し側は `await response.json()` のままで、
+     * ストリーミングかどうかを意識しなくて済む。
+     *
+     * @param {Response} response streamGenerateContent のレスポンス
+     * @param {(text: string) => void} onChunk 受信のたびに「ここまでの本文」を渡す
+     */
+    async _readGeminiStream(response, onChunk) {
+      if (!response.body) {
+        throw new Error("ストリーミング応答にボディがありません。");
+      }
+      const assembler = createGeminiStreamAssembler();
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      const buildTruncated = /* @__PURE__ */ __name((note) => {
+        const built = assembler.build();
+        const parts = built.candidates[0].content.parts;
+        parts.push({ text: `
+
+（※${note}ため、ここまでの内容です）` });
+        built.candidates[0].finishReason = "STOP";
+        return { ok: true, status: 200, json: /* @__PURE__ */ __name(async () => built, "json") };
+      }, "buildTruncated");
+      try {
+        for (; ; ) {
+          const { value, done } = await reader.read();
+          if (done) {
+            const { events: events2 } = parseSSEBuffer(buffer + "\n\n");
+            for (const data of events2) this._addGeminiChunk(assembler, data);
+            break;
+          }
+          buffer += value;
+          const { events, rest } = parseSSEBuffer(buffer);
+          buffer = rest;
+          let updated = false;
+          for (const data of events) {
+            if (this._addGeminiChunk(assembler, data)) updated = true;
+          }
+          if (updated) {
+            try {
+              onChunk(assembler.getText());
+            } catch (e) {
+              console.warn("[Streaming] 描画コールバックでエラー:", e);
+            }
+          }
+        }
+      } catch (error) {
+        await reader.cancel().catch(() => {
+        });
+        if (assembler.hasContent()) {
+          const aborted = error.name === "AbortError" || /aborted|キャンセル/.test(error.message || "");
+          console.warn("[Streaming] 中断されましたが、受信済みのぶんを保存します。", error);
+          return buildTruncated(aborted ? "中断された" : "通信が途切れた");
+        }
+        if (error.name === "AbortError") {
+          throw new Error("リクエストがキャンセルされました。");
+        }
+        throw error;
+      }
+      return { ok: true, status: 200, json: /* @__PURE__ */ __name(async () => assembler.build(), "json") };
+    },
+    /**
+     * SSE の data 値（JSON文字列）をパースして組み立て器へ渡す。
+     * @returns {boolean} 本文が増えたか（描画の要否判定に使う）
+     */
+    _addGeminiChunk(assembler, data) {
+      if (!data || data === "[DONE]") return false;
+      let chunk;
+      try {
+        chunk = JSON.parse(data);
+      } catch (e) {
+        console.warn("[Streaming] チャンクのパースに失敗（無視します）:", data.slice(0, 120));
+        return false;
+      }
+      const before = assembler.getText();
+      assembler.addChunk(chunk);
+      return assembler.getText() !== before;
     },
     /**
      * テキストを日本語に翻訳する関数
@@ -9886,7 +10087,10 @@ ${knowledgeText}`;
     },
     // プロバイダーに応じて適切なAPIアダプタへ振り分けるディスパッチャ。
     // ナレッジ注入もここで一括して行う（旧 app.js のモンキーパッチを統合）。
-    async callApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null) {
+    // onChunk はストリーミング描画用。渡すのはチャット本体だけで、要約・メモリ学習・
+    // タイトル生成などは渡さない（一括で受け取れば足りるため）。
+    // 今のところ受け取れるのは Gemini のみ。他プロバイダーは従来どおり一括。
+    async callApi(messagesForApi, generationConfig, systemInstruction, tools = null, forceCalling = false, signal = null, onChunk = null) {
       systemInstruction = this._injectProjectKnowledge(systemInstruction);
       const provider = state.settings.apiProvider || "gemini";
       switch (provider) {
@@ -9953,7 +10157,7 @@ ${knowledgeText}`;
             verboseError: true
           }, messagesForApi, generationConfig, systemInstruction, forceCalling, signal);
         default:
-          return await this.callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, signal);
+          return await this.callGeminiApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, signal, onChunk);
       }
     }
   };
@@ -10152,7 +10356,7 @@ ${knowledgeText}`;
      * @param {object} systemInstruction - システムプロンプト。
      * @returns {Promise<Array>} 生成された新しいメッセージオブジェクトの配列。
     */
-    async _internalHandleSend(messagesForApi, generationConfig, systemInstruction) {
+    async _internalHandleSend(messagesForApi, generationConfig, systemInstruction, onChunk = null) {
       let loopCount = 0;
       const MAX_LOOPS = 20;
       const finalTurnResults = [];
@@ -10166,7 +10370,10 @@ ${knowledgeText}`;
           generationConfig,
           systemInstruction,
           tools: window.functionDeclarations,
-          isFirstCall: loopCount === 1
+          isFirstCall: loopCount === 1,
+          // ストリーミング描画は最初の1回だけ。ツール呼び出しで2周目以降が
+          // 走ると、同じ表示領域を別の呼び出しの本文で上書きしてしまうため。
+          onChunk: loopCount === 1 ? onChunk : null
         });
         const modelMessage = {
           role: "model",
@@ -10450,7 +10657,12 @@ ${knowledgeText}`;
           _dynamicText: dynamicText
         } : null;
         const historyForApi = this._prepareApiHistory(baseHistory);
-        const newMessages = await this._internalHandleSend(historyForApi, generationConfig, systemInstruction);
+        const newMessages = await this._internalHandleSend(
+          historyForApi,
+          generationConfig,
+          systemInstruction,
+          (text2) => uiUtils.updateStreamingContent(modelMessageIndex, text2)
+        );
         const finalAggregatedMessage = this._aggregateMessages(newMessages);
         finalAggregatedMessage.modelName = state.settings.modelName;
         finalAggregatedMessage.provider = state.settings.apiProvider || "gemini";
@@ -10982,7 +11194,12 @@ ${knowledgeText}`;
             if (state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
           }
           const systemInstruction = state.currentSystemPrompt?.trim() ? { role: "system", parts: [{ text: state.currentSystemPrompt.trim() }] } : null;
-          const newMessages = await this._internalHandleSend(historyForApi, generationConfig, systemInstruction);
+          const newMessages = await this._internalHandleSend(
+            historyForApi,
+            generationConfig,
+            systemInstruction,
+            (text) => uiUtils.updateStreamingContent(modelMessageIndex, text)
+          );
           const newAggregatedMessage = this._aggregateMessages(newMessages);
           newAggregatedMessage.modelName = state.settings.modelName;
           newAggregatedMessage.provider = state.settings.apiProvider || "gemini";
@@ -11156,7 +11373,7 @@ ${knowledgeText}`;
       }
     },
     async callApiWithRetry(apiParams) {
-      const { messagesForApi, generationConfig, systemInstruction, tools, isFirstCall } = apiParams;
+      const { messagesForApi, generationConfig, systemInstruction, tools, isFirstCall, onChunk = null } = apiParams;
       let lastError = null;
       const maxRetries = state.settings.enableAutoRetry ? state.settings.maxRetries : 0;
       const forceCalling = state.settings.forceFunctionCalling && isFirstCall;
@@ -11205,7 +11422,7 @@ ${knowledgeText}`;
               attemptController.abort();
             }, timeoutMs);
           }
-          const response = await apiUtils.callApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, attemptController.signal);
+          const response = await apiUtils.callApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, attemptController.signal, onChunk);
           const getFinishReasonError = /* @__PURE__ */ __name((candidate2) => {
             const reason = candidate2?.finishReason;
             if (reason && reason !== "STOP" && reason !== "MAX_TOKENS") {

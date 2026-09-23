@@ -1183,6 +1183,7 @@ export const lifecycleMethods = {
             topP: { element: elements.topPInput, event: 'input' },
             thinkingBudget: { element: elements.thinkingBudgetInput, event: 'input' },
             includeThoughts: { element: elements.includeThoughtsToggle, event: 'change' },
+            enableStreaming: { element: elements.streamingOutputToggle, event: 'change' },
             enableThoughtTranslation: { element: elements.enableThoughtTranslationCheckbox, event: 'change' },
             thoughtTranslationModel: { element: elements.thoughtTranslationModelSelect, event: 'change' },
             dummyUser: { element: elements.dummyUserInput, event: 'input' },

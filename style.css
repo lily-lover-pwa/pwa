@@ -688,6 +688,11 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--border-primary)
 .code-artifact-copy .material-symbols-outlined { font-size: 16px; }
 .code-artifact pre { margin: 0; border: none; border-radius: 0; }
 .message.user .message-content pre { background-color: transparent; padding: 0; margin: 0; border: none; border-radius: 0; color: inherit; font-family: inherit; font-size: inherit; line-height: inherit; white-space: pre-wrap; word-wrap: break-word; overflow-x: visible; }
+/* ストリーミング表示中の本文。素のテキストを <pre> で描いているが、既定の
+   .message-content pre はコードブロック用の装飾（等幅・灰背景・折り返しなし）
+   なので、ユーザー発言と同じく本文として読める見た目に戻す。
+   折り返さないと長い段落が横に伸びて読めなくなる。 */
+.message-content.streaming-content > pre { background-color: transparent; padding: 0; margin: 0; border: none; border-radius: 0; color: inherit; font-family: inherit; font-size: inherit; line-height: inherit; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; overflow-x: visible; }
 .message-content code:not(pre > code) { background-color: var(--bg-secondary); padding: 0.2em 0.4em; border-radius: 3px; font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; font-size: 0.9em; border: 1px solid var(--border-tertiary); color: var(--text-secondary); }
 .message-content blockquote { margin: 1em 0; padding-left: 1em; border-left: 4px solid var(--border-primary); color: var(--text-secondary); }
 .message-content a { color: var(--text-link); text-decoration: underline; }
