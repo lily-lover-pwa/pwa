@@ -794,6 +794,24 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         }
     },
 
+    /**
+     * ストリーミング表示の後片付け。
+     *
+     * 本文は renderChatMessages が Markdown で描き直すので、ここでは
+     * ストリーミング用の id を外して、次の送信で作られるプレースホルダーと
+     * 取り違えないようにする（id が残っていると、古い要素のほうに書き込んでしまう）。
+     *
+     * @param {number} index メッセージのインデックス
+     */
+    finalizeStreamingMessage(index) {
+        for (const prefix of ['streaming-message', 'streaming-content', 'streaming-thought-summary']) {
+            const el = document.getElementById(`${prefix}-${index}`);
+            if (el) el.removeAttribute('id');
+        }
+        state.partialStreamContent = '';
+        state.streamTargetContent = '';
+    },
+
     updateChatTitle(definitiveTitle = null) {
         let titleText = '新規チャット';
         let baseTitle = '';
@@ -1200,6 +1218,7 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         elements.thinkingBudgetInput.value = state.settings.thinkingBudget === null ? '' : state.settings.thinkingBudget;
         elements.includeThoughtsToggle.checked = state.settings.includeThoughts;
         elements.streamingOutputToggle.checked = state.settings.enableStreaming;
+        elements.streamingSpeedInput.value = state.settings.streamingSpeed ?? '';
         elements.enableThoughtTranslationCheckbox.checked = state.settings.enableThoughtTranslation;
         elements.thoughtTranslationModelSelect.value = state.settings.thoughtTranslationModel || 'gemini-2.5-flash-lite';
         elements.thoughtTranslationOptionsDiv.classList.toggle('hidden', !state.settings.includeThoughts);

@@ -74,6 +74,7 @@ try {
         thinkingBudgetInput: document.getElementById('thinking-budget'),
         includeThoughtsToggle: document.getElementById('include-thoughts-toggle'),
         streamingOutputToggle: document.getElementById('streaming-output-toggle'),
+        streamingSpeedInput: document.getElementById('streaming-speed'),
         thoughtTranslationOptionsDiv: document.getElementById('thought-translation-options'),
         enableThoughtTranslationCheckbox: document.getElementById('enable-thought-translation'),
         thoughtTranslationModelSelect: document.getElementById('thought-translation-model'),

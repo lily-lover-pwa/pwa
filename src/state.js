@@ -16,6 +16,9 @@ export const state = {
     videoUrlCache: new Map(),
     imageUrlCache: new Map(),
     historySearchQuery: '', // 履歴画面の検索語（一時的な表示状態なので保存しない）
+    // ストリーミング中の表示内容。DOMだけに書くと再描画で消えるため state に持つ。
+    partialStreamContent: '',   // すでに画面に出したぶん
+    streamTargetContent: '',    // 受信済みのぶん（この差が未表示＝文字送りの残り）
     settings: {
         apiProvider: 'gemini',
         apiKey: '',
@@ -46,6 +49,8 @@ export const state = {
         includeThoughts: false,
         // 返事を書かれる端から表示する（Geminiのみ）。まずは様子見のため既定OFF。
         enableStreaming: false,
+        // 文字送りの間隔（ミリ秒/文字）。0で文字送りなし（届いたぶんを即表示）。
+        streamingSpeed: 12,
         enableThoughtTranslation: true, // 思考プロセスの翻訳を有効にするか
         thoughtTranslationModel: 'gemini-2.5-flash-lite',
         dummyUser: '',

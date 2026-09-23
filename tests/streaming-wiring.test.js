@@ -59,12 +59,14 @@ describe('ストリーミングのAPI配線', () => {
     // 途中で切れたときに捨ててしまうと、長文の返事が丸ごと消える
     it('中断・通信断でも受信済みのぶんを返す', () => {
         expect(api).toContain('assembler.hasContent()');
-        expect(api).toMatch(/buildTruncated\(.*(中断された|通信が途切れた)/s);
+        expect(api).toContain('buildTruncated()');
     });
 
-    // 黙って返すと「短い返事が来た」ようにしか見えない
-    it('途中である旨を本文に書き足す', () => {
-        expect(api).toContain('ここまでの内容です');
+    // 回帰: 以前は本文の末尾へ注記を書き足していたが、その注記ごと履歴に残り
+    // 次の送信でモデルに読まれてしまう。途中であることは finishReason で示す
+    it('途中であることを本文ではなく finishReason で示す', () => {
+        expect(api).toContain("finishReason = 'ABORTED'");
+        expect(api).not.toContain('ここまでの内容です');
     });
 
     it('onChunk が dispatcher から Gemini へ渡っている', () => {
@@ -106,7 +108,52 @@ describe('送信経路の配線', () => {
     const message = read('src/app-logic/message.js');
 
     it('描画コールバックを渡している', () => {
-        expect(message).toContain('uiUtils.updateStreamingContent(modelMessageIndex, text)');
+        expect(message).toContain('this._createStreamRenderer(modelMessageIndex)');
+    });
+
+    // ここで弾くと、せっかく受信したぶんが捨てられる
+    it('ABORTED をエラー扱いにしない', () => {
+        expect(message).toContain("reason !== 'ABORTED'");
+    });
+
+    // id が残っていると、次の送信で古い要素のほうに書き込んでしまう
+    it('完了時にストリーミング用の id を外している', () => {
+        expect(message).toContain('uiUtils.finalizeStreamingMessage(modelMessageIndex)');
+        expect(read('src/ui.js')).toContain('finalizeStreamingMessage(index)');
+    });
+});
+
+// 受信は数十文字ずつまとめて届くため、そのまま出すと表示が跳ねる
+describe('文字送りの配線', () => {
+    const message = read('src/app-logic/message.js');
+
+    it('未表示ぶんを state に持っている', () => {
+        expect(read('src/state.js')).toContain('partialStreamContent');
+        expect(read('src/state.js')).toContain('streamTargetContent');
+    });
+
+    it('planTypewriterStep を使って送る量を決めている', () => {
+        expect(message).toContain('planTypewriterStep({');
+        expect(message).toContain("from '../utils/typewriter.js'");
+    });
+
+    it('中断されたら文字送りを止める', () => {
+        expect(message).toMatch(/pump[\s\S]{0,400}abortController\?\.signal\.aborted/);
+    });
+
+    it('速度の設定が保存対象に入っている', () => {
+        expect(read('src/app-logic/lifecycle.js'))
+            .toContain('streamingSpeed: { element: elements.streamingSpeedInput');
+        expect(read('src/ui.js'))
+            .toContain('elements.streamingSpeedInput.value = state.settings.streamingSpeed');
+    });
+
+    it('設定画面に入力欄がある', () => {
+        const doc = new JSDOM(read('index.html')).window.document;
+        const input = doc.getElementById('streaming-speed');
+        expect(input).not.toBeNull();
+        expect(input.type).toBe('number');
+        expect(input.min).toBe('0');
     });
 
     // 2周目以降も同じ要素へ流すと、前の呼び出しの本文を上書きしてしまう

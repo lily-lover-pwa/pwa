@@ -667,13 +667,11 @@ export const apiUtils = {
         let buffer = '';
 
         // 中断・通信断が起きても、そこまで届いたぶんは捨てずに返す。
-        // ただし黙って返すと「短い返事が来た」ようにしか見えないので、
-        // 途中である旨を本文の末尾に書き足して区別できるようにする。
-        const buildTruncated = (note) => {
+        // 途中であることは本文に混ぜず finishReason で示す。本文へ書き足すと
+        // その注記ごと履歴に残り、次の送信でモデルに読まれてしまうため。
+        const buildTruncated = () => {
             const built = assembler.build();
-            const parts = built.candidates[0].content.parts;
-            parts.push({ text: `\n\n（※${note}ため、ここまでの内容です）` });
-            built.candidates[0].finishReason = 'STOP';
+            built.candidates[0].finishReason = 'ABORTED';
             return { ok: true, status: 200, json: async () => built };
         };
 
@@ -709,9 +707,8 @@ export const apiUtils = {
             await reader.cancel().catch(() => {});
 
             if (assembler.hasContent()) {
-                const aborted = error.name === 'AbortError' || /aborted|キャンセル/.test(error.message || '');
                 console.warn('[Streaming] 中断されましたが、受信済みのぶんを保存します。', error);
-                return buildTruncated(aborted ? '中断された' : '通信が途切れた');
+                return buildTruncated();
             }
             if (error.name === 'AbortError') {
                 throw new Error("リクエストがキャンセルされました。");

@@ -1184,6 +1184,7 @@ export const lifecycleMethods = {
             thinkingBudget: { element: elements.thinkingBudgetInput, event: 'input' },
             includeThoughts: { element: elements.includeThoughtsToggle, event: 'change' },
             enableStreaming: { element: elements.streamingOutputToggle, event: 'change' },
+            streamingSpeed: { element: elements.streamingSpeedInput, event: 'input' },
             enableThoughtTranslation: { element: elements.enableThoughtTranslationCheckbox, event: 'change' },
             thoughtTranslationModel: { element: elements.thoughtTranslationModelSelect, event: 'change' },
             dummyUser: { element: elements.dummyUserInput, event: 'input' },

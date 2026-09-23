@@ -4,6 +4,7 @@ import { GEMINI_API_BASE_URL, INITIAL_RETRY_DELAY } from '../constants.js';
 import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
+import { planTypewriterStep } from '../utils/typewriter.js';
 import { uiUtils } from '../ui.js';
 import { htmlUtils } from '../utils/html.js';
 import { interruptibleSleep, sleep } from '../utils/format.js';
@@ -146,6 +147,55 @@ export const messageMethods = {
      * @param {object} systemInstruction - システムプロンプト。
      * @returns {Promise<Array>} 生成された新しいメッセージオブジェクトの配列。
     */
+    /**
+     * @private ストリーミングの受信と表示を分離する。
+     *
+     * SSE は数十文字がまとめて届いて次まで間が空く、という届き方をするので、
+     * 受け取ったそばから描くと表示が跳ねる。受信ぶんを溜めておき、
+     * 1文字ずつ一定間隔で送り出して均す。
+     *
+     * 溜まりすぎると「生成は終わっているのに読めない」時間ができるため、
+     * planTypewriterStep が未表示の量に応じて1回に送る文字数を増やす。
+     *
+     * @param {number} messageIndex 表示先のメッセージのインデックス
+     */
+    _createStreamRenderer(messageIndex) {
+        state.partialStreamContent = '';
+        state.streamTargetContent = '';
+        let pumping = false;
+
+        const pump = async () => {
+            if (pumping) return;
+            pumping = true;
+            try {
+                for (;;) {
+                    if (state.abortController?.signal.aborted) break;
+
+                    const shown = state.partialStreamContent.length;
+                    const backlog = state.streamTargetContent.length - shown;
+                    if (backlog <= 0) break;
+
+                    const { chars, delayMs } = planTypewriterStep({
+                        backlog,
+                        speedMs: state.settings.streamingSpeed
+                    });
+                    state.partialStreamContent = state.streamTargetContent.slice(0, shown + chars);
+                    uiUtils.updateStreamingContent(messageIndex, state.partialStreamContent);
+
+                    if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+            } finally {
+                pumping = false;
+            }
+        };
+
+        return (text) => {
+            state.streamTargetContent = text;
+            // 走らせっぱなしにはせず、受信のたびに起こす。多重起動は pumping で防ぐ
+            pump();
+        };
+    },
+
      async _internalHandleSend(messagesForApi, generationConfig, systemInstruction, onChunk = null) {
         let loopCount = 0;
         // Z.ai API(OpenAI互換)は1回のレスポンスで1つのtool_callしか返さないため、
@@ -514,7 +564,7 @@ export const messageMethods = {
                 historyForApi,
                 generationConfig,
                 systemInstruction,
-                (text) => uiUtils.updateStreamingContent(modelMessageIndex, text)
+                this._createStreamRenderer(modelMessageIndex)
             );
             
             const finalAggregatedMessage = this._aggregateMessages(newMessages);
@@ -524,6 +574,9 @@ export const messageMethods = {
             finalAggregatedMessage.provider = state.settings.apiProvider || 'gemini';
             state.currentMessages[modelMessageIndex] = finalAggregatedMessage;
 
+            // 本文は renderChatMessages が描き直すので、先にストリーミング用の
+            // id を外しておく。残っていると次の送信で古い要素に書き込んでしまう
+            uiUtils.finalizeStreamingMessage(modelMessageIndex);
             uiUtils.renderChatMessages();
 
             // モデルの応答をDBに保存
@@ -1192,7 +1245,7 @@ export const messageMethods = {
                 historyForApi,
                 generationConfig,
                 systemInstruction,
-                (text) => uiUtils.updateStreamingContent(modelMessageIndex, text)
+                this._createStreamRenderer(modelMessageIndex)
             );
                 const newAggregatedMessage = this._aggregateMessages(newMessages);
                 newAggregatedMessage.modelName = state.settings.modelName;
@@ -1486,7 +1539,9 @@ export const messageMethods = {
 
                 const getFinishReasonError = (candidate) => {
                     const reason = candidate?.finishReason;
-                    if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS') {
+                    // ABORTED はストリーミングが途中で切れたときに付く。受信済みのぶんは
+                    // 保存したいので、ここでエラーにしない
+                    if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS' && reason !== 'ABORTED') {
                         const error = new Error(`モデルが応答をブロックしました (理由: ${reason})`);
                         error.candidate = candidate; // エラーオブジェクトに詳細情報を添付
                         return error;

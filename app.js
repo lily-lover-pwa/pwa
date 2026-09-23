@@ -1636,6 +1636,7 @@ ${relationship_context}`;
       thinkingBudgetInput: document.getElementById("thinking-budget"),
       includeThoughtsToggle: document.getElementById("include-thoughts-toggle"),
       streamingOutputToggle: document.getElementById("streaming-output-toggle"),
+      streamingSpeedInput: document.getElementById("streaming-speed"),
       thoughtTranslationOptionsDiv: document.getElementById("thought-translation-options"),
       enableThoughtTranslationCheckbox: document.getElementById("enable-thought-translation"),
       thoughtTranslationModelSelect: document.getElementById("thought-translation-model"),
@@ -2061,6 +2062,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.64": [
+      "ストリーミング表示に文字送りを追加しました。返事は数十文字ずつまとめて届くため、そのまま出すと表示がガタガタ跳ねていました。1文字ずつ一定の間隔で送るようにして滑らかにしています。設定の「文字送り速度」で調整でき、0にすると届いたぶんをそのまま表示します（既定は12ミリ秒/文字）。",
+      "生成に対して表示が遅れすぎないようにしてあります。溜まっているときは自動でまとめて送るので、「もう書き終わっているのに読めない」という待ち時間は出ません。",
+      "途中で中断したときの扱いを変えました。これまでは本文の末尾に「※…ここまでの内容です」と書き足していましたが、その文ごと履歴に残って次の送信でAIに読まれてしまうため、本文には混ぜないようにしました。"
+    ],
     "1.63": [
       "ストリーミング表示を追加しました。返事を書かれる端から表示するので、書き終わるまでの無音がなくなります。書き終わる時刻そのものは変わりませんが、長い返事ほど待ち時間が短く感じられるはずです。設定の「アドバンスド」→「ストリーミング出力を使用する」から有効にできます（現在は Gemini のみ。既定はOFFです）。",
       "表示中は書式なしの素のテキストで、書き終わると通常の表示に切り替わります。途中で装飾を描くと、閉じていないコードブロックなどで表示が崩れるためです。",
@@ -2281,6 +2287,11 @@ ${relationship_context}`;
     imageUrlCache: /* @__PURE__ */ new Map(),
     historySearchQuery: "",
     // 履歴画面の検索語（一時的な表示状態なので保存しない）
+    // ストリーミング中の表示内容。DOMだけに書くと再描画で消えるため state に持つ。
+    partialStreamContent: "",
+    // すでに画面に出したぶん
+    streamTargetContent: "",
+    // 受信済みのぶん（この差が未表示＝文字送りの残り）
     settings: {
       apiProvider: "gemini",
       apiKey: "",
@@ -2311,6 +2322,8 @@ ${relationship_context}`;
       includeThoughts: false,
       // 返事を書かれる端から表示する（Geminiのみ）。まずは様子見のため既定OFF。
       enableStreaming: false,
+      // 文字送りの間隔（ミリ秒/文字）。0で文字送りなし（届いたぶんを即表示）。
+      streamingSpeed: 12,
       enableThoughtTranslation: true,
       // 思考プロセスの翻訳を有効にするか
       thoughtTranslationModel: "gemini-2.5-flash-lite",
@@ -3617,6 +3630,23 @@ Reason: [NGの場合の理由]`,
         if (container) container.scrollTop = container.scrollHeight;
       }
     },
+    /**
+     * ストリーミング表示の後片付け。
+     *
+     * 本文は renderChatMessages が Markdown で描き直すので、ここでは
+     * ストリーミング用の id を外して、次の送信で作られるプレースホルダーと
+     * 取り違えないようにする（id が残っていると、古い要素のほうに書き込んでしまう）。
+     *
+     * @param {number} index メッセージのインデックス
+     */
+    finalizeStreamingMessage(index) {
+      for (const prefix of ["streaming-message", "streaming-content", "streaming-thought-summary"]) {
+        const el = document.getElementById(`${prefix}-${index}`);
+        if (el) el.removeAttribute("id");
+      }
+      state.partialStreamContent = "";
+      state.streamTargetContent = "";
+    },
     updateChatTitle(definitiveTitle = null) {
       let titleText = "新規チャット";
       let baseTitle = "";
@@ -3978,6 +4008,7 @@ Reason: [NGの場合の理由]`,
       elements.thinkingBudgetInput.value = state.settings.thinkingBudget === null ? "" : state.settings.thinkingBudget;
       elements.includeThoughtsToggle.checked = state.settings.includeThoughts;
       elements.streamingOutputToggle.checked = state.settings.enableStreaming;
+      elements.streamingSpeedInput.value = state.settings.streamingSpeed ?? "";
       elements.enableThoughtTranslationCheckbox.checked = state.settings.enableThoughtTranslation;
       elements.thoughtTranslationModelSelect.value = state.settings.thoughtTranslationModel || "gemini-2.5-flash-lite";
       elements.thoughtTranslationOptionsDiv.classList.toggle("hidden", !state.settings.includeThoughts);
@@ -5934,6 +5965,7 @@ Reason: [NGの場合の理由]`,
         thinkingBudget: { element: elements.thinkingBudgetInput, event: "input" },
         includeThoughts: { element: elements.includeThoughtsToggle, event: "change" },
         enableStreaming: { element: elements.streamingOutputToggle, event: "change" },
+        streamingSpeed: { element: elements.streamingSpeedInput, event: "input" },
         enableThoughtTranslation: { element: elements.enableThoughtTranslationCheckbox, event: "change" },
         thoughtTranslationModel: { element: elements.thoughtTranslationModelSelect, event: "change" },
         dummyUser: { element: elements.dummyUserInput, event: "input" },
@@ -9211,13 +9243,9 @@ AI: ${firstModelContent}`;
       const assembler = createGeminiStreamAssembler();
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let buffer = "";
-      const buildTruncated = /* @__PURE__ */ __name((note) => {
+      const buildTruncated = /* @__PURE__ */ __name(() => {
         const built = assembler.build();
-        const parts = built.candidates[0].content.parts;
-        parts.push({ text: `
-
-（※${note}ため、ここまでの内容です）` });
-        built.candidates[0].finishReason = "STOP";
+        built.candidates[0].finishReason = "ABORTED";
         return { ok: true, status: 200, json: /* @__PURE__ */ __name(async () => built, "json") };
       }, "buildTruncated");
       try {
@@ -9247,9 +9275,8 @@ AI: ${firstModelContent}`;
         await reader.cancel().catch(() => {
         });
         if (assembler.hasContent()) {
-          const aborted = error.name === "AbortError" || /aborted|キャンセル/.test(error.message || "");
           console.warn("[Streaming] 中断されましたが、受信済みのぶんを保存します。", error);
-          return buildTruncated(aborted ? "中断された" : "通信が途切れた");
+          return buildTruncated();
         }
         if (error.name === "AbortError") {
           throw new Error("リクエストがキャンセルされました。");
@@ -10162,6 +10189,19 @@ ${knowledgeText}`;
     }
   };
 
+  // src/utils/typewriter.js
+  var DEFAULT_MAX_LAG_MS = 2e3;
+  function planTypewriterStep({ backlog, speedMs, maxLagMs = DEFAULT_MAX_LAG_MS }) {
+    const remaining = Number.isFinite(backlog) ? Math.max(0, Math.floor(backlog)) : 0;
+    if (remaining === 0) return { chars: 0, delayMs: 0 };
+    const speed = Number.isFinite(speedMs) ? speedMs : 0;
+    if (speed <= 0) return { chars: remaining, delayMs: 0 };
+    const lag = Number.isFinite(maxLagMs) && maxLagMs > 0 ? maxLagMs : DEFAULT_MAX_LAG_MS;
+    const chars = Math.max(1, Math.ceil(remaining * speed / lag));
+    return { chars: Math.min(chars, remaining), delayMs: speed };
+  }
+  __name(planTypewriterStep, "planTypewriterStep");
+
   // src/app-logic/retired-model.js
   var PROVIDER_DEFAULT_MODEL = {
     gemini: DEFAULT_MODEL,
@@ -10356,6 +10396,48 @@ ${knowledgeText}`;
      * @param {object} systemInstruction - システムプロンプト。
      * @returns {Promise<Array>} 生成された新しいメッセージオブジェクトの配列。
     */
+    /**
+     * @private ストリーミングの受信と表示を分離する。
+     *
+     * SSE は数十文字がまとめて届いて次まで間が空く、という届き方をするので、
+     * 受け取ったそばから描くと表示が跳ねる。受信ぶんを溜めておき、
+     * 1文字ずつ一定間隔で送り出して均す。
+     *
+     * 溜まりすぎると「生成は終わっているのに読めない」時間ができるため、
+     * planTypewriterStep が未表示の量に応じて1回に送る文字数を増やす。
+     *
+     * @param {number} messageIndex 表示先のメッセージのインデックス
+     */
+    _createStreamRenderer(messageIndex) {
+      state.partialStreamContent = "";
+      state.streamTargetContent = "";
+      let pumping = false;
+      const pump = /* @__PURE__ */ __name(async () => {
+        if (pumping) return;
+        pumping = true;
+        try {
+          for (; ; ) {
+            if (state.abortController?.signal.aborted) break;
+            const shown = state.partialStreamContent.length;
+            const backlog = state.streamTargetContent.length - shown;
+            if (backlog <= 0) break;
+            const { chars, delayMs } = planTypewriterStep({
+              backlog,
+              speedMs: state.settings.streamingSpeed
+            });
+            state.partialStreamContent = state.streamTargetContent.slice(0, shown + chars);
+            uiUtils.updateStreamingContent(messageIndex, state.partialStreamContent);
+            if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+        } finally {
+          pumping = false;
+        }
+      }, "pump");
+      return (text) => {
+        state.streamTargetContent = text;
+        pump();
+      };
+    },
     async _internalHandleSend(messagesForApi, generationConfig, systemInstruction, onChunk = null) {
       let loopCount = 0;
       const MAX_LOOPS = 20;
@@ -10661,12 +10743,13 @@ ${knowledgeText}`;
           historyForApi,
           generationConfig,
           systemInstruction,
-          (text2) => uiUtils.updateStreamingContent(modelMessageIndex, text2)
+          this._createStreamRenderer(modelMessageIndex)
         );
         const finalAggregatedMessage = this._aggregateMessages(newMessages);
         finalAggregatedMessage.modelName = state.settings.modelName;
         finalAggregatedMessage.provider = state.settings.apiProvider || "gemini";
         state.currentMessages[modelMessageIndex] = finalAggregatedMessage;
+        uiUtils.finalizeStreamingMessage(modelMessageIndex);
         uiUtils.renderChatMessages();
         await dbUtils.saveChat(null, null, { skipPush: true });
         this.autoGenerateTitle().catch((e) => console.warn("[AutoTitle] エラー:", e.message));
@@ -11198,7 +11281,7 @@ ${knowledgeText}`;
             historyForApi,
             generationConfig,
             systemInstruction,
-            (text) => uiUtils.updateStreamingContent(modelMessageIndex, text)
+            this._createStreamRenderer(modelMessageIndex)
           );
           const newAggregatedMessage = this._aggregateMessages(newMessages);
           newAggregatedMessage.modelName = state.settings.modelName;
@@ -11425,7 +11508,7 @@ ${knowledgeText}`;
           const response = await apiUtils.callApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, attemptController.signal, onChunk);
           const getFinishReasonError = /* @__PURE__ */ __name((candidate2) => {
             const reason = candidate2?.finishReason;
-            if (reason && reason !== "STOP" && reason !== "MAX_TOKENS") {
+            if (reason && reason !== "STOP" && reason !== "MAX_TOKENS" && reason !== "ABORTED") {
               const error = new Error(`モデルが応答をブロックしました (理由: ${reason})`);
               error.candidate = candidate2;
               return error;
