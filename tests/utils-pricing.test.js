@@ -451,6 +451,32 @@ describe('getPricing — 2026-09 の新モデル', () => {
             .toMatchObject({ threshold: 200000, in: 2, out: 4, cr: 0.40 });
     });
 
+    it('Claude Opus 5.5 を引ける（Opus 5 より安く、キャッシュヒットは 0.05 倍）', () => {
+        expect(getPricing('claude-opus-5-5', NOW))
+            .toMatchObject({ in: 4, out: 20, cw5m: 5, cw1h: 8, cr: 0.20 });
+        expect(getPricing('claude-opus-5', NOW)).toMatchObject({ in: 5, out: 25, cr: 0.50 });
+    });
+
+    // '5.5' が 'claude-opus-5' に先に当たると入力・出力とも25%高く、
+    // キャッシュヒットは2.5倍で計算されてしまう
+    it('Opus 5.5 が Opus 5 より先に一致する', () => {
+        expect(getPricing('claude-opus-5.5', NOW).in).toBe(4);
+        expect(getPricing('claude-opus-5.5', NOW).cr).toBe(0.20);
+    });
+
+    it('GPT-6 Sol / Luna を引ける', () => {
+        expect(getPricing('gpt-6-sol', NOW)).toMatchObject({ in: 2, out: 10, cr: 0.20 });
+        expect(getPricing('gpt-6-luna', NOW)).toMatchObject({ in: 0.10, out: 0.50, cr: 0.01 });
+        // 'gpt-5-6-sol'（$4/$20）と取り違えない
+        expect(getPricing('gpt-6-sol', NOW).out).not.toBe(20);
+    });
+
+    it('Grok 4.7 を引ける（4.6 と同額・200k以上は倍額）', () => {
+        expect(getPricing('grok-4.7', NOW)).toMatchObject({ in: 2, out: 6, cr: 0.50 });
+        expect(getPricing('grok-4.7', NOW).longCtx)
+            .toMatchObject({ threshold: 200000, in: 4, out: 12, cr: 1 });
+    });
+
     it('DeepSeek V4.1 Flash を引ける', () => {
         expect(getPricing('deepseek-flash', NOW)).toMatchObject({ in: 0.15, out: 0.60, cr: 0.003 });
         // 総称の 'deepseek-' に先に一致してしまうと $0.27 になる

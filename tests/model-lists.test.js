@@ -136,6 +136,23 @@ describe('Z.ai は一覧の全モデルに料金がある', () => {
     });
 });
 
+// 一覧に足したのに料金表に足し忘れると、そのモデルだけ ⓘ が出なくなる
+describe('新しく追加したモデルに料金がある', () => {
+    const cases = [
+        ['ANTHROPIC_MODELS', ANTHROPIC_MODELS, 'claude-opus-5-5'],
+        ['OPENAI_MODELS', OPENAI_MODELS, 'gpt-6-astra'],
+        ['OPENAI_MODELS', OPENAI_MODELS, 'gpt-6-sol'],
+        ['OPENAI_MODELS', OPENAI_MODELS, 'gpt-6-luna'],
+        ['XAI_MODELS', XAI_MODELS, 'grok-4.7'],
+    ];
+    for (const [name, list, value] of cases) {
+        it(`${name}: ${value}`, () => {
+            expect(list.map((m) => m.value)).toContain(value);
+            expect(getPricing(value, Date.now())).toBeTruthy();
+        });
+    }
+});
+
 describe('RETIRED_MODEL_MAP の後継が有効', () => {
     it('後継として、それ自体が廃止済みのモデルを指していない', () => {
         const bad = Object.entries(RETIRED_MODEL_MAP)

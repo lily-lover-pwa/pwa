@@ -1980,6 +1980,9 @@ ${relationship_context}`;
   var DEFAULT_BEDROCK_MODEL = "jp.anthropic.claude-sonnet-4-5-20250929-v1:0";
   var DEFAULT_BEDROCK_REGION = "us-east-1";
   var OPENAI_MODELS = [
+    { value: "gpt-6-astra", label: "GPT-6 Astra (最上位)" },
+    { value: "gpt-6-sol", label: "GPT-6 Sol (最新・標準)" },
+    { value: "gpt-6-luna", label: "GPT-6 Luna (最新・最安)" },
     { value: "gpt-4o", label: "GPT-4o" },
     { value: "gpt-4o-mini", label: "GPT-4o mini" },
     { value: "gpt-4.1", label: "GPT-4.1" },
@@ -1989,6 +1992,7 @@ ${relationship_context}`;
   ];
   var DEFAULT_OPENAI_MODEL = "gpt-4o";
   var ANTHROPIC_MODELS = [
+    { value: "claude-opus-5-5", label: "Claude Opus 5.5 (最新・Opus 5 より安価)" },
     { value: "claude-opus-5", label: "Claude Opus 5" },
     { value: "claude-opus-4-8", label: "Claude Opus 4.8" },
     { value: "claude-opus-4-7", label: "Claude Opus 4.7" },
@@ -2030,7 +2034,8 @@ ${relationship_context}`;
   ];
   var DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
   var XAI_MODELS = [
-    { value: "grok-4.6", label: "Grok 4.6 (推奨)" },
+    { value: "grok-4.7", label: "Grok 4.7 (最新・推奨)" },
+    { value: "grok-4.6", label: "Grok 4.6" },
     { value: "grok-4.5", label: "Grok 4.5" },
     { value: "grok-4.3", label: "Grok 4.3 (安価)" },
     { value: "grok-build-0.1", label: "Grok Build 0.1 (コーディング向け)" }
@@ -2055,6 +2060,10 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.62": [
+      "新しく出たモデルを追加しました。Claude Opus 5.5（入力$4・出力$20。Opus 5 より2割安く、キャッシュ読み込みは $0.20）、GPT-6 Sol（入力$2・出力$10）、GPT-6 Luna（入力$0.10・出力$0.50）、Grok 4.7（Grok 4.6 と同額の入力$2・出力$6）です。料金表とモデル一覧の両方に入れています。",
+      "GPT-6 Astra もモデル一覧から選べるようにしました（料金はすでに対応済みでした）。"
+    ],
     "1.61": [
       "新しく出たモデルの料金に対応しました。Gemini 3.8 Flash（3.7/3.6 と同じく2026年内は半額の入力$0.75・出力$3.75）、GPT-6 Astra（入力$10・出力$50）、DeepSeek V4.1 Flash（入力$0.15・出力$0.60）、Grok Build 0.1 を追加し、Gemini 3.8 Flash と DeepSeek V4.1 Flash はモデル一覧から選べるようにしています。",
       "GLM-5.3 Flash の単価を修正しました。公開時の50%割引が2026年9月9日で終わり、入力$0.075→$0.15・出力$0.25→$0.50 と倍になっています。割引期間中に送ったメッセージは、これまでどおり当時の半額で計算します。",
@@ -12959,6 +12968,10 @@ ${msg}`);
     "claude-fable-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
     "claude-mythos-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
     // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+    // Opus 5.5 は Opus 5 より安く（$4/$20）、キャッシュヒットも基本入力の0.05倍（他は0.1倍）。
+    // 前方一致のため 'claude-opus-5' より前に置くこと（後ろだとそちらに先に一致する）。
+    // ※ Fast mode（入力$8/出力$40）もあるが、アプリからは使わないので入れていない。
+    "claude-opus-5-5": { in: 4, out: 20, cw5m: 5, cw1h: 8, cr: 0.2 },
     "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
     "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
     "claude-opus-4-7": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
@@ -12994,6 +13007,7 @@ ${msg}`);
     // （calcMessageCost が in にフォールバックする）。
     // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
     // xAI Grok — https://docs.x.ai/developers/pricing
+    "grok-4-7": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
     "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
     "grok-4-5": { in: 2, out: 6, cr: 0.3, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 0.6 } },
     "grok-4-3": { in: 1.25, out: 2.5, cr: 0.2, longCtx: { threshold: 2e5, in: 2.5, out: 5, cr: 0.4 } },
@@ -13043,6 +13057,8 @@ ${msg}`);
     // GPT-6 Astra。長コンテキスト段（入力$20/出力$75）もあるが、何トークンから
     // 切り替わるかが公表されていないため longCtx は入れていない（推測で入れない）。
     "gpt-6-astra": { in: 10, out: 50, cr: 1 },
+    "gpt-6-sol": { in: 2, out: 10, cr: 0.2 },
+    "gpt-6-luna": { in: 0.1, out: 0.5, cr: 0.01 },
     "gpt-5-6-sol": { in: 4, out: 20, cr: 0.4 },
     // 2026-08-21 値下げ（少なくとも11/21まで）
     "gpt-5-6-terra": { in: 2, out: 12, cr: 0.2 },

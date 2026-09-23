@@ -10,6 +10,10 @@ export const MODEL_PRICING = {
     'claude-fable-5':    { in: 10, out: 50, cw5m: 12.50, cw1h: 20, cr: 1    },
     'claude-mythos-5':   { in: 10, out: 50, cw5m: 12.50, cw1h: 20, cr: 1    },
     // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+    // Opus 5.5 は Opus 5 より安く（$4/$20）、キャッシュヒットも基本入力の0.05倍（他は0.1倍）。
+    // 前方一致のため 'claude-opus-5' より前に置くこと（後ろだとそちらに先に一致する）。
+    // ※ Fast mode（入力$8/出力$40）もあるが、アプリからは使わないので入れていない。
+    'claude-opus-5-5': { in: 4,    out: 20,  cw5m: 5,     cw1h: 8,    cr: 0.20 },
     'claude-opus-5':   { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
     'claude-opus-4-8': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
     'claude-opus-4-7': { in: 5,    out: 25,  cw5m: 6.25,  cw1h: 10,   cr: 0.50 },
@@ -47,6 +51,7 @@ export const MODEL_PRICING = {
     // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
 
     // xAI Grok — https://docs.x.ai/developers/pricing
+    'grok-4-7': { in: 2,    out: 6,    cr: 0.50, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 1    } },
     'grok-4-6': { in: 2,    out: 6,    cr: 0.50, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 1    } },
     'grok-4-5': { in: 2,    out: 6,    cr: 0.30, longCtx: { threshold: 200_000, in: 4,    out: 12,   cr: 0.60 } },
     'grok-4-3': { in: 1.25, out: 2.50, cr: 0.20, longCtx: { threshold: 200_000, in: 2.50, out: 5,    cr: 0.40 } },
@@ -100,6 +105,8 @@ export const MODEL_PRICING = {
     // GPT-6 Astra。長コンテキスト段（入力$20/出力$75）もあるが、何トークンから
     // 切り替わるかが公表されていないため longCtx は入れていない（推測で入れない）。
     'gpt-6-astra':   { in: 10,   out: 50,   cr: 1 },
+    'gpt-6-sol':     { in: 2,    out: 10,   cr: 0.20 },
+    'gpt-6-luna':    { in: 0.10, out: 0.50, cr: 0.01 },
     'gpt-5-6-sol':   { in: 4,    out: 20,   cr: 0.40 },  // 2026-08-21 値下げ（少なくとも11/21まで）
     'gpt-5-6-terra': { in: 2,    out: 12,   cr: 0.20 },
     'gpt-5-6-luna':  { in: 0.20, out: 1.20, cr: 0.02 },

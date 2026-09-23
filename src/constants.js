@@ -142,6 +142,9 @@ export const DEFAULT_BEDROCK_MODEL = 'jp.anthropic.claude-sonnet-4-5-20250929-v1
 export const DEFAULT_BEDROCK_REGION = 'us-east-1';
 
 export const OPENAI_MODELS = [
+    { value: 'gpt-6-astra', label: 'GPT-6 Astra (最上位)' },
+    { value: 'gpt-6-sol', label: 'GPT-6 Sol (最新・標準)' },
+    { value: 'gpt-6-luna', label: 'GPT-6 Luna (最新・最安)' },
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
     { value: 'gpt-4.1', label: 'GPT-4.1' },
@@ -152,6 +155,7 @@ export const OPENAI_MODELS = [
 export const DEFAULT_OPENAI_MODEL = 'gpt-4o';
 
 export const ANTHROPIC_MODELS = [
+    { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 (最新・Opus 5 より安価)' },
     { value: 'claude-opus-5', label: 'Claude Opus 5' },
     { value: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
     { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
@@ -205,7 +209,8 @@ export const DEEPSEEK_MODELS = [
 export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 
 export const XAI_MODELS = [
-    { value: 'grok-4.6', label: 'Grok 4.6 (推奨)' },
+    { value: 'grok-4.7', label: 'Grok 4.7 (最新・推奨)' },
+    { value: 'grok-4.6', label: 'Grok 4.6' },
     { value: 'grok-4.5', label: 'Grok 4.5' },
     { value: 'grok-4.3', label: 'Grok 4.3 (安価)' },
     { value: 'grok-build-0.1', label: 'Grok Build 0.1 (コーディング向け)' },
@@ -242,6 +247,10 @@ export const DEFAULT_BAI_MODEL = 'glm-5.3-flash';
 
 
 export const VERSION_HISTORY = {
+    '1.62': [
+        '新しく出たモデルを追加しました。Claude Opus 5.5（入力$4・出力$20。Opus 5 より2割安く、キャッシュ読み込みは $0.20）、GPT-6 Sol（入力$2・出力$10）、GPT-6 Luna（入力$0.10・出力$0.50）、Grok 4.7（Grok 4.6 と同額の入力$2・出力$6）です。料金表とモデル一覧の両方に入れています。',
+        'GPT-6 Astra もモデル一覧から選べるようにしました（料金はすでに対応済みでした）。',
+    ],
     '1.61': [
         '新しく出たモデルの料金に対応しました。Gemini 3.8 Flash（3.7/3.6 と同じく2026年内は半額の入力$0.75・出力$3.75）、GPT-6 Astra（入力$10・出力$50）、DeepSeek V4.1 Flash（入力$0.15・出力$0.60）、Grok Build 0.1 を追加し、Gemini 3.8 Flash と DeepSeek V4.1 Flash はモデル一覧から選べるようにしています。',
         'GLM-5.3 Flash の単価を修正しました。公開時の50%割引が2026年9月9日で終わり、入力$0.075→$0.15・出力$0.25→$0.50 と倍になっています。割引期間中に送ったメッセージは、これまでどおり当時の半額で計算します。',
