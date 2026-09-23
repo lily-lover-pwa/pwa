@@ -701,6 +701,8 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--border-primary)
 .message-content th { background-color: var(--bg-tertiary); font-weight: bold; }
 .message-content hr { border: none; border-top: 1px solid var(--border-secondary); margin: 1.5em 0; }
 .message.editing.show-actions .message-actions, .message.editing.show-actions .message-cascade-controls { display: none !important; }
+/* 途中で止まった返事の注記。本文と紛れないよう控えめに出す。 */
+.message-stopped-notice { font-size: 11px; color: var(--text-secondary); margin-top: 6px; opacity: 0.85; }
 .message-actions .token-count-display { font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; line-height: 1.5; white-space: nowrap; }
 .message-actions .token-cache-display { display: block; font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8; }
 .thought-summary-details { margin-bottom: 10px; font-size: 13px; border: 1px solid var(--border-tertiary); border-radius: 5px; background-color: var(--bg-tertiary); }

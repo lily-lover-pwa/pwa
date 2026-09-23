@@ -1541,12 +1541,24 @@ export const messageMethods = {
                     const reason = candidate?.finishReason;
                     // ABORTED はストリーミングが途中で切れたときに付く。受信済みのぶんは
                     // 保存したいので、ここでエラーにしない
-                    if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS' && reason !== 'ABORTED') {
-                        const error = new Error(`モデルが応答をブロックしました (理由: ${reason})`);
-                        error.candidate = candidate; // エラーオブジェクトに詳細情報を添付
-                        return error;
+                    if (!reason || reason === 'STOP' || reason === 'MAX_TOKENS' || reason === 'ABORTED') {
+                        return null;
                     }
-                    return null;
+
+                    // 途中まで本文が返っているなら、それを捨ててエラーにするより残す。
+                    // ストリーミングだと書かれている最中にブロックされることがあり、
+                    // 目の前に出ていた文章が丸ごと消えてエラー表示に変わってしまうため。
+                    // 理由は finishReason に残るので、画面にもその旨が出る。
+                    const hasText = (candidate.content?.parts || [])
+                        .some(part => part.text && part.thought !== true);
+                    if (hasText) {
+                        console.warn(`[FinishReason] ${reason} で終了しましたが、受信済みの本文を残します。`);
+                        return null;
+                    }
+
+                    const error = new Error(`モデルが応答をブロックしました (理由: ${reason})`);
+                    error.candidate = candidate; // エラーオブジェクトに詳細情報を添付
+                    return error;
                 };
 
                 const checkForSafetyRejection = (candidate, content, toolCalls, images) => {

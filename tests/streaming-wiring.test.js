@@ -113,7 +113,7 @@ describe('送信経路の配線', () => {
 
     // ここで弾くと、せっかく受信したぶんが捨てられる
     it('ABORTED をエラー扱いにしない', () => {
-        expect(message).toContain("reason !== 'ABORTED'");
+        expect(message).toMatch(/reason === 'ABORTED'\)\s*\{\s*return null;/);
     });
 
     // id が残っていると、次の送信で古い要素のほうに書き込んでしまう
@@ -163,5 +163,33 @@ describe('文字送りの配線', () => {
 
     it('callApi へ onChunk が渡っている', () => {
         expect(message).toMatch(/callApi\([^)]*attemptController\.signal,\s*onChunk\)/);
+    });
+});
+
+// 回帰: ストリーミングで書かれている最中にブロックされると、目の前に出ていた
+// 文章が丸ごと消えてエラー表示に置き換わっていた
+describe('ブロックされても受信済みの本文を残す', () => {
+    const message = read('src/app-logic/message.js');
+
+    it('本文があるときは finishReason でエラーにしない', () => {
+        expect(message).toContain('const hasText = (candidate.content?.parts || [])');
+        expect(message).toMatch(/if \(hasText\) \{[\s\S]{0,200}return null;/);
+    });
+
+    // 本文が無いときまで通すと、ブロックされたこと自体が分からなくなる
+    it('本文が無ければ従来どおりエラーにする', () => {
+        expect(message).toContain('モデルが応答をブロックしました (理由:');
+    });
+
+    it('途中で止まったことを画面に出している', () => {
+        const ui = read('src/ui.js');
+        expect(ui).toContain('message-stopped-notice');
+        expect(ui).toContain('ここまでの内容です');
+        // 中断（ABORTED）でも同じ注記が出る
+        expect(ui).toContain("stoppedReason === 'ABORTED'");
+    });
+
+    it('注記のスタイルがある', () => {
+        expect(read('style.css')).toContain('.message-stopped-notice');
     });
 });

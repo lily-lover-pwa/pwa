@@ -2062,6 +2062,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.65": [
+      "ブロックされたときに、途中まで出ていた文章が消えないようにしました。これまでは「モデルが応答をブロックしました (理由: PROHIBITED_CONTENT)」などが出ると、目の前に表示されていた文章ごとエラー表示に置き換わっていました。本文が届いている場合はそれを残します。",
+      "途中で止まった返事には、本文の下に「※ 途中で停止したため、ここまでの内容です（理由: ...）」と出るようにしました。書き終わったのか切れたのか分かるようになります。中断したときも同じ形で出ます。",
+      "※ 本文が一文字も返っていない場合は、これまでどおりエラー表示になります。"
+    ],
     "1.64": [
       "ストリーミング表示に文字送りを追加しました。返事は数十文字ずつまとめて届くため、そのまま出すと表示がガタガタ跳ねていました。1文字ずつ一定の間隔で送るようにして滑らかにしています。設定の「文字送り速度」で調整でき、0にすると届いたぶんをそのまま表示します（既定は12ミリ秒/文字）。",
       "生成に対して表示が遅れすぎないようにしてあります。溜まっているときは自動でまとめて送るので、「もう書き終わっているのに読めない」という待ち時間は出ません。",
@@ -3510,6 +3515,13 @@ Reason: [NGの場合の理由]`,
         deleteCascadeButton.onclick = () => appLogic.confirmDeleteCascadeResponse(index);
         cascadeControlsDiv.appendChild(deleteCascadeButton);
         messageDiv.appendChild(cascadeControlsDiv);
+      }
+      const stoppedReason = role === "model" ? messageData?.finishReason : null;
+      if (stoppedReason && stoppedReason !== "STOP" && stoppedReason !== "MAX_TOKENS" && !isStreamingPlaceholder) {
+        const notice = document.createElement("div");
+        notice.classList.add("message-stopped-notice");
+        notice.textContent = stoppedReason === "ABORTED" ? "※ 途中で中断されたため、ここまでの内容です" : `※ 途中で停止したため、ここまでの内容です（理由: ${stoppedReason}）`;
+        messageDiv.appendChild(notice);
       }
       if (role !== "error") {
         const actionsDiv = document.createElement("div");
@@ -11508,12 +11520,17 @@ ${knowledgeText}`;
           const response = await apiUtils.callApi(messagesForApi, generationConfig, systemInstruction, tools, forceCalling, attemptController.signal, onChunk);
           const getFinishReasonError = /* @__PURE__ */ __name((candidate2) => {
             const reason = candidate2?.finishReason;
-            if (reason && reason !== "STOP" && reason !== "MAX_TOKENS" && reason !== "ABORTED") {
-              const error = new Error(`モデルが応答をブロックしました (理由: ${reason})`);
-              error.candidate = candidate2;
-              return error;
+            if (!reason || reason === "STOP" || reason === "MAX_TOKENS" || reason === "ABORTED") {
+              return null;
             }
-            return null;
+            const hasText = (candidate2.content?.parts || []).some((part) => part.text && part.thought !== true);
+            if (hasText) {
+              console.warn(`[FinishReason] ${reason} で終了しましたが、受信済みの本文を残します。`);
+              return null;
+            }
+            const error = new Error(`モデルが応答をブロックしました (理由: ${reason})`);
+            error.candidate = candidate2;
+            return error;
           }, "getFinishReasonError");
           const checkForSafetyRejection = /* @__PURE__ */ __name((candidate2, content, toolCalls, images) => {
             if (content || toolCalls && toolCalls.length > 0 || images && images.length > 0) {

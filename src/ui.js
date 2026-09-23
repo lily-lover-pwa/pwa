@@ -663,6 +663,19 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
         messageDiv.appendChild(cascadeControlsDiv);
     }
 
+    // 途中で止まった返事は、そのままだとモデルが書き終えたのか切れたのか分からない。
+    // 中断（ABORTED）でも、書いている最中にブロックされた場合でも、ここで理由を出す。
+    // 本文が残っているときだけ通る（本文が無いときは従来どおりエラー表示になる）。
+    const stoppedReason = role === 'model' ? messageData?.finishReason : null;
+    if (stoppedReason && stoppedReason !== 'STOP' && stoppedReason !== 'MAX_TOKENS' && !isStreamingPlaceholder) {
+        const notice = document.createElement('div');
+        notice.classList.add('message-stopped-notice');
+        notice.textContent = stoppedReason === 'ABORTED'
+            ? '※ 途中で中断されたため、ここまでの内容です'
+            : `※ 途中で停止したため、ここまでの内容です（理由: ${stoppedReason}）`;
+        messageDiv.appendChild(notice);
+    }
+
     if (role !== 'error') {
         const actionsDiv = document.createElement('div');
         actionsDiv.classList.add('message-actions');
