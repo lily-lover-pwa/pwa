@@ -3,7 +3,7 @@ import { parseSearchQuery, collectSearchableMessages, buildExcerpt, searchChat, 
 
 describe('parseSearchQuery', () => {
     it('空白で区切って小文字に揃える', () => {
-        expect(parseSearchQuery('Aquarium Chat')).toEqual(['aquarium', 'chat']);
+        expect(parseSearchQuery('Hello World')).toEqual(['hello', 'world']);
     });
 
     it('全角空白でも区切る', () => {
