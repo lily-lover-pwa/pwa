@@ -1607,6 +1607,7 @@ ${relationship_context}`;
       anthropicApiKeyInput: document.getElementById("anthropic-api-key"),
       anthropicApiKeyContainer: document.getElementById("anthropic-api-key-container"),
       anthropicCacheTTLSelect: document.getElementById("anthropic-cache-ttl"),
+      cacheMissAlertThresholdInput: document.getElementById("cache-miss-alert-threshold"),
       anthropicEffortSelect: document.getElementById("anthropic-effort"),
       anthropicEffortNote: document.getElementById("anthropic-effort-note"),
       novelaiApiKeyInput: document.getElementById("novelai-api-key"),
@@ -1634,6 +1635,8 @@ ${relationship_context}`;
       topKInput: document.getElementById("top-k"),
       topPInput: document.getElementById("top-p"),
       thinkingBudgetInput: document.getElementById("thinking-budget"),
+      geminiThinkingLevelSelect: document.getElementById("gemini-thinking-level"),
+      geminiThinkingLevelNote: document.getElementById("gemini-thinking-level-note"),
       includeThoughtsToggle: document.getElementById("include-thoughts-toggle"),
       streamingOutputToggle: document.getElementById("streaming-output-toggle"),
       streamingSpeedInput: document.getElementById("streaming-speed"),
@@ -1678,6 +1681,7 @@ ${relationship_context}`;
       confirmMessage: document.getElementById("confirmDialog")?.querySelector(".dialog-message"),
       confirmOkBtn: document.getElementById("confirmDialog")?.querySelector(".dialog-ok-btn"),
       confirmCancelBtn: document.getElementById("confirmDialog")?.querySelector(".dialog-cancel-btn"),
+      confirmAltBtn: document.getElementById("confirmDialog")?.querySelector(".dialog-alt-btn"),
       promptDialog: document.getElementById("promptDialog"),
       promptMessage: document.getElementById("promptDialog")?.querySelector(".dialog-message"),
       promptInput: document.getElementById("promptDialog")?.querySelector(".dialog-input"),
@@ -2062,6 +2066,17 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.67": [
+      "Gemini に「思考の深さ (thinking_level)」を追加しました。minimal / low / medium / high から選べます。Gemini 公式が現在推奨している方式で、これまでの Thinking Budget（旧方式）は残してありますが、思考の深さを選んでいるときは送られません（両方送るとエラーになるため）。",
+      "選択中のモデルで使える段階だけが表示されます。minimal は 3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite で選べます。モデルを切り替えて非対応の値になった場合は自動で「モデルの既定」に戻ります。",
+      "※ Gemini 3 では minimal を選んでも思考が完全に止まる保証はありません。"
+    ],
+    "1.66": [
+      "Claude で、うっかり高くつく送信を送る前に止めるようにしました。モデルを変えたときや、前の返事から5分（または1時間）以上空いたときは、プロンプトキャッシュが効かず会話全体を再書き込みします。長い会話だと1通で数ドルになることがあるので、その見積もりが設定額（既定 $0.50）を超えるときだけ、送信前に確認を出します。普段は何も出ません。",
+      "5分キャッシュで間が空いたときは、「1時間キャッシュに切り替えて送信」を選べます。1回押せば設定が変わるので、以後は同じ確認が繰り返し出ることはありません。",
+      "設定の Anthropic の項目にある「キャッシュが効かない送信の確認」で額を変えられます。0にすると出なくなります。",
+      "設定の「Thinking Budget」の説明が Gemini 2.5 時代のままだったので直しました。「0で思考OFF」「0～24576」「1～1024は1024固定」はいずれも現在の仕様と合っていません。空欄か0なら送らずモデルの既定になります。Gemini の公式は thinking_level への移行を推奨しており、こちらは別途対応します。"
+    ],
     "1.65": [
       "ブロックされたときに、途中まで出ていた文章が消えないようにしました。これまでは「モデルが応答をブロックしました (理由: PROHIBITED_CONTENT)」などが出ると、目の前に表示されていた文章ごとエラー表示に置き換わっていました。本文が届いている場合はそれを残します。",
       "途中で止まった返事には、本文の下に「※ 途中で停止したため、ここまでの内容です（理由: ...）」と出るようにしました。書き終わったのか切れたのか分かるようになります。中断したときも同じ形で出ます。",
@@ -2308,6 +2323,9 @@ ${relationship_context}`;
       openaiApiKey: "",
       anthropicApiKey: "",
       anthropicCacheTTL: "5m",
+      // 送信前の警告。モデル変更やキャッシュ期限切れで丸ごと再書き込みになる送信が
+      // この額（USD）以上なら確認を出す。0で無効。
+      cacheMissAlertThresholdUsd: 0.5,
       anthropicEffort: "high",
       novelaiApiKey: "",
       novelaiModel: "nai-diffusion-4-5-curated",
@@ -2324,6 +2342,8 @@ ${relationship_context}`;
       topK: null,
       topP: null,
       thinkingBudget: null,
+      // Gemini の思考の深さ（thinking_level）。空はモデルの既定。選ぶと thinkingBudget は送らない
+      geminiThinkingLevel: "",
       includeThoughts: false,
       // 返事を書かれる端から表示する（Geminiのみ）。まずは様子見のため既定OFF。
       enableStreaming: false,
@@ -2681,6 +2701,253 @@ Reason: [NGの場合の理由]`,
       console.log("[DebugLogger] ログがクリアされました。");
     }
   };
+
+  // src/utils/pricing.js
+  var MODEL_PRICING = {
+    // Claude — https://platform.claude.com/docs/en/about-claude/pricing
+    // Fable/Mythos 5.1 はキャッシュヒットが基本入力の0.025倍（他モデルは0.1倍）。
+    "claude-fable-5-1": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 0.25 },
+    "claude-mythos-5-1": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 0.25 },
+    "claude-fable-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
+    "claude-mythos-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
+    // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
+    // Opus 5.5 は Opus 5 より安く（$4/$20）、キャッシュヒットも基本入力の0.05倍（他は0.1倍）。
+    // 前方一致のため 'claude-opus-5' より前に置くこと（後ろだとそちらに先に一致する）。
+    // ※ Fast mode（入力$8/出力$40）もあるが、アプリからは使わないので入れていない。
+    "claude-opus-5-5": { in: 4, out: 20, cw5m: 5, cw1h: 8, cr: 0.2 },
+    "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-7": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-6": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-opus-4-1": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    "claude-opus-4": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    // Sonnet 5 は 4.6/4.5 より安い（$2/$10）。'claude-sonnet-4' より前に置くこと。
+    // 発表時は 2026-08-31 までの導入価格とされていたが、その後この額が正価になり、
+    // 予定されていた $3/$15 への値上げは行われないと明記された（＝期間で分ける必要なし）。
+    "claude-sonnet-5": { in: 2, out: 10, cw5m: 2.5, cw1h: 4, cr: 0.2 },
+    "claude-sonnet-4": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
+    "claude-haiku-4": { in: 1, out: 5, cw5m: 1.25, cw1h: 2, cr: 0.1 },
+    // Claude 3系 (旧モデル)
+    "claude-opus-3": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
+    "claude-opus": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
+    "claude-sonnet": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
+    "claude-haiku": { in: 0.8, out: 4, cw5m: 1, cw1h: 1.6, cr: 0.08 },
+    // DeepSeek（in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
+    // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
+    // V4系は 2026-08-16 の改定後の価格。
+    "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
+    "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
+    "deepseek-v4-pro": { in: 0.66, out: 1.98, cw5m: 0.66, cw1h: 0.66, cr: 0.022, peakMul: 2 },
+    // V4.1 Flash（2026-09-10 公開）。旧名 'deepseek-v4-flash' と
+    // 'deepseek-v4-flash-vision-exp' もこのモデルへ転送され、Flash の単価で課金される。
+    // 転送前に送ったぶんは MODEL_PRICING_BEFORE_V41_FLASH で当時の単価を引く。
+    // 総称の 'deepseek-' より前に置くこと（後ろだとそちらに先に一致する）。
+    "deepseek-flash": { in: 0.15, out: 0.6, cw5m: 0.15, cw1h: 0.15, cr: 3e-3, peakMul: 2 },
+    "deepseek-v4-flash": { in: 0.15, out: 0.6, cw5m: 0.15, cw1h: 0.15, cr: 3e-3, peakMul: 2 },
+    "deepseek-": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
+    // 以下は cw5m/cw1h を持たない。キャッシュ書き込みに別料金が無く、通常入力と同額のため
+    // （calcMessageCost が in にフォールバックする）。
+    // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
+    // xAI Grok — https://docs.x.ai/developers/pricing
+    "grok-4-7": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
+    "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
+    "grok-4-5": { in: 2, out: 6, cr: 0.3, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 0.6 } },
+    "grok-4-3": { in: 1.25, out: 2.5, cr: 0.2, longCtx: { threshold: 2e5, in: 2.5, out: 5, cr: 0.4 } },
+    "grok-build-0-1": { in: 1, out: 2, cr: 0.2, longCtx: { threshold: 2e5, in: 2, out: 4, cr: 0.4 } },
+    // Groq — https://console.groq.com/docs/models
+    // 'openai/gpt-oss-120b' はベンダー接頭辞が外れて 'gpt-oss-120b' になる。
+    // キャッシュ割引の記載が無いので cr は入力と同額にしてある。
+    // Compound（groq/compound・compound-mini）は内部で複数モデルを使う仕組みで
+    // 単体の単価表記が無く、Llama 3.3 70B / 3.1 8B と MiniMax M2.7 は
+    // Enterprise（要問い合わせ）扱いのため、いずれも載せていない。
+    "gpt-oss-120b": { in: 0.15, out: 0.6, cr: 0.15 },
+    "gpt-oss-20b": { in: 0.075, out: 0.3, cr: 0.075 },
+    "qwen3-6-27b": { in: 0.6, out: 3, cr: 0.6 },
+    // Mistral — https://mistral.ai/pricing/api
+    // '-latest' が付くので前方一致で引く。open-mistral-nemo は料金表から消えたため無し。
+    "mistral-large": { in: 0.5, out: 1.5, cr: 0.5 },
+    "mistral-medium": { in: 1.5, out: 7.5, cr: 1.5 },
+    "mistral-small": { in: 0.15, out: 0.6, cr: 0.15 },
+    "codestral": { in: 0.3, out: 0.9, cr: 0.3 },
+    "ministral-3-14b": { in: 0.2, out: 0.2, cr: 0.2 },
+    "ministral-3-8b": { in: 0.15, out: 0.15, cr: 0.15 },
+    "ministral-3-3b": { in: 0.1, out: 0.1, cr: 0.1 },
+    // Z.ai GLM — https://docs.z.ai/guides/overview/pricing
+    // Flash 系（4.7 / 4.5 / 4.6V）は入出力とも無料。
+    // 前方一致なので、長いキーを先に置くこと（'glm-5-3-flash' は 'glm-5-3' より前、
+    // 'glm-4-7-flashx' は 'glm-4-7-flash' より前、'glm-5-1' 等は 'glm-5' より前）。
+    "glm-5-3-flash": { in: 0.15, out: 0.5, cr: 0.03 },
+    // 2026-09-09 に50%割引が終了
+    "glm-5-3": { in: 1.4, out: 4.4, cr: 0.26 },
+    "glm-5-2": { in: 1.4, out: 4.4, cr: 0.26 },
+    "glm-5-1": { in: 1.4, out: 4.4, cr: 0.26 },
+    "glm-5": { in: 1, out: 3.2, cr: 0.2 },
+    "glm-4-7-flashx": { in: 0.07, out: 0.4, cr: 0.01 },
+    "glm-4-7-flash": { in: 0, out: 0, cr: 0 },
+    "glm-4-7": { in: 0.6, out: 2.2, cr: 0.11 },
+    "glm-4-6v-flashx": { in: 0.04, out: 0.4, cr: 4e-3 },
+    "glm-4-6v-flash": { in: 0, out: 0, cr: 0 },
+    "glm-4-6v": { in: 0.3, out: 0.9, cr: 0.05 },
+    "glm-4-6": { in: 0.6, out: 2.2, cr: 0.11 },
+    "glm-4-5-air": { in: 0.2, out: 1.1, cr: 0.03 },
+    "glm-4-5-flash": { in: 0, out: 0, cr: 0 },
+    // Qwen — https://www.qwencloud.com/models/qwen3.8-flash
+    // OpenRouter 経由（'qwen/qwen3.8-flash'）でもベンダー接頭辞が外れて一致する。
+    "qwen3-8-flash": { in: 0.15, out: 0.47, cr: 0.016 },
+    // OpenAI — https://developers.openai.com/api/docs/pricing
+    // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
+    // GPT-6 Astra。長コンテキスト段（入力$20/出力$75）もあるが、何トークンから
+    // 切り替わるかが公表されていないため longCtx は入れていない（推測で入れない）。
+    "gpt-6-astra": { in: 10, out: 50, cr: 1 },
+    "gpt-6-sol": { in: 2, out: 10, cr: 0.2 },
+    "gpt-6-luna": { in: 0.1, out: 0.5, cr: 0.01 },
+    "gpt-5-6-sol": { in: 4, out: 20, cr: 0.4 },
+    // 2026-08-21 値下げ（少なくとも11/21まで）
+    "gpt-5-6-terra": { in: 2, out: 12, cr: 0.2 },
+    "gpt-5-6-luna": { in: 0.2, out: 1.2, cr: 0.02 },
+    "gpt-5-5-pro": { in: 30, out: 180, cr: 30 },
+    // キャッシュ割引の提供なし
+    "gpt-5-5": { in: 5, out: 30, cr: 0.5 },
+    "gpt-5-4-mini": { in: 0.75, out: 4.5, cr: 0.075 },
+    "gpt-5-4-nano": { in: 0.2, out: 1.25, cr: 0.02 },
+    "gpt-5-4-pro": { in: 30, out: 180, cr: 30 },
+    // 同上
+    "gpt-5-4": { in: 2.5, out: 15, cr: 0.25 },
+    "gpt-5-2": { in: 1.75, out: 14, cr: 0.175 },
+    "gpt-5-1": { in: 1.25, out: 10, cr: 0.125 },
+    "gpt-5-mini": { in: 0.25, out: 2, cr: 0.025 },
+    "gpt-5": { in: 1.25, out: 10, cr: 0.125 },
+    "gpt-4-1-mini": { in: 0.4, out: 1.6, cr: 0.1 },
+    "gpt-4-1-nano": { in: 0.1, out: 0.4, cr: 0.025 },
+    "gpt-4-1": { in: 2, out: 8, cr: 0.5 },
+    "o4-mini": { in: 1.1, out: 4.4, cr: 0.275 },
+    "o3-mini": { in: 1.1, out: 4.4, cr: 0.55 },
+    "o3-pro": { in: 20, out: 80, cr: 20 },
+    // 同上
+    "o3": { in: 2, out: 8, cr: 0.5 },
+    // Google Gemini — https://ai.google.dev/gemini-api/docs/pricing
+    // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
+    // 3.7 / 3.6 Flash は 2026-12-31 まで半額。ここには割引終了後の通常単価を置き、
+    // 割引期間中は MODEL_PRICING_GEMINI_FLASH_PROMO を優先して引く。
+    "gemini-3-8-flash": { in: 1.5, out: 7.5, cr: 0.15 },
+    "gemini-3-7-flash": { in: 1.5, out: 7.5, cr: 0.15 },
+    "gemini-3-6-flash": { in: 1.5, out: 7.5, cr: 0.15 },
+    "gemini-3-5-flash-lite": { in: 0.3, out: 2.5, cr: 0.03 },
+    "gemini-3-5-flash": { in: 1.5, out: 9, cr: 0.15 },
+    // 3.1 Pro も 200k 超で単価が上がる（入力2倍・出力1.5倍・キャッシュ2倍）
+    "gemini-3-1-pro": { in: 2, out: 12, cr: 0.2, longCtx: { threshold: 2e5, in: 4, out: 18, cr: 0.4 } },
+    "gemini-3-1-flash-lite": { in: 0.25, out: 1.5, cr: 0.025 },
+    // 3 Flash（プレビュー）。'gemini-3-7-flash' 等とは前方一致で衝突しない
+    "gemini-3-flash": { in: 0.5, out: 3, cr: 0.05 },
+    // 2.5 Pro は 200k 超で入力2倍・出力1.5倍と倍率が異なるため、上位段の単価をそのまま持つ
+    "gemini-2-5-pro": { in: 1.25, out: 10, cr: 0.125, longCtx: { threshold: 2e5, in: 2.5, out: 15, cr: 0.25 } },
+    "gemini-2-5-flash-lite": { in: 0.1, out: 0.4, cr: 0.01 },
+    "gemini-2-5-flash": { in: 0.3, out: 2.5, cr: 0.03 }
+  };
+  var DEEPSEEK_V4_PRICE_CHANGE_AT = Date.UTC(2026, 7, 16, 16, 0, 0);
+  var MODEL_PRICING_BEFORE_V4_CHANGE = {
+    "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
+    "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 }
+  };
+  var GPT_56_SOL_PRICE_CUT_AT = Date.UTC(2026, 7, 21, 0, 0, 0);
+  var MODEL_PRICING_BEFORE_SOL_CUT = {
+    "gpt-5-6-sol": { in: 5, out: 30, cr: 0.5 }
+  };
+  var GEMINI_FLASH_PROMO_END_AT = Date.UTC(2027, 0, 1, 0, 0, 0);
+  var MODEL_PRICING_GEMINI_FLASH_PROMO = {
+    "gemini-3-8-flash": { in: 0.75, out: 3.75, cr: 0.075 },
+    "gemini-3-7-flash": { in: 0.75, out: 3.75, cr: 0.075 },
+    "gemini-3-6-flash": { in: 0.75, out: 3.75, cr: 0.075 }
+  };
+  var DEEPSEEK_V41_FLASH_AT = Date.UTC(2026, 8, 10, 0, 0, 0);
+  var MODEL_PRICING_BEFORE_V41_FLASH = {
+    "deepseek-v4-flash": { in: 0.22, out: 0.66, cw5m: 0.22, cw1h: 0.22, cr: 7e-3, peakMul: 2 }
+  };
+  var GLM_53_FLASH_PROMO_END_AT = Date.UTC(2026, 8, 9, 16, 0, 0);
+  var MODEL_PRICING_GLM_53_FLASH_PROMO = {
+    "glm-5-3-flash": { in: 0.075, out: 0.25, cr: 0.015 }
+  };
+  function normalizeModelName(modelName) {
+    if (typeof modelName !== "string") return "";
+    return modelName.toLowerCase().trim().replace(/^[^/]+\//, "").replace(/:.*$/, "").replace(/(\d)\.(\d)/g, "$1-$2");
+  }
+  __name(normalizeModelName, "normalizeModelName");
+  function getPricing(modelName, timestamp) {
+    if (!modelName) return null;
+    const m = normalizeModelName(modelName);
+    if (!m) return null;
+    if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < GPT_56_SOL_PRICE_CUT_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_SOL_CUT)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < DEEPSEEK_V41_FLASH_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V41_FLASH)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < GLM_53_FLASH_PROMO_END_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_GLM_53_FLASH_PROMO)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    if (!timestamp || timestamp < GEMINI_FLASH_PROMO_END_AT) {
+      for (const [key, price] of Object.entries(MODEL_PRICING_GEMINI_FLASH_PROMO)) {
+        if (m.startsWith(key)) return price;
+      }
+    }
+    for (const [key, price] of Object.entries(MODEL_PRICING)) {
+      if (m.startsWith(key)) return price;
+    }
+    return null;
+  }
+  __name(getPricing, "getPricing");
+  var DEEPSEEK_WEEKEND_OFFPEAK_AT = Date.UTC(2026, 7, 22, 16, 0, 0);
+  var BEIJING_OFFSET_MS = 8 * 60 * 60 * 1e3;
+  function isDeepSeekPeak(timestamp) {
+    if (!timestamp) return false;
+    if (timestamp >= DEEPSEEK_WEEKEND_OFFPEAK_AT) {
+      const beijingDay = new Date(timestamp + BEIJING_OFFSET_MS).getUTCDay();
+      if (beijingDay === 0 || beijingDay === 6) return false;
+    }
+    const h = new Date(timestamp).getUTCHours();
+    return h >= 1 && h < 4 || h >= 6 && h < 10;
+  }
+  __name(isDeepSeekPeak, "isDeepSeekPeak");
+
+  // src/utils/gemini-thinking.js
+  function getGeminiThinkingLevels(model) {
+    const m = normalizeModelName(model);
+    if (!m.startsWith("gemini")) return null;
+    if (/-image|embedding|-live|-tts|robotics/.test(m)) return null;
+    if (m.startsWith("gemini-3-6-flash") || m.startsWith("gemini-3-5-flash-lite") || m.startsWith("gemini-3-1-flash-lite")) {
+      return ["minimal", "low", "medium", "high"];
+    }
+    if (m.startsWith("gemini-3") || m.startsWith("gemini-2-5")) {
+      return ["low", "medium", "high"];
+    }
+    return null;
+  }
+  __name(getGeminiThinkingLevels, "getGeminiThinkingLevels");
+  function buildGeminiThinkingConfig({ model, thinkingLevel, thinkingBudget, includeThoughts }) {
+    const cfg = {};
+    const level = typeof thinkingLevel === "string" ? thinkingLevel.trim().toLowerCase() : "";
+    const allowed = getGeminiThinkingLevels(model);
+    if (level && allowed && allowed.includes(level)) {
+      cfg.thinkingLevel = level.toUpperCase();
+    } else if (Number.isFinite(thinkingBudget) && thinkingBudget > 0) {
+      cfg.thinkingBudget = thinkingBudget;
+    }
+    if (includeThoughts) cfg.includeThoughts = true;
+    return Object.keys(cfg).length > 0 ? cfg : null;
+  }
+  __name(buildGeminiThinkingConfig, "buildGeminiThinkingConfig");
 
   // src/utils/format.js
   var sleep = /* @__PURE__ */ __name((ms) => new Promise((resolve) => setTimeout(resolve, ms)), "sleep");
@@ -3983,6 +4250,9 @@ Reason: [NGの場合の理由]`,
       if (elements.anthropicCacheTTLSelect) {
         elements.anthropicCacheTTLSelect.value = state.settings.anthropicCacheTTL || "5m";
       }
+      if (elements.cacheMissAlertThresholdInput) {
+        elements.cacheMissAlertThresholdInput.value = state.settings.cacheMissAlertThresholdUsd ?? "";
+      }
       if (elements.anthropicEffortSelect) {
         elements.anthropicEffortSelect.value = state.settings.anthropicEffort ?? "high";
       }
@@ -4018,6 +4288,9 @@ Reason: [NGの場合の理由]`,
       elements.topKInput.value = state.settings.topK === null ? "" : state.settings.topK;
       elements.topPInput.value = state.settings.topP === null ? "" : state.settings.topP;
       elements.thinkingBudgetInput.value = state.settings.thinkingBudget === null ? "" : state.settings.thinkingBudget;
+      if (elements.geminiThinkingLevelSelect) {
+        elements.geminiThinkingLevelSelect.value = state.settings.geminiThinkingLevel || "";
+      }
       elements.includeThoughtsToggle.checked = state.settings.includeThoughts;
       elements.streamingOutputToggle.checked = state.settings.enableStreaming;
       elements.streamingSpeedInput.value = state.settings.streamingSpeed ?? "";
@@ -4363,6 +4636,39 @@ Reason: [NGの場合の理由]`,
       const result = await this.showCustomDialog(elements.confirmDialog, elements.confirmOkBtn);
       return result === "ok";
     },
+    /**
+     * キャッシュが効かない送信の確認。既存の confirm ダイアログに
+     * 「1時間キャッシュに切り替えて送信」を必要なときだけ足して出す。
+     *
+     * @param {string} message 本文
+     * @param {string|null} altLabel 3つ目のボタンの文言。null なら出さない
+     * @returns {Promise<'ok'|'alt'|'cancel'>}
+     */
+    async showCacheMissConfirm(message, altLabel = null) {
+      elements.confirmMessage.textContent = message;
+      for (const key of ["confirmOkBtn", "confirmCancelBtn", "confirmAltBtn"]) {
+        const fresh = elements[key].cloneNode(true);
+        elements[key].parentNode.replaceChild(fresh, elements[key]);
+        elements[key] = fresh;
+      }
+      elements.confirmOkBtn.textContent = "送信する";
+      elements.confirmOkBtn.onclick = () => elements.confirmDialog.close("ok");
+      elements.confirmCancelBtn.onclick = () => elements.confirmDialog.close("cancel");
+      if (altLabel) {
+        elements.confirmAltBtn.textContent = altLabel;
+        elements.confirmAltBtn.classList.remove("hidden");
+        elements.confirmAltBtn.onclick = () => elements.confirmDialog.close("alt");
+      } else {
+        elements.confirmAltBtn.classList.add("hidden");
+      }
+      try {
+        const result = await this.showCustomDialog(elements.confirmDialog, elements.confirmCancelBtn);
+        return result === "ok" || result === "alt" ? result : "cancel";
+      } finally {
+        elements.confirmOkBtn.textContent = "OK";
+        elements.confirmAltBtn.classList.add("hidden");
+      }
+    },
     // プロンプトダイアログ表示
     async showCustomPrompt(message, defaultValue = "") {
       elements.promptMessage.textContent = message;
@@ -4473,6 +4779,41 @@ Reason: [NGの場合の理由]`,
       const isImageModel = isImageGenerationModel(selectedModel);
       elements.modelWarningMessage.classList.toggle("hidden", !isImageModel);
       this.updateAnthropicEffortOptions();
+      this.updateGeminiThinkingLevelOptions();
+    },
+    // 選択中の Gemini モデルに応じて thinking_level の選択肢を絞り込み、注意書きを出す。
+    // Anthropic の Effort（updateAnthropicEffortOptions）と同じ作り。
+    updateGeminiThinkingLevelOptions() {
+      const sel = elements.geminiThinkingLevelSelect;
+      if (!sel) return;
+      const model = elements.modelNameSelect && elements.modelNameSelect.value || state.settings.modelName || "";
+      const levels = getGeminiThinkingLevels(model);
+      for (const opt of sel.options) {
+        const ok = opt.value === "" || levels && levels.includes(opt.value);
+        opt.hidden = !ok;
+        opt.disabled = !ok;
+      }
+      if (sel.value && (!levels || !levels.includes(sel.value))) {
+        sel.value = "";
+        if (state.settings.geminiThinkingLevel !== "") {
+          state.settings.geminiThinkingLevel = "";
+          if (state.activeProfile) {
+            state.activeProfile.settings.geminiThinkingLevel = "";
+            dbUtils.updateProfile(state.activeProfile).catch(() => {
+            });
+          }
+        }
+      }
+      const note = elements.geminiThinkingLevelNote;
+      if (note) {
+        let msg = "";
+        if (model.startsWith("gemini")) {
+          if (!levels) msg = "※ このモデルは thinking_level 非対応です（Gemini 2.5 以降で利用できます）。";
+          else if (!levels.includes("minimal")) msg = "※ minimal はこのモデルでは使えません（3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite で利用可）。";
+        }
+        note.textContent = msg;
+        note.classList.toggle("hidden", !msg);
+      }
     },
     // 選択中のAnthropicモデルに応じて Effort の選択肢を絞り込み、注意書きを出す。
     updateAnthropicEffortOptions() {
@@ -5925,6 +6266,7 @@ Reason: [NGの場合の理由]`,
         openaiApiKey: { element: elements.openaiApiKeyInput, event: "input" },
         anthropicApiKey: { element: elements.anthropicApiKeyInput, event: "input" },
         anthropicCacheTTL: { element: elements.anthropicCacheTTLSelect, event: "change", getValue: /* @__PURE__ */ __name(() => elements.anthropicCacheTTLSelect ? elements.anthropicCacheTTLSelect.value : "5m", "getValue") },
+        cacheMissAlertThresholdUsd: { element: elements.cacheMissAlertThresholdInput, event: "input" },
         anthropicEffort: { element: elements.anthropicEffortSelect, event: "change", getValue: /* @__PURE__ */ __name(() => elements.anthropicEffortSelect ? elements.anthropicEffortSelect.value : "high", "getValue") },
         novelaiApiKey: { element: elements.novelaiApiKeyInput, event: "input" },
         novelaiModel: { element: elements.novelaiModelSelect, event: "change", getValue: /* @__PURE__ */ __name(() => elements.novelaiModelSelect ? elements.novelaiModelSelect.value : "nai-diffusion-4-5-curated", "getValue") },
@@ -5975,6 +6317,7 @@ Reason: [NGの場合の理由]`,
         topK: { element: elements.topKInput, event: "input" },
         topP: { element: elements.topPInput, event: "input" },
         thinkingBudget: { element: elements.thinkingBudgetInput, event: "input" },
+        geminiThinkingLevel: { element: elements.geminiThinkingLevelSelect, event: "change", getValue: /* @__PURE__ */ __name(() => elements.geminiThinkingLevelSelect ? elements.geminiThinkingLevelSelect.value : "", "getValue") },
         includeThoughts: { element: elements.includeThoughtsToggle, event: "change" },
         enableStreaming: { element: elements.streamingOutputToggle, event: "change" },
         streamingSpeed: { element: elements.streamingSpeedInput, event: "input" },
@@ -9153,11 +9496,13 @@ AI: ${firstModelContent}`;
         delete finalGenerationConfig.topP;
         delete finalGenerationConfig.temperature;
       } else {
-        if (state.settings.thinkingBudget > 0 || state.settings.includeThoughts) {
-          generationConfig.thinkingConfig = {};
-          if (state.settings.thinkingBudget > 0) generationConfig.thinkingConfig.thinkingBudget = state.settings.thinkingBudget;
-          if (state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
-        }
+        const thinkingConfig = buildGeminiThinkingConfig({
+          model,
+          thinkingLevel: state.settings.geminiThinkingLevel,
+          thinkingBudget: state.settings.thinkingBudget,
+          includeThoughts: state.settings.includeThoughts
+        });
+        if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
       }
       const requestBody = {
         contents: messagesForApi,
@@ -10201,6 +10546,68 @@ ${knowledgeText}`;
     }
   };
 
+  // src/utils/cache-miss.js
+  var CACHE_TTL_MS = {
+    "5m": 5 * 60 * 1e3,
+    "1h": 60 * 60 * 1e3
+  };
+  function assessAnthropicCacheMiss({ settings, lastModelMessage, now }) {
+    if (!settings || settings.apiProvider !== "anthropic") return null;
+    const threshold = Number(settings.cacheMissAlertThresholdUsd);
+    if (!Number.isFinite(threshold) || threshold <= 0) return null;
+    const ttl = settings.anthropicCacheTTL || "5m";
+    if (!CACHE_TTL_MS[ttl]) return null;
+    const tokens = lastModelMessage?.usageMetadata?.promptTokenCount || 0;
+    if (tokens <= 0) return null;
+    const model = settings.modelName || "";
+    const prevModel = lastModelMessage.modelName || "";
+    const prevProvider = lastModelMessage.provider || "anthropic";
+    let reason = null;
+    if (prevProvider !== "anthropic") {
+      reason = "provider";
+    } else if (prevModel && normalizeModelName(prevModel) !== normalizeModelName(model)) {
+      reason = "model";
+    } else if (Number.isFinite(lastModelMessage.timestamp) && now - lastModelMessage.timestamp > CACHE_TTL_MS[ttl]) {
+      reason = "expired";
+    }
+    if (!reason) return null;
+    const pricing = getPricing(model, now);
+    if (!pricing) return null;
+    const perMillion = (ttl === "1h" ? pricing.cw1h : pricing.cw5m) ?? pricing.in;
+    const estimatedUsd = tokens * perMillion / 1e6;
+    if (estimatedUsd < threshold) return null;
+    const estimatedUsd1h = ttl === "5m" && pricing.cw1h != null ? tokens * pricing.cw1h / 1e6 : null;
+    return { reason, prevModel, model, ttl, tokens, estimatedUsd, estimatedUsd1h };
+  }
+  __name(assessAnthropicCacheMiss, "assessAnthropicCacheMiss");
+  function formatCacheMissMessage(info) {
+    if (!info) return "";
+    const usd = /* @__PURE__ */ __name((v) => `$${v.toFixed(2)}`, "usd");
+    const tokens = info.tokens.toLocaleString("en-US");
+    let head;
+    if (info.reason === "provider") {
+      head = `プロバイダーが変わっています（前の返事は ${info.prevModel || "別のプロバイダー"}）。`;
+    } else if (info.reason === "model") {
+      head = `モデルが ${info.prevModel} から ${info.model} に変わっています。`;
+    } else {
+      const ttlLabel = info.ttl === "1h" ? "1時間" : "5分";
+      head = `前の返事から ${ttlLabel} 以上空いたため、プロンプトキャッシュが消えています。`;
+    }
+    let body = `キャッシュが効かないため、この送信は約 ${usd(info.estimatedUsd)} かかります（${tokens} トークンを再書き込み）。`;
+    if (info.estimatedUsd1h != null) {
+      const extra = info.estimatedUsd1h - info.estimatedUsd;
+      body += `
+
+「1時間キャッシュに切り替えて送信」を選ぶと:
+・この1通は約 ${usd(info.estimatedUsd1h)}（5分のままより +${usd(extra)}）
+・以後、返事のたびに増えるぶんの書き込みが2倍（5分は1.25倍）になります
+・そのかわり、1時間以内なら間が空いても再書き込みは起きません`;
+    }
+    return `${head}
+${body}`;
+  }
+  __name(formatCacheMissMessage, "formatCacheMissMessage");
+
   // src/utils/typewriter.js
   var DEFAULT_MAX_LAG_MS = 2e3;
   function planTypewriterStep({ backlog, speedMs, maxLagMs = DEFAULT_MAX_LAG_MS }) {
@@ -10682,6 +11089,33 @@ ${knowledgeText}`;
       finalAggregatedMessage.timestamp = Date.now();
       return finalAggregatedMessage;
     },
+    /**
+     * @private キャッシュが効かない高額な送信なら確認を出す。
+     * @returns {Promise<boolean>} 送信を続けてよければ true
+     */
+    async _confirmCacheMissIfNeeded() {
+      const lastModelMessage = [...state.currentMessages].reverse().find((m) => (m.role === "model" || m.role === "assistant") && !m.isHidden && (!m.isCascaded || m.isSelected));
+      const info = assessAnthropicCacheMiss({
+        settings: state.settings,
+        lastModelMessage,
+        now: Date.now()
+      });
+      if (!info) return true;
+      const altLabel = info.estimatedUsd1h != null ? "1時間キャッシュに切り替えて送信" : null;
+      const choice = await uiUtils.showCacheMissConfirm(formatCacheMissMessage(info), altLabel);
+      if (choice === "cancel") return false;
+      if (choice === "alt") {
+        state.settings.anthropicCacheTTL = "1h";
+        if (state.activeProfile?.settings) state.activeProfile.settings.anthropicCacheTTL = "1h";
+        if (elements.anthropicCacheTTLSelect) elements.anthropicCacheTTLSelect.value = "1h";
+        if (state.activeProfile) {
+          await dbUtils.updateProfile(state.activeProfile);
+          this.markAsDirtyAndSchedulePush("structural");
+        }
+        console.log("[CacheMiss] プロンプトキャッシュの保持時間を 1時間 に切り替えました。");
+      }
+      return true;
+    },
     async handleSend() {
       state.pendingCascadeResponses = null;
       if (state.isSending) {
@@ -10698,6 +11132,7 @@ ${knowledgeText}`;
       const text = elements.userInput.value.trim();
       const attachmentsToSend = [...state.pendingAttachments];
       if (!text && attachmentsToSend.length === 0) return;
+      if (!await this._confirmCacheMissIfNeeded()) return;
       uiUtils.setSendingState(true);
       uiUtils.setLoadingIndicatorText("応答生成中...");
       const userMessage = { role: "user", content: text, timestamp: Date.now(), attachments: attachmentsToSend };
@@ -10724,9 +11159,13 @@ ${knowledgeText}`;
         if (state.settings.topK !== null) generationConfig.topK = state.settings.topK;
         if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
         if ((state.settings.apiProvider || "gemini") === "gemini" && (state.settings.thinkingBudget > 0 || state.settings.includeThoughts)) {
-          generationConfig.thinkingConfig = {};
-          if (state.settings.thinkingBudget > 0) generationConfig.thinkingConfig.thinkingBudget = state.settings.thinkingBudget;
-          if (state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
+          const thinkingConfig = buildGeminiThinkingConfig({
+            model: state.settings.modelName,
+            thinkingLevel: state.settings.geminiThinkingLevel,
+            thinkingBudget: state.settings.thinkingBudget,
+            includeThoughts: state.settings.includeThoughts
+          });
+          if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
         }
         const summaryText = this._buildSummaryForPrompt();
         const staticText = state.currentSystemPrompt?.trim() || "";
@@ -11284,9 +11723,13 @@ ${knowledgeText}`;
           if (state.settings.topK !== null) generationConfig.topK = state.settings.topK;
           if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
           if ((state.settings.apiProvider || "gemini") === "gemini" && (state.settings.thinkingBudget > 0 || state.settings.includeThoughts)) {
-            generationConfig.thinkingConfig = {};
-            if (state.settings.thinkingBudget > 0) generationConfig.thinkingConfig.thinkingBudget = state.settings.thinkingBudget;
-            if (state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
+            const thinkingConfig = buildGeminiThinkingConfig({
+              model: state.settings.modelName,
+              thinkingLevel: state.settings.geminiThinkingLevel,
+              thinkingBudget: state.settings.thinkingBudget,
+              includeThoughts: state.settings.includeThoughts
+            });
+            if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
           }
           const systemInstruction = state.currentSystemPrompt?.trim() ? { role: "system", parts: [{ text: state.currentSystemPrompt.trim() }] } : null;
           const newMessages = await this._internalHandleSend(
@@ -13275,225 +13718,6 @@ ${msg}`);
       }
     }, "runQualityChecker")
   };
-
-  // src/utils/pricing.js
-  var MODEL_PRICING = {
-    // Claude — https://platform.claude.com/docs/en/about-claude/pricing
-    // Fable/Mythos 5.1 はキャッシュヒットが基本入力の0.025倍（他モデルは0.1倍）。
-    "claude-fable-5-1": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 0.25 },
-    "claude-mythos-5-1": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 0.25 },
-    "claude-fable-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
-    "claude-mythos-5": { in: 10, out: 50, cw5m: 12.5, cw1h: 20, cr: 1 },
-    // Claude 5系 / 4系 (claude-opus-5, claude-opus-4-x, claude-sonnet-4-x, claude-haiku-4-x)
-    // Opus 5.5 は Opus 5 より安く（$4/$20）、キャッシュヒットも基本入力の0.05倍（他は0.1倍）。
-    // 前方一致のため 'claude-opus-5' より前に置くこと（後ろだとそちらに先に一致する）。
-    // ※ Fast mode（入力$8/出力$40）もあるが、アプリからは使わないので入れていない。
-    "claude-opus-5-5": { in: 4, out: 20, cw5m: 5, cw1h: 8, cr: 0.2 },
-    "claude-opus-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-    "claude-opus-4-8": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-    "claude-opus-4-7": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-    "claude-opus-4-6": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-    "claude-opus-4-5": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-    "claude-opus-4-1": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
-    "claude-opus-4": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
-    // Sonnet 5 は 4.6/4.5 より安い（$2/$10）。'claude-sonnet-4' より前に置くこと。
-    // 発表時は 2026-08-31 までの導入価格とされていたが、その後この額が正価になり、
-    // 予定されていた $3/$15 への値上げは行われないと明記された（＝期間で分ける必要なし）。
-    "claude-sonnet-5": { in: 2, out: 10, cw5m: 2.5, cw1h: 4, cr: 0.2 },
-    "claude-sonnet-4": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
-    "claude-haiku-4": { in: 1, out: 5, cw5m: 1.25, cw1h: 2, cr: 0.1 },
-    // Claude 3系 (旧モデル)
-    "claude-opus-3": { in: 15, out: 75, cw5m: 18.75, cw1h: 30, cr: 1.5 },
-    "claude-opus": { in: 5, out: 25, cw5m: 6.25, cw1h: 10, cr: 0.5 },
-    "claude-sonnet": { in: 3, out: 15, cw5m: 3.75, cw1h: 6, cr: 0.3 },
-    "claude-haiku": { in: 0.8, out: 4, cw5m: 1, cw1h: 1.6, cr: 0.08 },
-    // DeepSeek（in=キャッシュミス入力, cr=キャッシュヒット入力）。価格は「通常（オフピーク）」基準。
-    // peakMul があるモデルは、ピーク時間帯のメッセージのみ料金を peakMul 倍にする。
-    // V4系は 2026-08-16 の改定後の価格。
-    "deepseek-reasoner": { in: 0.55, out: 2.19, cw5m: 0.55, cw1h: 0.55, cr: 0.14 },
-    "deepseek-chat": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
-    "deepseek-v4-pro": { in: 0.66, out: 1.98, cw5m: 0.66, cw1h: 0.66, cr: 0.022, peakMul: 2 },
-    // V4.1 Flash（2026-09-10 公開）。旧名 'deepseek-v4-flash' と
-    // 'deepseek-v4-flash-vision-exp' もこのモデルへ転送され、Flash の単価で課金される。
-    // 転送前に送ったぶんは MODEL_PRICING_BEFORE_V41_FLASH で当時の単価を引く。
-    // 総称の 'deepseek-' より前に置くこと（後ろだとそちらに先に一致する）。
-    "deepseek-flash": { in: 0.15, out: 0.6, cw5m: 0.15, cw1h: 0.15, cr: 3e-3, peakMul: 2 },
-    "deepseek-v4-flash": { in: 0.15, out: 0.6, cw5m: 0.15, cw1h: 0.15, cr: 3e-3, peakMul: 2 },
-    "deepseek-": { in: 0.27, out: 1.1, cw5m: 0.27, cw1h: 0.27, cr: 0.07 },
-    // 以下は cw5m/cw1h を持たない。キャッシュ書き込みに別料金が無く、通常入力と同額のため
-    // （calcMessageCost が in にフォールバックする）。
-    // longCtx があるモデルは、プロンプトが threshold 以上のとき単価がそちらへ切り替わる。
-    // xAI Grok — https://docs.x.ai/developers/pricing
-    "grok-4-7": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
-    "grok-4-6": { in: 2, out: 6, cr: 0.5, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 1 } },
-    "grok-4-5": { in: 2, out: 6, cr: 0.3, longCtx: { threshold: 2e5, in: 4, out: 12, cr: 0.6 } },
-    "grok-4-3": { in: 1.25, out: 2.5, cr: 0.2, longCtx: { threshold: 2e5, in: 2.5, out: 5, cr: 0.4 } },
-    "grok-build-0-1": { in: 1, out: 2, cr: 0.2, longCtx: { threshold: 2e5, in: 2, out: 4, cr: 0.4 } },
-    // Groq — https://console.groq.com/docs/models
-    // 'openai/gpt-oss-120b' はベンダー接頭辞が外れて 'gpt-oss-120b' になる。
-    // キャッシュ割引の記載が無いので cr は入力と同額にしてある。
-    // Compound（groq/compound・compound-mini）は内部で複数モデルを使う仕組みで
-    // 単体の単価表記が無く、Llama 3.3 70B / 3.1 8B と MiniMax M2.7 は
-    // Enterprise（要問い合わせ）扱いのため、いずれも載せていない。
-    "gpt-oss-120b": { in: 0.15, out: 0.6, cr: 0.15 },
-    "gpt-oss-20b": { in: 0.075, out: 0.3, cr: 0.075 },
-    "qwen3-6-27b": { in: 0.6, out: 3, cr: 0.6 },
-    // Mistral — https://mistral.ai/pricing/api
-    // '-latest' が付くので前方一致で引く。open-mistral-nemo は料金表から消えたため無し。
-    "mistral-large": { in: 0.5, out: 1.5, cr: 0.5 },
-    "mistral-medium": { in: 1.5, out: 7.5, cr: 1.5 },
-    "mistral-small": { in: 0.15, out: 0.6, cr: 0.15 },
-    "codestral": { in: 0.3, out: 0.9, cr: 0.3 },
-    "ministral-3-14b": { in: 0.2, out: 0.2, cr: 0.2 },
-    "ministral-3-8b": { in: 0.15, out: 0.15, cr: 0.15 },
-    "ministral-3-3b": { in: 0.1, out: 0.1, cr: 0.1 },
-    // Z.ai GLM — https://docs.z.ai/guides/overview/pricing
-    // Flash 系（4.7 / 4.5 / 4.6V）は入出力とも無料。
-    // 前方一致なので、長いキーを先に置くこと（'glm-5-3-flash' は 'glm-5-3' より前、
-    // 'glm-4-7-flashx' は 'glm-4-7-flash' より前、'glm-5-1' 等は 'glm-5' より前）。
-    "glm-5-3-flash": { in: 0.15, out: 0.5, cr: 0.03 },
-    // 2026-09-09 に50%割引が終了
-    "glm-5-3": { in: 1.4, out: 4.4, cr: 0.26 },
-    "glm-5-2": { in: 1.4, out: 4.4, cr: 0.26 },
-    "glm-5-1": { in: 1.4, out: 4.4, cr: 0.26 },
-    "glm-5": { in: 1, out: 3.2, cr: 0.2 },
-    "glm-4-7-flashx": { in: 0.07, out: 0.4, cr: 0.01 },
-    "glm-4-7-flash": { in: 0, out: 0, cr: 0 },
-    "glm-4-7": { in: 0.6, out: 2.2, cr: 0.11 },
-    "glm-4-6v-flashx": { in: 0.04, out: 0.4, cr: 4e-3 },
-    "glm-4-6v-flash": { in: 0, out: 0, cr: 0 },
-    "glm-4-6v": { in: 0.3, out: 0.9, cr: 0.05 },
-    "glm-4-6": { in: 0.6, out: 2.2, cr: 0.11 },
-    "glm-4-5-air": { in: 0.2, out: 1.1, cr: 0.03 },
-    "glm-4-5-flash": { in: 0, out: 0, cr: 0 },
-    // Qwen — https://www.qwencloud.com/models/qwen3.8-flash
-    // OpenRouter 経由（'qwen/qwen3.8-flash'）でもベンダー接頭辞が外れて一致する。
-    "qwen3-8-flash": { in: 0.15, out: 0.47, cr: 0.016 },
-    // OpenAI — https://developers.openai.com/api/docs/pricing
-    // 前方一致のため、より具体的なキーを先に置くこと（'gpt-5-mini' は 'gpt-5' より前）。
-    // GPT-6 Astra。長コンテキスト段（入力$20/出力$75）もあるが、何トークンから
-    // 切り替わるかが公表されていないため longCtx は入れていない（推測で入れない）。
-    "gpt-6-astra": { in: 10, out: 50, cr: 1 },
-    "gpt-6-sol": { in: 2, out: 10, cr: 0.2 },
-    "gpt-6-luna": { in: 0.1, out: 0.5, cr: 0.01 },
-    "gpt-5-6-sol": { in: 4, out: 20, cr: 0.4 },
-    // 2026-08-21 値下げ（少なくとも11/21まで）
-    "gpt-5-6-terra": { in: 2, out: 12, cr: 0.2 },
-    "gpt-5-6-luna": { in: 0.2, out: 1.2, cr: 0.02 },
-    "gpt-5-5-pro": { in: 30, out: 180, cr: 30 },
-    // キャッシュ割引の提供なし
-    "gpt-5-5": { in: 5, out: 30, cr: 0.5 },
-    "gpt-5-4-mini": { in: 0.75, out: 4.5, cr: 0.075 },
-    "gpt-5-4-nano": { in: 0.2, out: 1.25, cr: 0.02 },
-    "gpt-5-4-pro": { in: 30, out: 180, cr: 30 },
-    // 同上
-    "gpt-5-4": { in: 2.5, out: 15, cr: 0.25 },
-    "gpt-5-2": { in: 1.75, out: 14, cr: 0.175 },
-    "gpt-5-1": { in: 1.25, out: 10, cr: 0.125 },
-    "gpt-5-mini": { in: 0.25, out: 2, cr: 0.025 },
-    "gpt-5": { in: 1.25, out: 10, cr: 0.125 },
-    "gpt-4-1-mini": { in: 0.4, out: 1.6, cr: 0.1 },
-    "gpt-4-1-nano": { in: 0.1, out: 0.4, cr: 0.025 },
-    "gpt-4-1": { in: 2, out: 8, cr: 0.5 },
-    "o4-mini": { in: 1.1, out: 4.4, cr: 0.275 },
-    "o3-mini": { in: 1.1, out: 4.4, cr: 0.55 },
-    "o3-pro": { in: 20, out: 80, cr: 20 },
-    // 同上
-    "o3": { in: 2, out: 8, cr: 0.5 },
-    // Google Gemini — https://ai.google.dev/gemini-api/docs/pricing
-    // '-flash-lite' は '-flash' より前に置くこと（前方一致のため）。
-    // 3.7 / 3.6 Flash は 2026-12-31 まで半額。ここには割引終了後の通常単価を置き、
-    // 割引期間中は MODEL_PRICING_GEMINI_FLASH_PROMO を優先して引く。
-    "gemini-3-8-flash": { in: 1.5, out: 7.5, cr: 0.15 },
-    "gemini-3-7-flash": { in: 1.5, out: 7.5, cr: 0.15 },
-    "gemini-3-6-flash": { in: 1.5, out: 7.5, cr: 0.15 },
-    "gemini-3-5-flash-lite": { in: 0.3, out: 2.5, cr: 0.03 },
-    "gemini-3-5-flash": { in: 1.5, out: 9, cr: 0.15 },
-    // 3.1 Pro も 200k 超で単価が上がる（入力2倍・出力1.5倍・キャッシュ2倍）
-    "gemini-3-1-pro": { in: 2, out: 12, cr: 0.2, longCtx: { threshold: 2e5, in: 4, out: 18, cr: 0.4 } },
-    "gemini-3-1-flash-lite": { in: 0.25, out: 1.5, cr: 0.025 },
-    // 3 Flash（プレビュー）。'gemini-3-7-flash' 等とは前方一致で衝突しない
-    "gemini-3-flash": { in: 0.5, out: 3, cr: 0.05 },
-    // 2.5 Pro は 200k 超で入力2倍・出力1.5倍と倍率が異なるため、上位段の単価をそのまま持つ
-    "gemini-2-5-pro": { in: 1.25, out: 10, cr: 0.125, longCtx: { threshold: 2e5, in: 2.5, out: 15, cr: 0.25 } },
-    "gemini-2-5-flash-lite": { in: 0.1, out: 0.4, cr: 0.01 },
-    "gemini-2-5-flash": { in: 0.3, out: 2.5, cr: 0.03 }
-  };
-  var DEEPSEEK_V4_PRICE_CHANGE_AT = Date.UTC(2026, 7, 16, 16, 0, 0);
-  var MODEL_PRICING_BEFORE_V4_CHANGE = {
-    "deepseek-v4-pro": { in: 0.435, out: 0.87, cw5m: 0.435, cw1h: 0.435, cr: 3625e-6, peakMul: 2 },
-    "deepseek-v4-flash": { in: 0.14, out: 0.28, cw5m: 0.14, cw1h: 0.14, cr: 28e-4, peakMul: 2 }
-  };
-  var GPT_56_SOL_PRICE_CUT_AT = Date.UTC(2026, 7, 21, 0, 0, 0);
-  var MODEL_PRICING_BEFORE_SOL_CUT = {
-    "gpt-5-6-sol": { in: 5, out: 30, cr: 0.5 }
-  };
-  var GEMINI_FLASH_PROMO_END_AT = Date.UTC(2027, 0, 1, 0, 0, 0);
-  var MODEL_PRICING_GEMINI_FLASH_PROMO = {
-    "gemini-3-8-flash": { in: 0.75, out: 3.75, cr: 0.075 },
-    "gemini-3-7-flash": { in: 0.75, out: 3.75, cr: 0.075 },
-    "gemini-3-6-flash": { in: 0.75, out: 3.75, cr: 0.075 }
-  };
-  var DEEPSEEK_V41_FLASH_AT = Date.UTC(2026, 8, 10, 0, 0, 0);
-  var MODEL_PRICING_BEFORE_V41_FLASH = {
-    "deepseek-v4-flash": { in: 0.22, out: 0.66, cw5m: 0.22, cw1h: 0.22, cr: 7e-3, peakMul: 2 }
-  };
-  var GLM_53_FLASH_PROMO_END_AT = Date.UTC(2026, 8, 9, 16, 0, 0);
-  var MODEL_PRICING_GLM_53_FLASH_PROMO = {
-    "glm-5-3-flash": { in: 0.075, out: 0.25, cr: 0.015 }
-  };
-  function normalizeModelName(modelName) {
-    if (typeof modelName !== "string") return "";
-    return modelName.toLowerCase().trim().replace(/^[^/]+\//, "").replace(/:.*$/, "").replace(/(\d)\.(\d)/g, "$1-$2");
-  }
-  __name(normalizeModelName, "normalizeModelName");
-  function getPricing(modelName, timestamp) {
-    if (!modelName) return null;
-    const m = normalizeModelName(modelName);
-    if (!m) return null;
-    if (!timestamp || timestamp < DEEPSEEK_V4_PRICE_CHANGE_AT) {
-      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V4_CHANGE)) {
-        if (m.startsWith(key)) return price;
-      }
-    }
-    if (!timestamp || timestamp < GPT_56_SOL_PRICE_CUT_AT) {
-      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_SOL_CUT)) {
-        if (m.startsWith(key)) return price;
-      }
-    }
-    if (!timestamp || timestamp < DEEPSEEK_V41_FLASH_AT) {
-      for (const [key, price] of Object.entries(MODEL_PRICING_BEFORE_V41_FLASH)) {
-        if (m.startsWith(key)) return price;
-      }
-    }
-    if (!timestamp || timestamp < GLM_53_FLASH_PROMO_END_AT) {
-      for (const [key, price] of Object.entries(MODEL_PRICING_GLM_53_FLASH_PROMO)) {
-        if (m.startsWith(key)) return price;
-      }
-    }
-    if (!timestamp || timestamp < GEMINI_FLASH_PROMO_END_AT) {
-      for (const [key, price] of Object.entries(MODEL_PRICING_GEMINI_FLASH_PROMO)) {
-        if (m.startsWith(key)) return price;
-      }
-    }
-    for (const [key, price] of Object.entries(MODEL_PRICING)) {
-      if (m.startsWith(key)) return price;
-    }
-    return null;
-  }
-  __name(getPricing, "getPricing");
-  var DEEPSEEK_WEEKEND_OFFPEAK_AT = Date.UTC(2026, 7, 22, 16, 0, 0);
-  var BEIJING_OFFSET_MS = 8 * 60 * 60 * 1e3;
-  function isDeepSeekPeak(timestamp) {
-    if (!timestamp) return false;
-    if (timestamp >= DEEPSEEK_WEEKEND_OFFPEAK_AT) {
-      const beijingDay = new Date(timestamp + BEIJING_OFFSET_MS).getUTCDay();
-      if (beijingDay === 0 || beijingDay === 6) return false;
-    }
-    const h = new Date(timestamp).getUTCHours();
-    return h >= 1 && h < 4 || h >= 6 && h < 10;
-  }
-  __name(isDeepSeekPeak, "isDeepSeekPeak");
 
   // src/utils/usage.js
   function getUsageRange(range, now) {

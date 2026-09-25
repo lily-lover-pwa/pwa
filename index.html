@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.65" defer></script>
+    <script src="app.js?v=1.25.66" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -365,6 +365,12 @@
                                 <option value="1h">1時間（長い会話向け）</option>
                             </select>
                             <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">※ 1時間TTLはキャッシュ書き込みコストが2倍になりますが、5分以上間隔が空く会話で有効です。</p>
+                            <label for="cache-miss-alert-threshold" style="margin-top: 15px;">キャッシュが効かない送信の確認 (USD):</label>
+                            <input type="number" id="cache-miss-alert-threshold" min="0" step="0.1" placeholder="例: 0.5 (0で無効)" aria-label="キャッシュが効かない送信の確認">
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">
+                                ※ モデルを変えたときや、前の返事からTTL以上空いたときは、会話全体がキャッシュに再書き込みされます。<br>
+                                ※ その見積もりがこの額を超える場合だけ、送信前に確認を出します。普段は何も出ません。
+                            </p>
                             <label for="anthropic-effort" style="margin-top: 15px;">思考の深さ (Effort):</label>
                             <select id="anthropic-effort">
                                 <option value="">OFF (思考なし)</option>
@@ -503,13 +509,28 @@
                         <p style="height:16px;"></p>
                         <div class="param-grid">
                             <div>
-                                <label for="thinking-budget">Thinking Budget:</label>
-                                <input type="number" id="thinking-budget" step="1" min="0" placeholder="例: 5000 (0～24576整数)" aria-label="Thinking Budget">
+                                <label for="gemini-thinking-level">思考の深さ (thinking_level):</label>
+                                <select id="gemini-thinking-level">
+                                    <option value="">モデルの既定（動的）</option>
+                                    <option value="minimal">minimal（最小）</option>
+                                    <option value="low">low（速度・コスト重視）</option>
+                                    <option value="medium">medium（バランス型）</option>
+                                    <option value="high">high（最大品質）</option>
+                                </select>
+                                <p id="gemini-thinking-level-note" class="hidden" style="font-size: 11px; color: var(--warning-text, #c0392b); margin-top: 4px;"></p>
+                                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 10px;">
+                                    ※ Gemini 公式が推奨する現行の方式。選択中のモデルで使える段階だけ表示されます（minimal は 3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite）。<br>
+                                    ※ これを選ぶと下の Thinking Budget は送られません（両方送ると400になるため）。<br>
+                                    ※ Gemini 3 では minimal でも思考が完全に止まる保証はありません。
+                                </p>
+                                <label for="thinking-budget">Thinking Budget（旧方式）:</label>
+                                <input type="number" id="thinking-budget" step="1" min="0" placeholder="例: 5000 (空欄なら送らない)" aria-label="Thinking Budget">
                             </div>
                         </div>
                         <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
-                            ※ Thinking Budgetは新しいGeminiモデルのみ対応。0明示でthinkingをOFF。<br>
-                            ※ 1～1024指定時は固定で1024になる
+                            ※ Gemini と OpenRouter（Include Thoughts がONのとき）に送られます。Anthropic は「思考の深さ (Effort)」で制御し、この値は使いません。<br>
+                            ※ 空欄または0なら送らず、モデルの既定（動的思考）になります。0で思考を止める指定ではありません。<br>
+                            ※ Gemini では旧方式（thinking_budget）です。上の「思考の深さ」が未指定のときだけ送られます。
                         </p>
                         <label class="checkbox-label" style="margin-top: 15px;">
                             <input type="checkbox" id="include-thoughts-toggle">
@@ -989,6 +1010,7 @@
         <p class="dialog-message"></p>
         <div class="dialog-actions">
             <button value="cancel" class="dialog-cancel-btn">キャンセル</button>
+            <button value="alt" class="dialog-alt-btn hidden">代替</button>
             <button value="ok" class="dialog-ok-btn">OK</button>
         </div>
     </dialog>

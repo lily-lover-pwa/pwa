@@ -4,6 +4,7 @@ import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
 import { createGeminiStreamAssembler } from './utils/gemini-stream.js';
+import { buildGeminiThinkingConfig } from './utils/gemini-thinking.js';
 import { extractReasoningText } from './utils/reasoning.js';
 import { parseSSEBuffer } from './utils/sse.js';
 import { isImageGenerationModel } from './utils/model-select.js';
@@ -550,11 +551,15 @@ export const apiUtils = {
             delete finalGenerationConfig.temperature;
 
         } else {
-            if ((state.settings.thinkingBudget > 0) || state.settings.includeThoughts) {
-                generationConfig.thinkingConfig = {};
-                if(state.settings.thinkingBudget > 0) generationConfig.thinkingConfig.thinkingBudget = state.settings.thinkingBudget;
-                if(state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
-            }
+            // thinking_level が選ばれていればそれを、無ければ旧方式の thinking_budget を送る。
+            // 両方同時は 400 になるので buildGeminiThinkingConfig が必ず片方に絞る
+            const thinkingConfig = buildGeminiThinkingConfig({
+                model,
+                thinkingLevel: state.settings.geminiThinkingLevel,
+                thinkingBudget: state.settings.thinkingBudget,
+                includeThoughts: state.settings.includeThoughts
+            });
+            if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
         }
 
         const requestBody = {

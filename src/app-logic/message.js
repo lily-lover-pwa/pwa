@@ -4,6 +4,8 @@ import { GEMINI_API_BASE_URL, INITIAL_RETRY_DELAY } from '../constants.js';
 import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
+import { assessAnthropicCacheMiss, formatCacheMissMessage } from '../utils/cache-miss.js';
+import { buildGeminiThinkingConfig } from '../utils/gemini-thinking.js';
 import { planTypewriterStep } from '../utils/typewriter.js';
 import { uiUtils } from '../ui.js';
 import { htmlUtils } from '../utils/html.js';
@@ -488,6 +490,38 @@ export const messageMethods = {
 
 
     
+    /**
+     * @private キャッシュが効かない高額な送信なら確認を出す。
+     * @returns {Promise<boolean>} 送信を続けてよければ true
+     */
+    async _confirmCacheMissIfNeeded() {
+        const lastModelMessage = [...state.currentMessages].reverse()
+            .find(m => (m.role === 'model' || m.role === 'assistant') && !m.isHidden && (!m.isCascaded || m.isSelected));
+        const info = assessAnthropicCacheMiss({
+            settings: state.settings,
+            lastModelMessage,
+            now: Date.now()
+        });
+        if (!info) return true;
+
+        const altLabel = info.estimatedUsd1h != null ? '1時間キャッシュに切り替えて送信' : null;
+        const choice = await uiUtils.showCacheMissConfirm(formatCacheMissMessage(info), altLabel);
+        if (choice === 'cancel') return false;
+
+        if (choice === 'alt') {
+            // 設定の保存は setupInstantSave と同じ経路（state → プロファイル → DB → 同期）
+            state.settings.anthropicCacheTTL = '1h';
+            if (state.activeProfile?.settings) state.activeProfile.settings.anthropicCacheTTL = '1h';
+            if (elements.anthropicCacheTTLSelect) elements.anthropicCacheTTLSelect.value = '1h';
+            if (state.activeProfile) {
+                await dbUtils.updateProfile(state.activeProfile);
+                this.markAsDirtyAndSchedulePush('structural');
+            }
+            console.log('[CacheMiss] プロンプトキャッシュの保持時間を 1時間 に切り替えました。');
+        }
+        return true;
+    },
+
     async handleSend() {
         state.pendingCascadeResponses = null; // 保留中のカスケードデータをクリア
         if (state.isSending) { return; }
@@ -497,6 +531,11 @@ export const messageMethods = {
         const text = elements.userInput.value.trim();
         const attachmentsToSend = [...state.pendingAttachments];
         if (!text && attachmentsToSend.length === 0) return;
+
+        // モデル変更やキャッシュ期限切れで会話全体が再書き込みになる送信は、
+        // 額が大きいときだけ送信前に止める（普段は何も出ない）。
+        // ユーザー発言を積む前に判定して、キャンセルしたら何も残らないようにする。
+        if (!(await this._confirmCacheMissIfNeeded())) return;
 
         uiUtils.setSendingState(true);
         uiUtils.setLoadingIndicatorText('応答生成中...');
@@ -531,9 +570,14 @@ export const messageMethods = {
             if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
             if ((state.settings.apiProvider || 'gemini') === 'gemini' &&
                     ((state.settings.thinkingBudget > 0) || state.settings.includeThoughts)) {
-                generationConfig.thinkingConfig = {};
-                if(state.settings.thinkingBudget > 0) generationConfig.thinkingConfig.thinkingBudget = state.settings.thinkingBudget;
-                if(state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
+                // thinking_level 優先・両方は送らない（buildGeminiThinkingConfig が片方に絞る）
+                const thinkingConfig = buildGeminiThinkingConfig({
+                    model: state.settings.modelName,
+                    thinkingLevel: state.settings.geminiThinkingLevel,
+                    thinkingBudget: state.settings.thinkingBudget,
+                    includeThoughts: state.settings.includeThoughts
+                });
+                if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
             }
 
             const summaryText = this._buildSummaryForPrompt();
@@ -1235,9 +1279,14 @@ export const messageMethods = {
                 if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
                 if ((state.settings.apiProvider || 'gemini') === 'gemini' &&
                         ((state.settings.thinkingBudget > 0) || state.settings.includeThoughts)) {
-                    generationConfig.thinkingConfig = {};
-                    if(state.settings.thinkingBudget > 0) generationConfig.thinkingConfig.thinkingBudget = state.settings.thinkingBudget;
-                    if(state.settings.includeThoughts) generationConfig.thinkingConfig.includeThoughts = true;
+                    // thinking_level 優先・両方は送らない（buildGeminiThinkingConfig が片方に絞る）
+                    const thinkingConfig = buildGeminiThinkingConfig({
+                        model: state.settings.modelName,
+                        thinkingLevel: state.settings.geminiThinkingLevel,
+                        thinkingBudget: state.settings.thinkingBudget,
+                        includeThoughts: state.settings.includeThoughts
+                    });
+                    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
                 }
                 const systemInstruction = state.currentSystemPrompt?.trim() ? { role: "system", parts: [{ text: state.currentSystemPrompt.trim() }] } : null;
     
