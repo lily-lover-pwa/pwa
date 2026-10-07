@@ -11,6 +11,7 @@ import {
     BAI_API_BASE_URL,
     DEFAULT_ANTHROPIC_MODEL,
 } from '../constants.js';
+import { sanitizeGeminiGenerationConfig } from '../utils/gemini-params.js';
 import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
@@ -78,7 +79,8 @@ async function runAuxiliaryCompletion({ provider, model, systemPrompt, userConte
         body = {
             contents: [{ role: 'user', parts: [{ text: userContent }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { temperature, maxOutputTokens: maxTokens },
+            // 3.6 Flash 以降に temperature を送らない（効かず、今後のモデルではエラー）
+            generationConfig: sanitizeGeminiGenerationConfig(model, { temperature, maxOutputTokens: maxTokens }),
             safetySettings: getGeminiSafetySettings(),
         };
         parse = (d) => d.candidates?.[0]?.content?.parts?.[0]?.text;

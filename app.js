@@ -2066,6 +2066,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.68": [
+      "Gemini の「思考の深さ」だけを選んでいると、実際には送られていなかった不具合を直しました。Thinking Budget か Include Thoughts を一緒に設定していた場合は送られていました。",
+      "Google から「今後の Gemini では thinking_budget と Temperature / Top K / Top P を送るとエラーになる」と告知があったため、受け付けるモデルにだけ送るようにしました。3.6 Flash 以降はもともと Temperature などが効いていないので、送らなくても結果は変わりません。新しい Gemini では思考の深さを使ってください。",
+      "3.5 Flash と 3 Flash（プレビュー）でも minimal を選べるようにしました。Gemini 公式の対応表が更新されたためです。"
+    ],
     "1.67": [
       "Gemini に「思考の深さ (thinking_level)」を追加しました。minimal / low / medium / high から選べます。Gemini 公式が現在推奨している方式で、これまでの Thinking Budget（旧方式）は残してありますが、思考の深さを選んでいるときは送られません（両方送るとエラーになるため）。",
       "選択中のモデルで使える段階だけが表示されます。minimal は 3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite で選べます。モデルを切り替えて非対応の値になった場合は自動で「モデルの既定」に戻ります。",
@@ -2921,17 +2926,66 @@ Reason: [NGの場合の理由]`,
   }
   __name(isDeepSeekPeak, "isDeepSeekPeak");
 
+  // src/utils/gemini-params.js
+  var SAMPLING_PARAMS_PREFIXES = [
+    "gemini-2-5",
+    "gemini-3-flash",
+    "gemini-3-pro",
+    "gemini-3-1-",
+    "gemini-3-5-"
+  ];
+  var THINKING_BUDGET_PREFIXES = [
+    ...SAMPLING_PARAMS_PREFIXES,
+    "gemini-3-6-",
+    "gemini-3-7-",
+    "gemini-3-8-"
+  ];
+  var isGemini = /* @__PURE__ */ __name((m) => m.startsWith("gemini"), "isGemini");
+  function geminiAcceptsSamplingParams(model) {
+    const m = normalizeModelName(model);
+    if (!isGemini(m)) return true;
+    return SAMPLING_PARAMS_PREFIXES.some((p) => m.startsWith(p));
+  }
+  __name(geminiAcceptsSamplingParams, "geminiAcceptsSamplingParams");
+  function geminiAcceptsThinkingBudget(model) {
+    const m = normalizeModelName(model);
+    if (!isGemini(m)) return true;
+    return THINKING_BUDGET_PREFIXES.some((p) => m.startsWith(p));
+  }
+  __name(geminiAcceptsThinkingBudget, "geminiAcceptsThinkingBudget");
+  function sanitizeGeminiGenerationConfig(model, generationConfig) {
+    const cfg = { ...generationConfig || {} };
+    if (!geminiAcceptsSamplingParams(model)) {
+      delete cfg.temperature;
+      delete cfg.topP;
+      delete cfg.topK;
+    }
+    if (cfg.thinkingConfig && !geminiAcceptsThinkingBudget(model)) {
+      const rest = { ...cfg.thinkingConfig };
+      delete rest.thinkingBudget;
+      if (Object.keys(rest).length > 0) cfg.thinkingConfig = rest;
+      else delete cfg.thinkingConfig;
+    }
+    return cfg;
+  }
+  __name(sanitizeGeminiGenerationConfig, "sanitizeGeminiGenerationConfig");
+
   // src/utils/gemini-thinking.js
   function getGeminiThinkingLevels(model) {
     const m = normalizeModelName(model);
     if (!m.startsWith("gemini")) return null;
     if (/-image|embedding|-live|-tts|robotics/.test(m)) return null;
-    if (m.startsWith("gemini-3-6-flash") || m.startsWith("gemini-3-5-flash-lite") || m.startsWith("gemini-3-1-flash-lite")) {
+    if (m.startsWith("gemini-3-6-flash") || m.startsWith("gemini-3-5-flash") || m.startsWith("gemini-3-flash") || m.startsWith("gemini-3-1-flash-lite")) {
       return ["minimal", "low", "medium", "high"];
     }
-    if (m.startsWith("gemini-3") || m.startsWith("gemini-2-5")) {
-      return ["low", "medium", "high"];
+    const major = /^gemini-(\d+)(?:-(\d+))?/.exec(m);
+    if (major) {
+      const v = Number(major[1]);
+      if (v >= 3) return ["low", "medium", "high"];
+      if (v === 2 && major[2] === "5") return ["low", "medium", "high"];
+      return null;
     }
+    if (m.endsWith("-latest")) return ["low", "medium", "high"];
     return null;
   }
   __name(getGeminiThinkingLevels, "getGeminiThinkingLevels");
@@ -2941,13 +2995,20 @@ Reason: [NGの場合の理由]`,
     const allowed = getGeminiThinkingLevels(model);
     if (level && allowed && allowed.includes(level)) {
       cfg.thinkingLevel = level.toUpperCase();
-    } else if (Number.isFinite(thinkingBudget) && thinkingBudget > 0) {
+    } else if (Number.isFinite(thinkingBudget) && thinkingBudget > 0 && geminiAcceptsThinkingBudget(model)) {
       cfg.thinkingBudget = thinkingBudget;
     }
     if (includeThoughts) cfg.includeThoughts = true;
     return Object.keys(cfg).length > 0 ? cfg : null;
   }
   __name(buildGeminiThinkingConfig, "buildGeminiThinkingConfig");
+  function buildGeminiLightThinkingConfig(model) {
+    if (geminiAcceptsThinkingBudget(model)) return { thinkingBudget: 0 };
+    const levels = getGeminiThinkingLevels(model);
+    if (levels && levels.length > 0) return { thinkingLevel: levels[0].toUpperCase() };
+    return null;
+  }
+  __name(buildGeminiLightThinkingConfig, "buildGeminiLightThinkingConfig");
 
   // src/utils/format.js
   var sleep = /* @__PURE__ */ __name((ms) => new Promise((resolve) => setTimeout(resolve, ms)), "sleep");
@@ -4809,7 +4870,7 @@ Reason: [NGの場合の理由]`,
         let msg = "";
         if (model.startsWith("gemini")) {
           if (!levels) msg = "※ このモデルは thinking_level 非対応です（Gemini 2.5 以降で利用できます）。";
-          else if (!levels.includes("minimal")) msg = "※ minimal はこのモデルでは使えません（3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite で利用可）。";
+          else if (!levels.includes("minimal")) msg = "※ minimal はこのモデルでは使えません（一部のモデルのみ対応）。";
         }
         note.textContent = msg;
         note.classList.toggle("hidden", !msg);
@@ -5538,7 +5599,7 @@ Reason: [NGの場合の理由]`,
     }, "updateApiUsageUI"),
     // プロバイダー変更時のUI更新
     updateProviderUI(provider) {
-      const isGemini = provider === "gemini";
+      const isGemini2 = provider === "gemini";
       const isZai = provider === "zai";
       const isOpenRouter = provider === "openrouter";
       const isBedrock = provider === "bedrock";
@@ -5551,7 +5612,7 @@ Reason: [NGの場合の理由]`,
       const isSakana = provider === "sakana";
       const isBai = provider === "bai";
       const containers = [
-        [elements.geminiApiKeyContainer, isGemini],
+        [elements.geminiApiKeyContainer, isGemini2],
         [elements.zaiApiKeyContainer, isZai],
         [elements.openrouterApiKeyContainer, isOpenRouter],
         [elements.bedrockApiKeyContainer, isBedrock],
@@ -9495,18 +9556,11 @@ AI: ${firstModelContent}`;
         delete finalGenerationConfig.topK;
         delete finalGenerationConfig.topP;
         delete finalGenerationConfig.temperature;
-      } else {
-        const thinkingConfig = buildGeminiThinkingConfig({
-          model,
-          thinkingLevel: state.settings.geminiThinkingLevel,
-          thinkingBudget: state.settings.thinkingBudget,
-          includeThoughts: state.settings.includeThoughts
-        });
-        if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
       }
+      const sendGenerationConfig = isImageGenModel ? finalGenerationConfig : sanitizeGeminiGenerationConfig(model, finalGenerationConfig);
       const requestBody = {
         contents: messagesForApi,
-        ...Object.keys(finalGenerationConfig).length > 0 && { generationConfig: finalGenerationConfig },
+        ...Object.keys(sendGenerationConfig).length > 0 && { generationConfig: sendGenerationConfig },
         safetySettings: getGeminiSafetySettings()
       };
       if (isImageGenModel) {
@@ -9704,10 +9758,14 @@ AI: ${firstModelContent}`;
         }
         endpoint = `${GEMINI_API_BASE_URL}${modelToUse}:generateContent`;
         fetchHeaders = { "Content-Type": "application/json", "x-goog-api-key": apiKey };
+        const lightThinking = buildGeminiLightThinkingConfig(modelToUse);
         requestBody = {
           contents: [{ role: "user", parts: [{ text: textToTranslate }] }],
           systemInstruction: { parts: [{ text: translationSystemPrompt }] },
-          generationConfig: { temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } },
+          generationConfig: sanitizeGeminiGenerationConfig(modelToUse, {
+            temperature: 0.1,
+            ...lightThinking && { thinkingConfig: lightThinking }
+          }),
           safetySettings: getGeminiSafetySettings()
         };
       }
@@ -10721,9 +10779,10 @@ ${body}`;
       if (maxTokens !== null) generationConfig.maxOutputTokens = maxTokens;
       if (topK !== null) generationConfig.topK = topK;
       if (topP !== null) generationConfig.topP = topP;
+      const sendConfig = sanitizeGeminiGenerationConfig(proofreadingModelName, generationConfig);
       const requestBody = {
         contents: [{ role: "user", parts: [{ text: textToProofread }] }],
-        ...Object.keys(generationConfig).length > 0 && { generationConfig },
+        ...Object.keys(sendConfig).length > 0 && { generationConfig: sendConfig },
         ...systemInstruction && { systemInstruction },
         safetySettings: getGeminiSafetySettings()
       };
@@ -11158,7 +11217,7 @@ ${body}`;
         if (state.settings.maxTokens !== null) generationConfig.maxOutputTokens = state.settings.maxTokens;
         if (state.settings.topK !== null) generationConfig.topK = state.settings.topK;
         if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
-        if ((state.settings.apiProvider || "gemini") === "gemini" && (state.settings.thinkingBudget > 0 || state.settings.includeThoughts)) {
+        if ((state.settings.apiProvider || "gemini") === "gemini") {
           const thinkingConfig = buildGeminiThinkingConfig({
             model: state.settings.modelName,
             thinkingLevel: state.settings.geminiThinkingLevel,
@@ -11722,7 +11781,7 @@ ${body}`;
           if (state.settings.maxTokens !== null) generationConfig.maxOutputTokens = state.settings.maxTokens;
           if (state.settings.topK !== null) generationConfig.topK = state.settings.topK;
           if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
-          if ((state.settings.apiProvider || "gemini") === "gemini" && (state.settings.thinkingBudget > 0 || state.settings.includeThoughts)) {
+          if ((state.settings.apiProvider || "gemini") === "gemini") {
             const thinkingConfig = buildGeminiThinkingConfig({
               model: state.settings.modelName,
               thinkingLevel: state.settings.geminiThinkingLevel,
@@ -13511,7 +13570,8 @@ ${error.message}`);
       const requestBody = {
         contents: [{ parts: [{ text: userPrompt }] }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: { temperature: 0.5 }
+        // 3.6 Flash 以降に temperature を送らない（効かず、今後のモデルではエラー）
+        generationConfig: sanitizeGeminiGenerationConfig(model, { temperature: 0.5 })
       };
       const endpoint = `${GEMINI_API_BASE_URL}${model}:generateContent`;
       const response = await fetch(endpoint, {
@@ -13697,7 +13757,7 @@ ${msg}`);
             { inlineData: { mimeType: "image/png", data: imageBase64 } }
           ]
         }],
-        generationConfig: { temperature: 0.1 }
+        generationConfig: sanitizeGeminiGenerationConfig(qcModel, { temperature: 0.1 })
       };
       const endpoint = `${GEMINI_API_BASE_URL}${qcModel}:generateContent`;
       const response = await fetch(endpoint, {
@@ -13859,7 +13919,8 @@ ${msg}`);
       body = {
         contents: [{ role: "user", parts: [{ text: userContent }] }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: { temperature, maxOutputTokens: maxTokens },
+        // 3.6 Flash 以降に temperature を送らない（効かず、今後のモデルではエラー）
+        generationConfig: sanitizeGeminiGenerationConfig(model, { temperature, maxOutputTokens: maxTokens }),
         safetySettings: getGeminiSafetySettings()
       };
       parse = /* @__PURE__ */ __name((d) => d.candidates?.[0]?.content?.parts?.[0]?.text, "parse");

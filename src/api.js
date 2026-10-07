@@ -4,7 +4,8 @@ import { appLogic } from './app-logic.js';
 import { elements } from './dom-elements.js';
 import { interruptibleSleep } from './utils/format.js';
 import { createGeminiStreamAssembler } from './utils/gemini-stream.js';
-import { buildGeminiThinkingConfig } from './utils/gemini-thinking.js';
+import { buildGeminiLightThinkingConfig } from './utils/gemini-thinking.js';
+import { sanitizeGeminiGenerationConfig } from './utils/gemini-params.js';
 import { extractReasoningText } from './utils/reasoning.js';
 import { parseSSEBuffer } from './utils/sse.js';
 import { isImageGenerationModel } from './utils/model-select.js';
@@ -550,21 +551,18 @@ export const apiUtils = {
             delete finalGenerationConfig.topP;
             delete finalGenerationConfig.temperature;
 
-        } else {
-            // thinking_level が選ばれていればそれを、無ければ旧方式の thinking_budget を送る。
-            // 両方同時は 400 になるので buildGeminiThinkingConfig が必ず片方に絞る
-            const thinkingConfig = buildGeminiThinkingConfig({
-                model,
-                thinkingLevel: state.settings.geminiThinkingLevel,
-                thinkingBudget: state.settings.thinkingBudget,
-                includeThoughts: state.settings.includeThoughts
-            });
-            if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
         }
+
+        // thinkingConfig は呼び出し側（チャットの送信経路）が buildGeminiThinkingConfig で組む。
+        // ここでは、そのモデルが受け付けない項目（今後のモデルでの thinking_budget、
+        // 3.6 Flash 以降の temperature / top_p / top_k）を最後に取り除くだけにする。
+        const sendGenerationConfig = isImageGenModel
+            ? finalGenerationConfig
+            : sanitizeGeminiGenerationConfig(model, finalGenerationConfig);
 
         const requestBody = {
             contents: messagesForApi,
-            ...(Object.keys(finalGenerationConfig).length > 0 && { generationConfig: finalGenerationConfig }),
+            ...(Object.keys(sendGenerationConfig).length > 0 && { generationConfig: sendGenerationConfig }),
             safetySettings : getGeminiSafetySettings()
         };
 
@@ -795,10 +793,16 @@ export const apiUtils = {
             }
             endpoint = `${GEMINI_API_BASE_URL}${modelToUse}:generateContent`;
             fetchHeaders = { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey };
+            // 思考はいちばん軽く。thinking_budget: 0 を受け付けないモデルでは
+            // いちばん軽い thinking_level にし、temperature も受け付けるモデルにだけ送る
+            const lightThinking = buildGeminiLightThinkingConfig(modelToUse);
             requestBody = {
                 contents: [{ role: 'user', parts: [{ text: textToTranslate }] }],
                 systemInstruction: { parts: [{ text: translationSystemPrompt }] },
-                generationConfig: { temperature: 0.1, thinkingConfig: { thinkingBudget: 0 } },
+                generationConfig: sanitizeGeminiGenerationConfig(modelToUse, {
+                    temperature: 0.1,
+                    ...(lightThinking && { thinkingConfig: lightThinking }),
+                }),
                 safetySettings: getGeminiSafetySettings()
             };
         }

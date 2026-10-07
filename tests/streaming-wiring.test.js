@@ -262,14 +262,47 @@ describe('Gemini thinking_level の配線', () => {
         expect(ui).toMatch(/updateAnthropicEffortOptions\(\);\s*\n\s*this\.updateGeminiThinkingLevelOptions\(\);/);
     });
 
-    // 3箇所とも同じ関数を通す。1箇所でも旧コードが残ると、そこだけ両方送って 400 になる
-    it('thinkingConfig を組む3箇所すべてが buildGeminiThinkingConfig を通る', () => {
+    // thinkingConfig はチャットの送信経路2箇所だけで組む。api.js にあった組み立ては、
+    // 送る内容をコピーした後に書き込んでいて効いていなかったため取り除いた
+    it('thinkingConfig を組むのは送信経路の2箇所で、どちらも buildGeminiThinkingConfig を通る', () => {
         const api = read('src/api.js');
         const message = read('src/app-logic/message.js');
-        expect((api.match(/buildGeminiThinkingConfig\(\{/g) || []).length).toBe(1);
+        expect((api.match(/buildGeminiThinkingConfig\(\{/g) || []).length).toBe(0);
         expect((message.match(/buildGeminiThinkingConfig\(\{/g) || []).length).toBe(2);
         // 旧コードの直書きが残っていないこと
         expect(api).not.toContain('generationConfig.thinkingConfig = {};');
         expect(message).not.toContain('generationConfig.thinkingConfig = {};');
+        expect(api).not.toContain('thinkingConfig: { thinkingBudget: 0 }');
+    });
+
+    // 回帰: 送信経路の条件が「thinkingBudget > 0 か includeThoughts」のままで、
+    // 思考の深さだけを選んでいると何も送られていなかった
+    it('思考の深さだけを選んでいても thinkingConfig を組む（条件に Thinking Budget を要求しない）', () => {
+        const message = read('src/app-logic/message.js');
+        expect(message).not.toMatch(/\(\(state\.settings\.thinkingBudget > 0\) \|\| state\.settings\.includeThoughts\)\)\s*\{\s*\n\s*\/\/ thinking_level 優先/);
+        const gates = message.match(/if \(\(state\.settings\.apiProvider \|\| 'gemini'\) === 'gemini'\) \{\s*\n\s*\/\/ thinking_level 優先/g) || [];
+        expect(gates.length).toBe(2);
+    });
+});
+
+// 2026-10 の Google の告知: 今後のモデルでは thinking_budget と temperature / top_p / top_k が 400 になる
+describe('Gemini に送るパラメータの整理の配線', () => {
+    it('チャット本体は送る直前に sanitizeGeminiGenerationConfig を通す', () => {
+        const api = read('src/api.js');
+        expect(api).toContain('sanitizeGeminiGenerationConfig(model, finalGenerationConfig)');
+        expect(api).toContain('generationConfig: sendGenerationConfig');
+    });
+
+    it('Gemini を直接呼ぶ補助処理（翻訳・校正・要約/メモリ・画像プロンプト改善・画像チェック）も通す', () => {
+        expect(read('src/api.js')).toContain('sanitizeGeminiGenerationConfig(modelToUse,');
+        expect(read('src/app-logic/message.js')).toContain('sanitizeGeminiGenerationConfig(proofreadingModelName, generationConfig)');
+        expect(read('src/app-logic/memory.js')).toContain('sanitizeGeminiGenerationConfig(model, { temperature, maxOutputTokens: maxTokens })');
+        const media = read('src/app-logic/media.js');
+        expect(media).toContain('sanitizeGeminiGenerationConfig(model, { temperature: 0.5 })');
+        expect(media).toContain('sanitizeGeminiGenerationConfig(qcModel, { temperature: 0.1 })');
+    });
+
+    it('翻訳は thinking_budget: 0 を直書きせず、モデルに合わせて一番軽い思考を選ぶ', () => {
+        expect(read('src/api.js')).toContain('buildGeminiLightThinkingConfig(modelToUse)');
     });
 });

@@ -6,6 +6,7 @@ import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { assessAnthropicCacheMiss, formatCacheMissMessage } from '../utils/cache-miss.js';
 import { buildGeminiThinkingConfig } from '../utils/gemini-thinking.js';
+import { sanitizeGeminiGenerationConfig } from '../utils/gemini-params.js';
 import { planTypewriterStep } from '../utils/typewriter.js';
 import { uiUtils } from '../ui.js';
 import { htmlUtils } from '../utils/html.js';
@@ -41,9 +42,11 @@ export const messageMethods = {
         if (topK !== null) generationConfig.topK = topK;
         if (topP !== null) generationConfig.topP = topP;
 
+        // 3.6 Flash 以降に temperature / top_p / top_k を送らない（効かず、今後のモデルではエラー）
+        const sendConfig = sanitizeGeminiGenerationConfig(proofreadingModelName, generationConfig);
         const requestBody = {
             contents: [{ role: 'user', parts: [{ text: textToProofread }] }],
-            ...(Object.keys(generationConfig).length > 0 && { generationConfig }),
+            ...(Object.keys(sendConfig).length > 0 && { generationConfig: sendConfig }),
             ...(systemInstruction && { systemInstruction }),
             safetySettings: getGeminiSafetySettings()
         };
@@ -568,8 +571,10 @@ export const messageMethods = {
             if (state.settings.maxTokens !== null) generationConfig.maxOutputTokens = state.settings.maxTokens;
             if (state.settings.topK !== null) generationConfig.topK = state.settings.topK;
             if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
-            if ((state.settings.apiProvider || 'gemini') === 'gemini' &&
-                    ((state.settings.thinkingBudget > 0) || state.settings.includeThoughts)) {
+            // 回帰: 以前はここが「thinkingBudget > 0 か includeThoughts」のときだけ通っていたため、
+            // 思考の深さ（thinking_level）だけを選んでいると何も送られていなかった。
+            // 何も選ばれていなければ buildGeminiThinkingConfig が null を返すので、条件は不要
+            if ((state.settings.apiProvider || 'gemini') === 'gemini') {
                 // thinking_level 優先・両方は送らない（buildGeminiThinkingConfig が片方に絞る）
                 const thinkingConfig = buildGeminiThinkingConfig({
                     model: state.settings.modelName,
@@ -1277,8 +1282,8 @@ export const messageMethods = {
                 if (state.settings.maxTokens !== null) generationConfig.maxOutputTokens = state.settings.maxTokens;
                 if (state.settings.topK !== null) generationConfig.topK = state.settings.topK;
                 if (state.settings.topP !== null) generationConfig.topP = state.settings.topP;
-                if ((state.settings.apiProvider || 'gemini') === 'gemini' &&
-                        ((state.settings.thinkingBudget > 0) || state.settings.includeThoughts)) {
+                // 回帰: 思考の深さだけを選んでいると送られていなかった（送信経路と同じ）
+                if ((state.settings.apiProvider || 'gemini') === 'gemini') {
                     // thinking_level 優先・両方は送らない（buildGeminiThinkingConfig が片方に絞る）
                     const thinkingConfig = buildGeminiThinkingConfig({
                         model: state.settings.modelName,

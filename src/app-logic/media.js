@@ -1,5 +1,6 @@
 // appLogic 機能モジュール: media（Phase 3 で app-logic.js から分割）。挙動は不変。
 import { GEMINI_API_BASE_URL, IMAGE_STORE } from '../constants.js';
+import { sanitizeGeminiGenerationConfig } from '../utils/gemini-params.js';
 import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
@@ -991,7 +992,8 @@ export const mediaMethods = {
         const requestBody = {
             contents: [{ parts: [{ text: userPrompt }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { temperature: 0.5 }
+            // 3.6 Flash 以降に temperature を送らない（効かず、今後のモデルではエラー）
+            generationConfig: sanitizeGeminiGenerationConfig(model, { temperature: 0.5 })
         };
 
         const endpoint = `${GEMINI_API_BASE_URL}${model}:generateContent`;
@@ -1206,7 +1208,7 @@ export const mediaMethods = {
                     { inlineData: { mimeType: 'image/png', data: imageBase64 } }
                 ]
             }],
-            generationConfig: { temperature: 0.1 }
+            generationConfig: sanitizeGeminiGenerationConfig(qcModel, { temperature: 0.1 })
         };
 
         const endpoint = `${GEMINI_API_BASE_URL}${qcModel}:generateContent`;

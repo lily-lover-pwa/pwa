@@ -1843,7 +1843,7 @@ createMessageElement(role, content, index, isStreamingPlaceholder = false, casca
             let msg = '';
             if (model.startsWith('gemini')) {
                 if (!levels) msg = '※ このモデルは thinking_level 非対応です（Gemini 2.5 以降で利用できます）。';
-                else if (!levels.includes('minimal')) msg = '※ minimal はこのモデルでは使えません（3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite で利用可）。';
+                else if (!levels.includes('minimal')) msg = '※ minimal はこのモデルでは使えません（一部のモデルのみ対応）。';
             }
             note.textContent = msg;
             note.classList.toggle('hidden', !msg);

@@ -247,6 +247,11 @@ export const DEFAULT_BAI_MODEL = 'glm-5.3-flash';
 
 
 export const VERSION_HISTORY = {
+    '1.68': [
+        'Gemini の「思考の深さ」だけを選んでいると、実際には送られていなかった不具合を直しました。Thinking Budget か Include Thoughts を一緒に設定していた場合は送られていました。',
+        'Google から「今後の Gemini では thinking_budget と Temperature / Top K / Top P を送るとエラーになる」と告知があったため、受け付けるモデルにだけ送るようにしました。3.6 Flash 以降はもともと Temperature などが効いていないので、送らなくても結果は変わりません。新しい Gemini では思考の深さを使ってください。',
+        '3.5 Flash と 3 Flash（プレビュー）でも minimal を選べるようにしました。Gemini 公式の対応表が更新されたためです。',
+    ],
     '1.67': [
         'Gemini に「思考の深さ (thinking_level)」を追加しました。minimal / low / medium / high から選べます。Gemini 公式が現在推奨している方式で、これまでの Thinking Budget（旧方式）は残してありますが、思考の深さを選んでいるときは送られません（両方送るとエラーになるため）。',
         '選択中のモデルで使える段階だけが表示されます。minimal は 3.6 Flash / 3.5 Flash-Lite / 3.1 Flash-Lite で選べます。モデルを切り替えて非対応の値になった場合は自動で「モデルの既定」に戻ります。',
