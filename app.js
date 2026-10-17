@@ -1950,7 +1950,11 @@ ${relationship_context}`;
     "grok-4-0709": "grok-4.3",
     "grok-3": "grok-4.3",
     "grok-3-mini": "grok-4.3",
-    "grok-2-1212": "grok-4.6"
+    "grok-2-1212": "grok-4.6",
+    // DeepSeek（2026-07-24 廃止）。どちらも deepseek-v4-flash の別名で、その後継が deepseek-flash
+    // （chat は思考なし、reasoner は思考ありのモードだった。deepseek-flash は既定で思考あり）
+    "deepseek-chat": "deepseek-flash",
+    "deepseek-reasoner": "deepseek-flash"
   };
   var SCHEDULED_RETIREMENTS = [
     {
@@ -2102,11 +2106,9 @@ ${relationship_context}`;
     { value: "deepseek-flash", label: "DeepSeek V4.1 Flash (最新・安価)" },
     { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
     // 旧名。V4.1 Flash へ転送されるので 'deepseek-flash' と中身は同じになる
-    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash (V4.1 Flash へ転送)" },
-    { value: "deepseek-chat", label: "DeepSeek Chat (V3)" },
-    { value: "deepseek-reasoner", label: "DeepSeek Reasoner (R1)" }
+    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash (V4.1 Flash へ転送)" }
   ];
-  var DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
+  var DEFAULT_DEEPSEEK_MODEL = "deepseek-flash";
   var XAI_MODELS = [
     { value: "grok-4.7", label: "Grok 4.7 (最新・推奨)" },
     { value: "grok-4.6", label: "Grok 4.6" },
@@ -2134,6 +2136,11 @@ ${relationship_context}`;
   ];
   var DEFAULT_BAI_MODEL = "glm-5.3-flash";
   var VERSION_HISTORY = {
+    "1.71": [
+      "DeepSeek の新しい Flash（V4.1 Flash 1017）が公開されました。モデル名は deepseek-flash のままで、料金も変わりません。そのまま新しいモデルで動きます。",
+      "DeepSeek の旧名 deepseek-chat / deepseek-reasoner は7月24日に提供が終わっていたので、一覧から外し、選んでいた場合は deepseek-flash に自動で切り替えるようにしました。DeepSeek を選んだときの既定も deepseek-flash にしています。",
+      "deepseek-flash は何も指定しないと考えてから答えます。タイトル生成・思考の翻訳・メモリ学習は短い作業なので、以前の deepseek-chat と同じく考えずに答えるよう指定して送ります。"
+    ],
     "1.70": [
       "Gemini の既定モデルを 2.5 Pro から 3.8 Flash に変えました。2.5 系は9月18日から以前から使っている人しか使えなくなり、新しく始めた人は最初の送信でエラーになっていたためです。すでに選んでいるモデルはそのままです。",
       "タイトル生成・メモリ学習・翻訳・校正・画像まわりで使う Gemini の既定も、2.5 系から同じ値段の 3.5 Flash-Lite（画像のチェックは 3.8 Flash）に変えました。タイトル生成とメモリ学習は決め打ちだったので、以前から使っている人も新しいモデルになります。"
@@ -8503,6 +8510,13 @@ URL、認証情報、Forge/Reforgeの起動オプション(--listen)を確認し
   }
   __name(getGeminiSafetySettings, "getGeminiSafetySettings");
 
+  // src/utils/deepseek-params.js
+  function deepseekThinkingOffParams(model) {
+    if (typeof model !== "string" || !model.toLowerCase().startsWith("deepseek-")) return null;
+    return { thinking: { type: "disabled" } };
+  }
+  __name(deepseekThinkingOffParams, "deepseekThinkingOffParams");
+
   // src/app-logic/chat.js
   var chatMethods = {
     // --- スワイプ処理ここまで ---
@@ -9242,7 +9256,6 @@ AI: ${firstModelContent}`;
           if (!apiKey || !baseUrl) return;
           const titleModelMap = {
             deepseek: DEFAULT_DEEPSEEK_MODEL
-            // 'deepseek-chat'（非リーズナー）
           };
           const titleModel = titleModelMap[provider] || state.settings.modelName;
           const resp = await fetch(baseUrl, {
@@ -9251,7 +9264,10 @@ AI: ${firstModelContent}`;
             body: JSON.stringify({
               model: titleModel,
               max_tokens: 200,
-              messages: [{ role: "user", content: titlePrompt }]
+              messages: [{ role: "user", content: titlePrompt }],
+              // 回帰: deepseek-chat 廃止後の deepseek-flash は既定で思考し、200 トークンを
+              // 思考で使い切ってタイトルが空になりうる
+              ...deepseekThinkingOffParams(titleModel) || {}
             })
           });
           if (resp.ok) {
@@ -9979,7 +9995,9 @@ AI: ${firstModelContent}`;
             { role: "system", content: translationSystemPrompt },
             { role: "user", content: textToTranslate }
           ],
-          temperature: 0.1
+          temperature: 0.1,
+          // 今の DeepSeek は既定で思考する。翻訳は思考なしで足りるので止める
+          ...deepseekThinkingOffParams(modelToUse) || {}
         };
       } else {
         const apiKey = state.settings.apiKey;
@@ -14127,7 +14145,7 @@ ${msg}`);
     return { apiKey: keys[provider], baseUrl: urls[provider] };
   }
   __name(getOpenAICompatConfig, "getOpenAICompatConfig");
-  async function runAuxiliaryCompletion({ provider, model, systemPrompt, userContent, temperature = 0.3, maxTokens = 4096 }) {
+  async function runAuxiliaryCompletion({ provider, model, systemPrompt, userContent, temperature = 0.3, maxTokens = 4096, lightweight = false }) {
     let endpoint, headers, body, parse;
     if (provider === "anthropic") {
       const apiKey = state.settings.anthropicApiKey;
@@ -14180,6 +14198,9 @@ ${msg}`);
         body.max_completion_tokens = maxTokens;
         if (openaiSupportsReasoningNone(model)) body.reasoning_effort = "none";
       }
+      if (provider === "deepseek" && lightweight) {
+        Object.assign(body, deepseekThinkingOffParams(model) || {});
+      }
       parse = /* @__PURE__ */ __name((d) => d.choices?.[0]?.message?.content, "parse");
     }
     const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
@@ -14210,7 +14231,8 @@ ${msg}`);
       // 2.5 系は 2026-09-18 から既存ユーザー限定。同じ単価の 3.5 Flash-Lite にしている
       gemini: "gemini-3.5-flash-lite",
       anthropic: "claude-haiku-4-5-20251001",
-      deepseek: "deepseek-chat",
+      // deepseek-chat は 2026-07-24 に廃止。後継の deepseek-flash（思考は止めて送る）
+      deepseek: "deepseek-flash",
       // gpt-4o-mini は 2027-01-14 に終了。公式の移行先は gpt-6-luna
       openai: "gpt-6-luna",
       mistral: "mistral-small-latest"
@@ -14491,7 +14513,8 @@ ${flagContent}`);
           systemPrompt: "あなたはユーザーとの会話から永続的な個人情報を抽出するアシスタントです。",
           userContent: summarizationPrompt,
           temperature: 0.3,
-          maxTokens: 2048
+          maxTokens: 2048,
+          lightweight: true
         });
         if (!summaryText) {
           console.warn("[Memory] 自動学習による要約結果が空でした。");
@@ -16275,11 +16298,11 @@ ${pageText}
         // ここは「追加モデル」の初期値として実際に保存される。提供終了したモデルを
         // 置くと、新しく使い始めた人の一覧が最初から使えないモデルで埋まるため、
         // 標準リストに無い現行モデルだけを挙げること。
-        gemini: "gemini-3.1-flash-image, gemini-3-pro-image",
+        gemini: "gemini-nano-banana-2.1, gemini-3-pro-image",
         openai: "gpt-6-astra, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna",
         anthropic: "claude-fable-5, claude-opus-4-5-20251101",
         groq: "openai/gpt-oss-safeguard-20b",
-        deepseek: "deepseek-chat, deepseek-reasoner",
+        deepseek: "",
         xai: "grok-4.20-0309-reasoning, grok-4.20-0309-non-reasoning",
         mistral: "mistral-large-latest, mistral-small-latest, open-mistral-nemo",
         zai: "glm-4.6, glm-4.5-flash",

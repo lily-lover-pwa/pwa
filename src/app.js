@@ -972,11 +972,11 @@ window.dbUtils = dbUtils;
             // ここは「追加モデル」の初期値として実際に保存される。提供終了したモデルを
             // 置くと、新しく使い始めた人の一覧が最初から使えないモデルで埋まるため、
             // 標準リストに無い現行モデルだけを挙げること。
-            gemini: 'gemini-3.1-flash-image, gemini-3-pro-image',
+            gemini: 'gemini-nano-banana-2.1, gemini-3-pro-image',
             openai: 'gpt-6-astra, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna',
             anthropic: 'claude-fable-5, claude-opus-4-5-20251101',
             groq: 'openai/gpt-oss-safeguard-20b',
-            deepseek: 'deepseek-chat, deepseek-reasoner',
+            deepseek: '',
             xai: 'grok-4.20-0309-reasoning, grok-4.20-0309-non-reasoning',
             mistral: 'mistral-large-latest, mistral-small-latest, open-mistral-nemo',
             zai: 'glm-4.6, glm-4.5-flash',

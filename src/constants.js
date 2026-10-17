@@ -98,6 +98,10 @@ export const RETIRED_MODEL_MAP = {
     'grok-3': 'grok-4.3',
     'grok-3-mini': 'grok-4.3',
     'grok-2-1212': 'grok-4.6',
+    // DeepSeek（2026-07-24 廃止）。どちらも deepseek-v4-flash の別名で、その後継が deepseek-flash
+    // （chat は思考なし、reasoner は思考ありのモードだった。deepseek-flash は既定で思考あり）
+    'deepseek-chat': 'deepseek-flash',
+    'deepseek-reasoner': 'deepseek-flash',
 };
 
 // 終了日が告知されていて、まだ使えるモデル（終了日 → 旧モデル名 → 後継）。
@@ -278,10 +282,9 @@ export const DEEPSEEK_MODELS = [
     { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
     // 旧名。V4.1 Flash へ転送されるので 'deepseek-flash' と中身は同じになる
     { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash (V4.1 Flash へ転送)' },
-    { value: 'deepseek-chat', label: 'DeepSeek Chat (V3)' },
-    { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
 ];
-export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
+// deepseek-chat / deepseek-reasoner は 2026-07-24 に廃止（RETIRED_MODEL_MAP で deepseek-flash へ移す）
+export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-flash';
 
 export const XAI_MODELS = [
     { value: 'grok-4.7', label: 'Grok 4.7 (最新・推奨)' },
@@ -322,6 +325,11 @@ export const DEFAULT_BAI_MODEL = 'glm-5.3-flash';
 
 
 export const VERSION_HISTORY = {
+    '1.71': [
+        'DeepSeek の新しい Flash（V4.1 Flash 1017）が公開されました。モデル名は deepseek-flash のままで、料金も変わりません。そのまま新しいモデルで動きます。',
+        'DeepSeek の旧名 deepseek-chat / deepseek-reasoner は7月24日に提供が終わっていたので、一覧から外し、選んでいた場合は deepseek-flash に自動で切り替えるようにしました。DeepSeek を選んだときの既定も deepseek-flash にしています。',
+        'deepseek-flash は何も指定しないと考えてから答えます。タイトル生成・思考の翻訳・メモリ学習は短い作業なので、以前の deepseek-chat と同じく考えずに答えるよう指定して送ります。',
+    ],
     '1.70': [
         'Gemini の既定モデルを 2.5 Pro から 3.8 Flash に変えました。2.5 系は9月18日から以前から使っている人しか使えなくなり、新しく始めた人は最初の送信でエラーになっていたためです。すでに選んでいるモデルはそのままです。',
         'タイトル生成・メモリ学習・翻訳・校正・画像まわりで使う Gemini の既定も、2.5 系から同じ値段の 3.5 Flash-Lite（画像のチェックは 3.8 Flash）に変えました。タイトル生成とメモリ学習は決め打ちだったので、以前から使っている人も新しいモデルになります。',

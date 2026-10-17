@@ -13,6 +13,7 @@ import {
 } from '../constants.js';
 import { sanitizeGeminiGenerationConfig } from '../utils/gemini-params.js';
 import { openaiIsReasoningModel, openaiSupportsReasoningNone } from '../utils/openai-params.js';
+import { deepseekThinkingOffParams } from '../utils/deepseek-params.js';
 import { dbUtils } from '../db.js';
 import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
@@ -51,7 +52,8 @@ function getOpenAICompatConfig(provider) {
 
 // プロバイダー横断で補助生成（要約・メモリ学習）を実行する共通ヘルパー。
 // systemPrompt + userContent を送り、{ text, raw } を返す。HTTPエラー時は例外を投げる。
-async function runAuxiliaryCompletion({ provider, model, systemPrompt, userContent, temperature = 0.3, maxTokens = 4096 }) {
+// lightweight: 短い作業（メモリ学習）。DeepSeek では思考を止める（deepseek-params.js）。
+async function runAuxiliaryCompletion({ provider, model, systemPrompt, userContent, temperature = 0.3, maxTokens = 4096, lightweight = false }) {
     let endpoint, headers, body, parse;
 
     if (provider === 'anthropic') {
@@ -109,6 +111,9 @@ async function runAuxiliaryCompletion({ provider, model, systemPrompt, userConte
             body.max_completion_tokens = maxTokens;
             if (openaiSupportsReasoningNone(model)) body.reasoning_effort = 'none';
         }
+        if (provider === 'deepseek' && lightweight) {
+            Object.assign(body, deepseekThinkingOffParams(model) || {});
+        }
         parse = (d) => d.choices?.[0]?.message?.content;
     }
 
@@ -144,7 +149,8 @@ function getMemoryLearnModel(provider) {
         // 2.5 系は 2026-09-18 から既存ユーザー限定。同じ単価の 3.5 Flash-Lite にしている
         gemini: 'gemini-3.5-flash-lite',
         anthropic: 'claude-haiku-4-5-20251001',
-        deepseek: 'deepseek-chat',
+        // deepseek-chat は 2026-07-24 に廃止。後継の deepseek-flash（思考は止めて送る）
+        deepseek: 'deepseek-flash',
         // gpt-4o-mini は 2027-01-14 に終了。公式の移行先は gpt-6-luna
         openai: 'gpt-6-luna',
         mistral: 'mistral-small-latest',
@@ -478,6 +484,7 @@ export const memoryMethods = {
                 userContent: summarizationPrompt,
                 temperature: 0.3,
                 maxTokens: 2048,
+                lightweight: true,
             });
 
             if (!summaryText) {

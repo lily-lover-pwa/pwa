@@ -63,6 +63,9 @@ const RETIRED_MODELS = [
     'meta-llama/llama-4-scout-17b-16e-instruct',
     'qwen/qwen3-32b',
     'gemma2-9b-it',
+    // DeepSeek（2026-07-24 廃止。deepseek-v4-flash の別名だった）
+    'deepseek-chat',
+    'deepseek-reasoner',
     // xAI（2026-05-15 提供終了）
     'grok-4',
     'grok-4-0709',

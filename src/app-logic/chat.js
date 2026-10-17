@@ -5,6 +5,7 @@ import { elements } from '../dom-elements.js';
 import { state } from '../state.js';
 import { uiUtils } from '../ui.js';
 import { getGeminiSafetySettings } from '../utils/safety.js';
+import { deepseekThinkingOffParams } from '../utils/deepseek-params.js';
 import { buildGeminiThinkingConfig } from '../utils/gemini-thinking.js';
 import { sanitizeGeminiGenerationConfig } from '../utils/gemini-params.js';
 
@@ -832,8 +833,9 @@ export const chatMethods = {
                 // タイトル生成は軽量・非リーズナーモデルを優先（gemini=flash-lite / anthropic=haiku と同方針）。
                 // 推論モデル（deepseek-reasoner / v4-pro 等）を小さい max_tokens で呼ぶと、思考で
                 // トークンを使い切り content が空になりタイトルが生成されないため。
+                // DeepSeek の既定（deepseek-flash）は既定で思考するので、下で思考を止めて送る
                 const titleModelMap = {
-                    deepseek: DEFAULT_DEEPSEEK_MODEL // 'deepseek-chat'（非リーズナー）
+                    deepseek: DEFAULT_DEEPSEEK_MODEL
                 };
                 const titleModel = titleModelMap[provider] || state.settings.modelName;
                 const resp = await fetch(baseUrl, {
@@ -842,7 +844,10 @@ export const chatMethods = {
                     body: JSON.stringify({
                         model: titleModel,
                         max_tokens: 200,
-                        messages: [{ role: 'user', content: titlePrompt }]
+                        messages: [{ role: 'user', content: titlePrompt }],
+                        // 回帰: deepseek-chat 廃止後の deepseek-flash は既定で思考し、200 トークンを
+                        // 思考で使い切ってタイトルが空になりうる
+                        ...(deepseekThinkingOffParams(titleModel) || {})
                     })
                 });
                 if (resp.ok) {

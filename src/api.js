@@ -8,6 +8,7 @@ import { buildGeminiLightThinkingConfig } from './utils/gemini-thinking.js';
 import { sanitizeGeminiGenerationConfig } from './utils/gemini-params.js';
 import { openaiIsReasoningModel, resolveOpenAIReasoningEffort } from './utils/openai-params.js';
 import { anthropicThinkingOff } from './utils/anthropic-thinking.js';
+import { deepseekThinkingOffParams } from './utils/deepseek-params.js';
 import { extractReasoningText } from './utils/reasoning.js';
 import { parseSSEBuffer } from './utils/sse.js';
 import { isImageGenerationModel } from './utils/model-select.js';
@@ -786,6 +787,8 @@ export const apiUtils = {
                     { role: 'user', content: textToTranslate }
                 ],
                 temperature: 0.1,
+                // 今の DeepSeek は既定で思考する。翻訳は思考なしで足りるので止める
+                ...(deepseekThinkingOffParams(modelToUse) || {}),
             };
         } else {
             const apiKey = state.settings.apiKey;

@@ -35,7 +35,7 @@
                 console.error("AWS Bedrock Runtime SDKの読み込みに失敗しました:", err);
             });
     </script>
-    <script src="app.js?v=1.25.69" defer></script>
+    <script src="app.js?v=1.25.70" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -413,7 +413,7 @@
                                 ※ APIキーは <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">DeepSeek Platform</a> から取得できます。
                             </p>
                             <label for="deepseek-custom-models" style="margin-top: 15px;">▼ 追加モデル (カンマ区切り):</label>
-                            <textarea id="deepseek-custom-models" placeholder="例: deepseek-chat"></textarea>
+                            <textarea id="deepseek-custom-models" placeholder="例: deepseek-flash"></textarea>
                         </div>
 
                         <div id="xai-api-key-container" class="hidden">
@@ -570,8 +570,7 @@
                                 <option value="gemini-2.5-pro">gemini-2.5-pro (以前から使っている人のみ)</option>
                                 <optgroup label="DeepSeek (APIキー必要)">
                                     <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-                                    <option value="deepseek-chat">deepseek-chat (V3)</option>
-                                    <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+                                    <option value="deepseek-flash">deepseek-flash (V4.1 Flash)</option>
                                 </optgroup>
                                 <optgroup label="ユーザー指定" id="thought-translation-user-models">
                                 </optgroup>
@@ -869,8 +868,7 @@
                         </optgroup>
                         <optgroup label="DeepSeek (APIキー必要)">
                             <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-                            <option value="deepseek-chat">deepseek-chat (V3)</option>
-                            <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+                            <option value="deepseek-flash">deepseek-flash (V4.1 Flash)</option>
                         </optgroup>
                         <optgroup label="Gemini 3系">
                             <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (軽量・安価)</option>
